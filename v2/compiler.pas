@@ -67,6 +67,8 @@ const
   TOK_BOOLEAN_TYPE = 128;
   TOK_STRING_TYPE = 129;
   TOK_FORWARD = 130;
+  TOK_READ = 131;
+  TOK_READLN = 132;
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -119,6 +121,11 @@ var
   rt_newline: integer;
   rt_readchar: integer;
   rt_print_char: integer;
+  rt_read_int: integer;
+  rt_skip_line: integer;
+
+  { Output file descriptor - x20 is used to store it }
+  out_fd: integer;
 
   { Error flag }
   had_error: integer;
@@ -391,7 +398,11 @@ begin
       if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) then { do }
         if (ToLower(tok_str[2]) = 119) and (ToLower(tok_str[3]) = 110) then { wn }
           if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 111) then { to }
-            tok_type := TOK_DOWNTO
+            tok_type := TOK_DOWNTO;
+      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
+        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
+          if (ToLower(tok_str[4]) = 108) and (ToLower(tok_str[5]) = 110) then { ln }
+            tok_type := TOK_READLN
     end;
     if tok_len = 7 then
     begin
@@ -412,9 +423,14 @@ begin
               tok_type := TOK_FORWARD
     end;
     if tok_len = 4 then
+    begin
       if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 104) then { ch }
         if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 114) then { ar }
           tok_type := TOK_CHAR_TYPE;
+      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
+        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
+          tok_type := TOK_READ
+    end;
     if tok_len = 9 then
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
         if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 99) then { oc }
@@ -1076,6 +1092,16 @@ begin
   EmitNL
 end;
 
+procedure EmitMovX0X20;
+begin
+  { mov x0, x20 - use output file descriptor }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);     { x0, }
+  writechar(120); writechar(50); writechar(48);                    { x20 }
+  EmitNL
+end;
+
 procedure EmitBranchLabel(lbl: integer);
 begin
   { b Lxx }
@@ -1507,7 +1533,7 @@ begin
   EmitMovX0(45);  { '-' }
   EmitSturX0(-8);
   EmitMovX16(33554436); { 0x2000004 }
-  EmitMovX0(1);
+  EmitMovX0X20;
   EmitIndent;
   writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #8 }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -1652,7 +1678,7 @@ begin
   { Print char }
   EmitSturX0(-8);
   EmitMovX16(33554436);
-  EmitMovX0(1);
+  EmitMovX0X20;
   EmitIndent;
   writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #8 }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -1686,7 +1712,7 @@ begin
   EmitMovX0(10);
   EmitSturX0(-9);
   EmitMovX16(33554436);  { 0x2000004 = write }
-  EmitMovX0(1);
+  EmitMovX0X20;
   EmitIndent;
   writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #9 }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -1707,11 +1733,16 @@ end;
 procedure EmitReadcharRuntime;
 begin
   { Readchar routine - read one char, return in x0 (-1 for EOF) }
+  { Uses x19 as input file descriptor (0=stdin, or opened file) }
   EmitLabel(rt_readchar);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  EmitMovX0(0);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
   EmitIndent;
   writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -1763,7 +1794,7 @@ begin
   writechar(91); writechar(115); writechar(112); writechar(93);
   EmitNL;
   EmitMovX16(33554436);  { 0x2000004 = write }
-  EmitMovX0(1);
+  EmitMovX0X20;
   EmitIndent;
   writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -1778,6 +1809,525 @@ begin
   EmitAddSP(16);
   EmitLdp;
   EmitRet
+end;
+
+procedure EmitReadIntRuntime;
+var
+  skip_ws_lbl, read_digit_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: integer;
+begin
+  { Read integer routine - reads from x19 (input fd), returns in x0 }
+  { Skips whitespace, handles optional minus sign, reads digits }
+  EmitLabel(rt_read_int);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  { x21 = accumulated value, x22 = negative flag }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, #0 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #0 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+
+  { Skip whitespace loop }
+  skip_ws_lbl := NewLabel;
+  EmitLabel(skip_ws_lbl);
+  { Read one char }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  { Check if read failed }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  done_lbl := NewLabel;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Load char into x23 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w23, [sp] }
+  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { Check if space (32), tab (9), newline (10), or carriage return (13) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #32 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(51); writechar(50);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #10 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #13 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(51);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+
+  { Check for minus sign (45) }
+  neg_lbl := NewLabel;
+  not_neg_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #45 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(53);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne not_neg }
+  writechar(76); write(not_neg_lbl);
+  EmitNL;
+  { Set negative flag }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #1 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitBranchLabel(neg_lbl);
+  EmitLabel(not_neg_lbl);
+  { Not a minus, so it should be a digit - process it }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x23, x23, #48 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(56);
+  EmitNL;
+  { Check if valid digit (0-9) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done (unsigned >9) }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Add to accumulated value: x21 = x21 * 10 + x23 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #10 }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x24 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(52);
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x23 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(51);
+  EmitNL;
+
+  { Read digit loop }
+  EmitLabel(neg_lbl);
+  read_digit_lbl := NewLabel;
+  EmitLabel(read_digit_lbl);
+  { Read one char }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  { Check if read failed }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Load char into x23 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w23, [sp] }
+  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { Save original char to x18 for pushback }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, x23 }
+  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(51);
+  EmitNL;
+  { Convert to digit }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x23, x23, #48 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(56);
+  EmitNL;
+  { Check if valid digit (0-9) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Add to accumulated value: x21 = x21 * 10 + x23 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #10 }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x24 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(52);
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x23 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(51);
+  EmitNL;
+  EmitBranchLabel(read_digit_lbl);
+
+  { Done - apply negative if needed }
+  EmitLabel(done_lbl);
+  skip_neg_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz x22, Lxx (skip neg) }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(76); write(skip_neg_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(110); writechar(101); writechar(103); writechar(32);  { neg x21, x21 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49);
+  EmitNL;
+  EmitLabel(skip_neg_lbl);
+  { Move result to x0 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x21 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49);
+  EmitNL;
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitSkipLineRuntime;
+var
+  loop_lbl, done_lbl, check_pb_lbl: integer;
+begin
+  { Skip to end of line routine - reads chars until newline or EOF }
+  { Uses x18 as pushback character from read_int (-1 means none) }
+  EmitLabel(rt_skip_line);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  check_pb_lbl := NewLabel;
+
+  { First check if pushback character is available }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x18, #0 }
+  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt loop (no pushback) }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+  { Check if pushback is newline }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x18, #10 }
+  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  { Clear pushback }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, #-1 }
+  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
+  writechar(35); writechar(45); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq done (was newline, done) }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  EmitLabel(loop_lbl);
+  { Read one char }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  { Check if read failed }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Load char }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w0, [sp] }
+  writechar(119); writechar(48); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { Check if newline (10) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #10 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne loop }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  EmitLabel(done_lbl);
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitFileOpenInit;
+var
+  skip_input_lbl, skip_output_lbl: integer;
+begin
+  { Initialize x19 (input fd) and x20 (output fd) from command line }
+  { On entry: x0 = argc, x1 = argv }
+  { Usage: tpcv2 input.pas output.s }
+  skip_input_lbl := NewLabel;
+  skip_output_lbl := NewLabel;
+
+  { Save argc and argv to callee-saved registers }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, x0 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, x1 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(120); writechar(49);
+  EmitNL;
+
+  { Default: x19 = 0 (stdin), x20 = 1 (stdout), x18 = -1 (no pushback) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x19, #0 }
+  writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x20, #1 }
+  writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, #-1 }
+  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
+  writechar(35); writechar(45); writechar(49);
+  EmitNL;
+
+  { If argc < 2, skip input file open }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x21, #2 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(50);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt Lxx }
+  writechar(76); write(skip_input_lbl);
+  EmitNL;
+
+  { Load argv[1] into x0 (input filename) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #8] }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(56); writechar(93);
+  EmitNL;
+
+  { Open input file: open(filename, O_RDONLY, 0) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, #0 }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #0 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitMovX16(33554437);  { 0x2000005 = open }
+  EmitSvc;
+
+  { Move input fd to x19 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x19, x0 }
+  writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);
+  writechar(120); writechar(48);
+  EmitNL;
+
+  { If argc < 4, skip output file open (need: prog input.pas -o output.s) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x21, #4 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(52);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt Lxx }
+  writechar(76); write(skip_output_lbl);
+  EmitNL;
+
+  { Check if argv[2] == "-o": load argv[2], check first two bytes }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #16] }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(54); writechar(93);
+  EmitNL;
+  { Load first byte, check for '-' (45) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w1, [x0] }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(91); writechar(120); writechar(48); writechar(93);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp w1, #45 }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(53);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne skip }
+  writechar(76); write(skip_output_lbl);
+  EmitNL;
+  { Load second byte, check for 'o' (111) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w1, [x0, #1] }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(93);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp w1, #111 }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(49); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne skip }
+  writechar(76); write(skip_output_lbl);
+  EmitNL;
+
+  { Load argv[3] into x0 (output filename) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #24] }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(50); writechar(52); writechar(93);
+  EmitNL;
+
+  { Open output file: open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644) }
+  { O_WRONLY=1, O_CREAT=0x200, O_TRUNC=0x400 => 0x601 = 1537 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, #1537 }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);
+  EmitNL;
+  { mode 0644 = 420 decimal }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #420 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(50); writechar(48);
+  EmitNL;
+  EmitMovX16(33554437);  { 0x2000005 = open }
+  EmitSvc;
+
+  { Move output fd to x20 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x20, x0 }
+  writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(48);
+  EmitNL;
+
+  EmitLabel(skip_output_lbl);
+  EmitLabel(skip_input_lbl)
 end;
 
 { ----- Parser ----- }
@@ -2233,6 +2783,54 @@ begin
       writechar(35); writechar(49); writechar(54);  { #16 }
       EmitNL
     end
+  end
+  else if tok_type = TOK_READ then
+  begin
+    { read(var) - reads an integer into a variable }
+    NextToken;
+    Expect(TOK_LPAREN);
+    if tok_type <> TOK_IDENT then
+      Error(6);
+    idx := SymLookup;
+    if idx < 0 then
+      Error(3);
+    NextToken;
+    { Call read_int runtime }
+    EmitBL(rt_read_int);
+    { Store result in variable }
+    if sym_level[idx] = scope_level then
+      EmitSturX0(sym_offset[idx])
+    else
+      EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level);
+    Expect(TOK_RPAREN)
+  end
+  else if tok_type = TOK_READLN then
+  begin
+    { readln(var) or readln - reads integer and skips to end of line }
+    NextToken;
+    if tok_type = TOK_LPAREN then
+    begin
+      NextToken;
+      if tok_type <> TOK_RPAREN then
+      begin
+        if tok_type <> TOK_IDENT then
+          Error(6);
+        idx := SymLookup;
+        if idx < 0 then
+          Error(3);
+        NextToken;
+        { Call read_int runtime }
+        EmitBL(rt_read_int);
+        { Store result in variable }
+        if sym_level[idx] = scope_level then
+          EmitSturX0(sym_offset[idx])
+        else
+          EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      end;
+      Expect(TOK_RPAREN)
+    end;
+    { Skip to end of line }
+    EmitBL(rt_skip_line)
   end
   else if tok_type = TOK_IDENT then
   begin
@@ -2937,16 +3535,21 @@ begin
   rt_newline := NewLabel;
   rt_readchar := NewLabel;
   rt_print_char := NewLabel;
+  rt_read_int := NewLabel;
+  rt_skip_line := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
   EmitReadcharRuntime;
   EmitPrintCharRuntime;
+  EmitReadIntRuntime;
+  EmitSkipLineRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
   EmitStp;
   EmitMovFP;
+  EmitFileOpenInit;
 
   ParseBlock;
 
@@ -2974,6 +3577,9 @@ begin
   rt_newline := 0;
   rt_readchar := 0;
   rt_print_char := 0;
+  rt_read_int := 0;
+  rt_skip_line := 0;
+  out_fd := 1;
 
   { Read first character and token }
   NextChar;

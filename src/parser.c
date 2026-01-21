@@ -332,7 +332,7 @@ static int emit_print_int_routine(void) {
     // Print minus
     emit("mov x0, #'-'");
     emit("strb w0, [sp]");
-    emit("mov x0, #1");
+    emit("mov x0, x28");      // fd from x28 (output fd)
     emit("mov x1, sp");
     emit("mov x2, #1");
     emit_write_syscall();
@@ -347,7 +347,7 @@ static int emit_print_int_routine(void) {
 
     emit("mov x0, #'0'");
     emit("strb w0, [sp]");
-    emit("mov x0, #1");
+    emit("mov x0, x28");      // fd from x28 (output fd)
     emit("mov x1, sp");
     emit("mov x2, #1");
     emit_write_syscall();
@@ -391,7 +391,7 @@ static int emit_print_int_routine(void) {
     emit("ldrb w0, [x24]");
     emit("strb w0, [sp, #31]");
 
-    emit("mov x0, #1");
+    emit("mov x0, x28");      // fd from x28 (output fd)
     emit("add x1, sp, #31");
     emit("mov x2, #1");
     emit_write_syscall();
@@ -420,7 +420,7 @@ static int emit_newline_routine(void) {
 
     emit("mov x0, #10");  // newline
     emit("strb w0, [sp]");
-    emit("mov x0, #1");
+    emit("mov x0, x28");      // fd from x28 (output fd)
     emit("mov x1, sp");
     emit("mov x2, #1");
     emit_write_syscall();
@@ -432,7 +432,7 @@ static int emit_newline_routine(void) {
     return label;
 }
 
-// Emit readchar routine - reads one char from stdin, returns in x0 (-1 for EOF)
+// Emit readchar routine - reads one char from x27 (input fd), returns in x0 (-1 for EOF)
 static int emit_readchar_routine(void) {
     int label = new_label();
     emit_raw("\n// Read char routine");
@@ -442,8 +442,8 @@ static int emit_readchar_routine(void) {
     emit("mov x29, sp");
     emit("sub sp, sp, #16");
 
-    // read(0, buf, 1)
-    emit("mov x0, #0");       // fd = stdin
+    // read(x27, buf, 1)
+    emit("mov x0, x27");      // fd from x27 (input file descriptor)
     emit("mov x1, sp");       // buffer on stack
     emit("mov x2, #1");       // read 1 byte
     emit("mov x16, #3");      // read syscall
@@ -469,7 +469,7 @@ static int emit_readchar_routine(void) {
     return label;
 }
 
-// Emit print char routine - prints char in x0
+// Emit print char routine - prints char in x0 to x28 (output fd)
 static int emit_print_char_routine(void) {
     int label = new_label();
     emit_raw("\n// Print char routine");
@@ -480,7 +480,7 @@ static int emit_print_char_routine(void) {
     emit("sub sp, sp, #16");
 
     emit("strb w0, [sp]");
-    emit("mov x0, #1");       // fd = stdout
+    emit("mov x0, x28");      // fd from x28 (output file descriptor)
     emit("mov x1, sp");       // buffer
     emit("mov x2, #1");       // 1 byte
     emit("mov x16, #4");
@@ -492,6 +492,62 @@ static int emit_print_char_routine(void) {
     emit("ret");
 
     return label;
+}
+
+// Emit file initialization code
+// x27 = input fd (default stdin=0)
+// x28 = output fd (default stdout=1)
+// Usage: prog input.pas -o output.s
+static void emit_file_init(void) {
+    int skip_input = new_label();
+    int skip_output = new_label();
+
+    emit_raw("\n// File I/O initialization");
+    // Save argc, argv to callee-saved registers
+    emit("mov x25, x0");      // argc
+    emit("mov x26, x1");      // argv
+
+    // Default: x27 = 0 (stdin), x28 = 1 (stdout)
+    emit("mov x27, #0");
+    emit("mov x28, #1");
+
+    // If argc < 2, skip input file open
+    emit("cmp x25, #2");
+    emit("b.lt L%d", skip_input);
+
+    // Open argv[1] as input file
+    emit("ldr x0, [x26, #8]");    // argv[1]
+    emit("mov x1, #0");           // O_RDONLY
+    emit("mov x2, #0");           // mode
+    emit("mov x16, #5");          // open syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+    emit("mov x27, x0");          // save input fd
+
+    // If argc < 4, skip output file
+    emit("cmp x25, #4");
+    emit("b.lt L%d", skip_output);
+
+    // Check if argv[2] == "-o"
+    emit("ldr x0, [x26, #16]");   // argv[2]
+    emit("ldrb w1, [x0]");
+    emit("cmp w1, #'-'");
+    emit("b.ne L%d", skip_output);
+    emit("ldrb w1, [x0, #1]");
+    emit("cmp w1, #'o'");
+    emit("b.ne L%d", skip_output);
+
+    // Open argv[3] as output file
+    emit("ldr x0, [x26, #24]");   // argv[3]
+    emit("movz x1, #0x601");      // O_WRONLY|O_CREAT|O_TRUNC
+    emit("mov x2, #420");         // mode 0644
+    emit("mov x16, #5");          // open syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+    emit("mov x28, x0");          // save output fd
+
+    emit_label(skip_output);
+    emit_label(skip_input);
 }
 
 // Runtime routine labels
@@ -1655,6 +1711,9 @@ int parser_compile(Parser *p, const char *output_path) {
     // Main program
     emit_raw("\n// Main program");
     emit_label(main_label);
+
+    // Initialize file descriptors from command line
+    emit_file_init();
 
     // Parse program header
     expect(p, TOK_PROGRAM);
