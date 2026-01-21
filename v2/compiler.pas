@@ -104,6 +104,8 @@ var
   sym_offset: array[0..499] of integer;
   sym_const_val: array[0..499] of integer;
   sym_label: array[0..499] of integer;
+  sym_is_var_param: array[0..499] of integer;  { 1 if var parameter (pass by ref) }
+  sym_var_param_flags: array[0..499] of integer;  { bitmap: bit i = 1 if param i is var (for proc/func) }
   sym_count: integer;
 
   { Scope tracking }
@@ -123,6 +125,7 @@ var
   rt_print_char: integer;
   rt_read_int: integer;
   rt_skip_line: integer;
+  rt_print_string: integer;
 
   { Output file descriptor - x20 is used to store it }
   out_fd: integer;
@@ -402,7 +405,11 @@ begin
       if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
         if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
           if (ToLower(tok_str[4]) = 108) and (ToLower(tok_str[5]) = 110) then { ln }
-            tok_type := TOK_READLN
+            tok_type := TOK_READLN;
+      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 116) then { st }
+        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 105) then { ri }
+          if (ToLower(tok_str[4]) = 110) and (ToLower(tok_str[5]) = 103) then { ng }
+            tok_type := TOK_STRING_TYPE
     end;
     if tok_len = 7 then
     begin
@@ -618,6 +625,8 @@ begin
   sym_offset[sym_count] := offset;
   sym_label[sym_count] := 0;
   sym_const_val[sym_count] := 0;
+  sym_is_var_param[sym_count] := 0;
+  sym_var_param_flags[sym_count] := 0;
   sym_count := sym_count + 1;
   SymAdd := sym_count - 1
 end;
@@ -626,6 +635,23 @@ procedure PopScope(level: integer);
 begin
   while (sym_count > 0) and (sym_level[sym_count - 1] >= level) do
     sym_count := sym_count - 1
+end;
+
+{ Check if parameter position i is marked as var in flags bitmap }
+function IsVarParam(flags, i: integer): integer;
+var
+  bit_val, result: integer;
+begin
+  if i = 0 then bit_val := 1
+  else if i = 1 then bit_val := 2
+  else if i = 2 then bit_val := 4
+  else if i = 3 then bit_val := 8
+  else if i = 4 then bit_val := 16
+  else if i = 5 then bit_val := 32
+  else if i = 6 then bit_val := 64
+  else bit_val := 128;
+  result := (flags div bit_val) mod 2;
+  IsVarParam := result
 end;
 
 { ----- Output Helpers ----- }
@@ -1287,6 +1313,54 @@ begin
   end
 end;
 
+{ Emit code to compute address of a variable into x0 }
+{ For use with var parameters - caller passes address }
+procedure EmitVarAddr(var_idx, cur_scope: integer);
+var
+  offset, var_level, i: integer;
+begin
+  offset := sym_offset[var_idx];
+  var_level := sym_level[var_idx];
+
+  if var_level < cur_scope then
+  begin
+    { Variable is in outer scope - follow static chain to x8 }
+    EmitIndent;
+    writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+    writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+    writechar(120); writechar(50); writechar(57);  { x29 }
+    EmitNL;
+    for i := cur_scope downto var_level + 1 do
+    begin
+      EmitIndent;
+      writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+      writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
+      writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+      EmitNL
+    end;
+    { Now x8 has target frame, compute address: add x0, x8, #offset }
+    EmitIndent;
+    writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+    writechar(35);
+    write(offset);
+    EmitNL
+  end
+  else
+  begin
+    { Variable is in current scope - add x0, x29, #offset }
+    EmitIndent;
+    writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+    writechar(35);
+    write(offset);
+    EmitNL
+  end
+end;
+
 { Store to outer scope - follow saved frame pointer chain }
 procedure EmitSturX0Outer(offset, sym_level, cur_level: integer);
 var
@@ -1807,6 +1881,127 @@ begin
   EmitNL;
   EmitSvc;
   EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitPrintStringRuntime;
+var
+  loop_lbl, done_lbl: integer;
+begin
+  { Print string routine - x0 = address of pascal string (length byte + chars) }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitLabel(rt_print_string);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+  { Save base address to [x29, #-8] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  { Load length from [x0] into x1 and save to [x29, #-16] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  { Initialize index to 0 at [x29, #-24] }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { Loop label }
+  EmitLabel(loop_lbl);
+  { Load index and length, compare }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+  { b.ge done_lbl }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Load char at [base + index + 1] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  { Call print_char }
+  EmitBL(rt_print_char);
+  { Increment index }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { Branch back to loop }
+  EmitBranchLabel(loop_lbl);
+  { Done label }
+  EmitLabel(done_lbl);
+  EmitAddSP(32);
   EmitLdp;
   EmitRet
 end;
@@ -2356,6 +2551,7 @@ end;
 procedure ParseFactor;
 var
   idx, arg_count, i: integer;
+  var_flags, var_arg_idx: integer;
 begin
   if tok_type = TOK_INTEGER then
   begin
@@ -2477,16 +2673,27 @@ begin
         end
         else
         begin
+          { Load variable value - check for var param }
           if sym_level[idx] < scope_level then
             EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
           else
-            EmitLdurX0(sym_offset[idx])
+            EmitLdurX0(sym_offset[idx]);
+          { If var param, x0 now contains address - dereference it }
+          if sym_is_var_param[idx] = 1 then
+          begin
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end
         end
       end
       else if sym_kind[idx] = SYM_FUNCTION then
       begin
         { Function call - pass args in x0-x7 }
         arg_count := 0;
+        var_flags := sym_var_param_flags[idx];
         if tok_type = TOK_LPAREN then
         begin
           NextToken;
@@ -2495,7 +2702,65 @@ begin
             { Evaluate all args and push to stack }
             repeat
               if tok_type = TOK_COMMA then NextToken;
-              ParseExpression;
+              { Check if this is a var parameter }
+              if IsVarParam(var_flags, arg_count) = 1 then
+              begin
+                { Var param - pass address of variable }
+                if tok_type <> TOK_IDENT then
+                  Error(6);  { var param requires variable }
+                var_arg_idx := SymLookup;
+                if var_arg_idx < 0 then
+                  Error(3);
+                NextToken;
+                { Check for array element - pass address of element }
+                if (sym_type[var_arg_idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
+                begin
+                  NextToken;  { consume '[' }
+                  ParseExpression;  { index in x0 }
+                  Expect(TOK_RBRACKET);
+                  { Compute element address }
+                  EmitPushX0;
+                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitPopX1;
+                  { x0 = x1 - x0 = index - low_bound }
+                  EmitIndent;
+                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+                  writechar(120); writechar(48);  { x0 }
+                  EmitNL;
+                  { Multiply by 8 using lsl #3 }
+                  EmitIndent;
+                  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(35); writechar(51);  { #3 }
+                  EmitNL;
+                  { Get base address and subtract element offset }
+                  if sym_level[var_arg_idx] < scope_level then
+                  begin
+                    EmitFollowChain(sym_level[var_arg_idx], scope_level);
+                    EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
+                  end
+                  else
+                    EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
+                  { Address = base - element_offset }
+                  EmitIndent;
+                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+                  writechar(120); writechar(48);  { x0 }
+                  EmitNL
+                end
+                else
+                  { Simple variable - emit address }
+                  EmitVarAddr(var_arg_idx, scope_level)
+              end
+              else
+              begin
+                { Value param - evaluate expression }
+                ParseExpression
+              end;
               EmitPushX0;
               arg_count := arg_count + 1
             until tok_type <> TOK_COMMA
@@ -2633,6 +2898,7 @@ end;
 procedure ParseStatement;
 var
   idx, lbl1, lbl2, lbl3, arg_count, i: integer;
+  var_flags, arg_idx, var_arg_idx: integer;
 begin
   if tok_type = TOK_BEGIN then
   begin
@@ -2852,7 +3118,7 @@ begin
           repeat
             if tok_type = TOK_STRING then
             begin
-              { Print string character by character }
+              { Print string literal character by character }
               idx := 0;
               while idx < tok_len do
               begin
@@ -2861,6 +3127,24 @@ begin
                 idx := idx + 1
               end;
               NextToken
+            end
+            else if tok_type = TOK_IDENT then
+            begin
+              { Check if it's a string variable }
+              idx := SymLookup;
+              if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+              begin
+                { String variable - compute address and call print_string }
+                NextToken;
+                EmitVarAddr(idx, scope_level);
+                EmitBL(rt_print_string)
+              end
+              else
+              begin
+                { Not a string - parse as expression and print as int }
+                ParseExpression;
+                EmitBL(rt_print_int)
+              end
             end
             else
             begin
@@ -2886,7 +3170,7 @@ begin
           repeat
             if tok_type = TOK_STRING then
             begin
-              { Print string character by character }
+              { Print string literal character by character }
               idx := 0;
               while idx < tok_len do
               begin
@@ -2895,6 +3179,24 @@ begin
                 idx := idx + 1
               end;
               NextToken
+            end
+            else if tok_type = TOK_IDENT then
+            begin
+              { Check if it's a string variable }
+              idx := SymLookup;
+              if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+              begin
+                { String variable - compute address and call print_string }
+                NextToken;
+                EmitVarAddr(idx, scope_level);
+                EmitBL(rt_print_string)
+              end
+              else
+              begin
+                { Not a string - parse as expression and print as int }
+                ParseExpression;
+                EmitBL(rt_print_int)
+              end
             end
             else
             begin
@@ -2957,6 +3259,7 @@ begin
       begin
         { Procedure call - pass args in x0-x7 }
         arg_count := 0;
+        var_flags := sym_var_param_flags[idx];
         if tok_type = TOK_LPAREN then
         begin
           NextToken;
@@ -2965,7 +3268,65 @@ begin
             { Evaluate all args and push to stack }
             repeat
               if tok_type = TOK_COMMA then NextToken;
-              ParseExpression;
+              { Check if this is a var parameter }
+              if IsVarParam(var_flags, arg_count) = 1 then
+              begin
+                { Var param - pass address of variable }
+                if tok_type <> TOK_IDENT then
+                  Error(6);  { var param requires variable }
+                var_arg_idx := SymLookup;
+                if var_arg_idx < 0 then
+                  Error(3);
+                NextToken;
+                { Check for array element - pass address of element }
+                if (sym_type[var_arg_idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
+                begin
+                  NextToken;  { consume '[' }
+                  ParseExpression;  { index in x0 }
+                  Expect(TOK_RBRACKET);
+                  { Compute element address }
+                  EmitPushX0;
+                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitPopX1;
+                  { x0 = x1 - x0 = index - low_bound }
+                  EmitIndent;
+                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+                  writechar(120); writechar(48);  { x0 }
+                  EmitNL;
+                  { Multiply by 8 using lsl #3 }
+                  EmitIndent;
+                  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(35); writechar(51);  { #3 }
+                  EmitNL;
+                  { Get base address and subtract element offset }
+                  if sym_level[var_arg_idx] < scope_level then
+                  begin
+                    EmitFollowChain(sym_level[var_arg_idx], scope_level);
+                    EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
+                  end
+                  else
+                    EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
+                  { Address = base - element_offset }
+                  EmitIndent;
+                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+                  writechar(120); writechar(48);  { x0 }
+                  EmitNL
+                end
+                else
+                  { Simple variable - emit address }
+                  EmitVarAddr(var_arg_idx, scope_level)
+              end
+              else
+              begin
+                { Value param - evaluate expression }
+                ParseExpression
+              end;
               EmitPushX0;
               arg_count := arg_count + 1
             until tok_type <> TOK_COMMA
@@ -3056,15 +3417,89 @@ begin
           writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
           EmitNL
         end
+        else if sym_type[idx] = TYPE_STRING then
+        begin
+          { String assignment }
+          Expect(TOK_ASSIGN);
+          if tok_type <> TOK_STRING then
+            Error(12);  { expected string literal }
+          { Compute base address of string variable into x8 }
+          if sym_level[idx] < scope_level then
+          begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            { add x8, x8, #offset }
+            EmitIndent;
+            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+            writechar(35);
+            write(sym_offset[idx]);
+            EmitNL
+          end
+          else
+          begin
+            { add x8, x29, #offset }
+            EmitIndent;
+            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+            writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+            writechar(35);
+            write(sym_offset[idx]);
+            EmitNL
+          end;
+          { Store length at [x8] }
+          EmitMovX0(tok_len);
+          EmitIndent;
+          writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+          writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+          writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+          EmitNL;
+          { Store each character at [x8+1], [x8+2], etc }
+          for i := 0 to tok_len - 1 do
+          begin
+            EmitMovX0(tok_str[i]);
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+            writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+            writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
+            writechar(35);
+            write(i + 1);
+            writechar(93);  { ] }
+            EmitNL
+          end;
+          NextToken
+        end
         else
         begin
           { Simple assignment }
           Expect(TOK_ASSIGN);
           ParseExpression;
-          if sym_level[idx] < scope_level then
-            EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          { Check if this is a var param - need to dereference address }
+          if sym_is_var_param[idx] = 1 then
+          begin
+            { x0 has the value, need to store to address in var param }
+            EmitPushX0;  { save value }
+            { Load the address stored in the var param }
+            if sym_level[idx] < scope_level then
+              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitLdurX0(sym_offset[idx]);
+            { x0 now has the address, pop value to x1 }
+            EmitPopX1;
+            { Store x1 to [x0] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end
           else
-            EmitSturX0(sym_offset[idx])
+          begin
+            if sym_level[idx] < scope_level then
+              EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitSturX0(sym_offset[idx])
+          end
         end
       end
       else if sym_kind[idx] = SYM_FUNCTION then
@@ -3147,6 +3582,15 @@ begin
       sym_type[first_idx] := TYPE_ARRAY;
       sym_const_val[first_idx] := lo_bound;
       sym_label[first_idx] := arr_size
+    end
+    else if tok_type = TOK_STRING_TYPE then
+    begin
+      { String type: 256 bytes (1 length byte + 255 char bytes) }
+      NextToken;
+      { Adjust local_offset: we already allocated 8 bytes, need 248 more }
+      local_offset := local_offset - 248;
+      sym_type[first_idx] := TYPE_STRING;
+      sym_label[first_idx] := 256  { Store size for reference }
     end
     else
       Error(9);
@@ -3244,6 +3688,7 @@ var
   saved_level, saved_offset: integer;
   param_count, param_idx, i: integer;
   param_indices: array[0..7] of integer;
+  is_var_group: integer;
 begin
   NextToken;  { consume 'procedure' }
 
@@ -3280,15 +3725,29 @@ begin
     if tok_type <> TOK_RPAREN then
     begin
       repeat
-        if tok_type = TOK_COMMA then NextToken;
+        if tok_type = TOK_SEMICOLON then NextToken;
+        { Check for 'var' keyword - applies to all idents in this group }
+        is_var_group := 0;
+        if tok_type = TOK_VAR then
+        begin
+          is_var_group := 1;
+          NextToken
+        end;
+        { Parse identifier list for this parameter group }
         if tok_type <> TOK_IDENT then Error(11);
-        { Add parameter as local variable }
-        local_offset := local_offset - 8;
-        param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-        if param_count < 8 then
-          param_indices[param_count] := param_idx;
-        param_count := param_count + 1;
-        NextToken;
+        repeat
+          if tok_type = TOK_COMMA then NextToken;
+          if tok_type <> TOK_IDENT then Error(11);
+          { Add parameter }
+          local_offset := local_offset - 8;
+          param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
+          if is_var_group = 1 then
+            sym_is_var_param[param_idx] := 1;
+          if param_count < 8 then
+            param_indices[param_count] := param_idx;
+          param_count := param_count + 1;
+          NextToken
+        until tok_type <> TOK_COMMA;
         { Skip type annotation }
         if tok_type = TOK_COLON then
         begin
@@ -3297,10 +3756,25 @@ begin
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
         end
-      until tok_type <> TOK_COMMA
+      until tok_type <> TOK_SEMICOLON
     end;
     Expect(TOK_RPAREN)
   end;
+
+  { Build var-param bitmap and store on procedure symbol }
+  sym_var_param_flags[idx] := 0;
+  for i := 0 to param_count - 1 do
+    if sym_is_var_param[param_indices[i]] = 1 then
+    begin
+      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    end;
 
   Expect(TOK_SEMICOLON);
 
@@ -3375,6 +3849,7 @@ var
   saved_level, saved_offset: integer;
   param_count, param_idx, i: integer;
   param_indices: array[0..7] of integer;
+  is_var_group: integer;
 begin
   NextToken;  { consume 'function' }
 
@@ -3411,15 +3886,29 @@ begin
     if tok_type <> TOK_RPAREN then
     begin
       repeat
-        if tok_type = TOK_COMMA then NextToken;
+        if tok_type = TOK_SEMICOLON then NextToken;
+        { Check for 'var' keyword - applies to all idents in this group }
+        is_var_group := 0;
+        if tok_type = TOK_VAR then
+        begin
+          is_var_group := 1;
+          NextToken
+        end;
+        { Parse identifier list for this parameter group }
         if tok_type <> TOK_IDENT then Error(11);
-        { Add parameter as local variable }
-        local_offset := local_offset - 8;
-        param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-        if param_count < 8 then
-          param_indices[param_count] := param_idx;
-        param_count := param_count + 1;
-        NextToken;
+        repeat
+          if tok_type = TOK_COMMA then NextToken;
+          if tok_type <> TOK_IDENT then Error(11);
+          { Add parameter }
+          local_offset := local_offset - 8;
+          param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
+          if is_var_group = 1 then
+            sym_is_var_param[param_idx] := 1;
+          if param_count < 8 then
+            param_indices[param_count] := param_idx;
+          param_count := param_count + 1;
+          NextToken
+        until tok_type <> TOK_COMMA;
         { Skip type annotation }
         if tok_type = TOK_COLON then
         begin
@@ -3428,10 +3917,25 @@ begin
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
         end
-      until tok_type <> TOK_COMMA
+      until tok_type <> TOK_SEMICOLON
     end;
     Expect(TOK_RPAREN)
   end;
+
+  { Build var-param bitmap and store on function symbol }
+  sym_var_param_flags[idx] := 0;
+  for i := 0 to param_count - 1 do
+    if sym_is_var_param[param_indices[i]] = 1 then
+    begin
+      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    end;
 
   { Parse return type }
   Expect(TOK_COLON);
@@ -3537,6 +4041,7 @@ begin
   rt_print_char := NewLabel;
   rt_read_int := NewLabel;
   rt_skip_line := NewLabel;
+  rt_print_string := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -3544,6 +4049,7 @@ begin
   EmitPrintCharRuntime;
   EmitReadIntRuntime;
   EmitSkipLineRuntime;
+  EmitPrintStringRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
@@ -3579,6 +4085,7 @@ begin
   rt_print_char := 0;
   rt_read_int := 0;
   rt_skip_line := 0;
+  rt_print_string := 0;
   out_fd := 1;
 
   { Read first character and token }
