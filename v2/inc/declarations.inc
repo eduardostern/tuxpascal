@@ -2,7 +2,7 @@
 
 procedure ParseVarDeclarations;
 var
-  idx, first_idx, arr_size, lo_bound, hi_bound, j: integer;
+  idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: integer;
 begin
   NextToken;  { consume 'var' }
   while tok_type = TOK_IDENT do
@@ -59,28 +59,56 @@ begin
       { Parse element type }
       if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
          (tok_type = TOK_BOOLEAN_TYPE) then
-        NextToken
+      begin
+        NextToken;
+        arr_size := (hi_bound - lo_bound + 1) * 8;
+        local_offset := local_offset - (arr_size - 8);
+        sym_type[first_idx] := TYPE_ARRAY;
+        sym_const_val[first_idx] := lo_bound;
+        sym_label[first_idx] := arr_size;
+        sym_var_param_flags[first_idx] := 0  { 0 = basic type element }
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { Array of record type }
+        base_idx := SymLookup;
+        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and (sym_type[base_idx] = TYPE_RECORD) then
+        begin
+          arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
+          local_offset := local_offset - (arr_size - 8);
+          sym_type[first_idx] := TYPE_ARRAY;
+          sym_const_val[first_idx] := lo_bound;
+          sym_label[first_idx] := arr_size;
+          sym_var_param_flags[first_idx] := base_idx + 1;  { record type index + 1 (0 means basic) }
+          NextToken
+        end
+        else
+          Error(9)
+      end
       else
-        Error(9);
-      { Calculate array size and adjust offset }
-      { Each element is 8 bytes for integer, but we'll use simpler 1-byte for char }
-      { For now, use 8 bytes per element for simplicity }
-      arr_size := (hi_bound - lo_bound + 1) * 8;
-      { Adjust local_offset: we already allocated 8 bytes, need (arr_size - 8) more }
-      local_offset := local_offset - (arr_size - 8);
-      { Store array info: use sym_const_val for low bound, sym_label for size }
-      sym_type[first_idx] := TYPE_ARRAY;
-      sym_const_val[first_idx] := lo_bound;
-      sym_label[first_idx] := arr_size
+        Error(9)
     end
     else if tok_type = TOK_STRING_TYPE then
     begin
       { String type: 256 bytes (1 length byte + 255 char bytes) }
       NextToken;
-      { Adjust local_offset: we already allocated 8 bytes, need 248 more }
-      local_offset := local_offset - 248;
-      sym_type[first_idx] := TYPE_STRING;
-      sym_label[first_idx] := 256  { Store size for reference }
+      { Handle all variables in the list }
+      for j := first_idx to idx do
+      begin
+        sym_type[j] := TYPE_STRING;
+        sym_label[j] := 256;  { Store size for reference }
+        { Adjust offset: already allocated 8 bytes, need 248 more }
+        if j = first_idx then
+        begin
+          local_offset := local_offset - 248;
+          sym_offset[j] := local_offset  { Update offset to start of 256-byte area }
+        end
+        else
+        begin
+          local_offset := local_offset - 256;
+          sym_offset[j] := local_offset
+        end
+      end
     end
     else if tok_type = TOK_CARET then
     begin
@@ -121,6 +149,23 @@ begin
           sym_const_val[j] := TYPE_REAL
         end;
         NextToken
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { Pointer to record type: ^RecordType }
+        arr_size := SymLookup;  { reuse arr_size as type_idx }
+        if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
+        begin
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_POINTER;
+            sym_const_val[j] := TYPE_RECORD;
+            sym_label[j] := arr_size  { store record type index }
+          end;
+          NextToken
+        end
+        else
+          Error(14)  { expected type identifier }
       end
       else
         Error(14)  { expected type identifier }
@@ -319,7 +364,7 @@ procedure ParseProcedureDeclaration;
 var
   idx, proc_label: integer;
   saved_level, saved_offset: integer;
-  param_count, param_idx, i: integer;
+  param_count, param_idx, i, j: integer;
   param_indices: array[0..7] of integer;
   is_var_group: integer;
 begin
@@ -394,6 +439,20 @@ begin
             sym_type[param_idx] := TYPE_REAL;
             NextToken
           end
+          else if tok_type = TOK_STRING_TYPE then
+          begin
+            { String parameter }
+            sym_type[param_idx] := TYPE_STRING;
+            if is_var_group = 0 then
+            begin
+              { Value parameter - need 256 bytes total, already have 8, need 248 more }
+              local_offset := local_offset - 248;
+              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-in }
+            end;
+            { var string params keep the 8-byte slot for address }
+            NextToken
+          end
           else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
@@ -442,20 +501,53 @@ begin
   { Allocate space for parameters and copy from registers }
   if param_count > 0 then
   begin
-    EmitSubSP(((param_count * 8 + 15) div 16) * 16);
+    { Allocate based on actual space needed (local_offset tracks it) }
+    { param_space = -(local_offset) - 8 (static link already counted separately) }
+    j := 0 - local_offset - 8;
+    j := ((j + 15) div 16) * 16;  { Align to 16 }
+    if j > 0 then
+      EmitSubSP(j);
     for i := 0 to param_count - 1 do
     begin
       if i < 8 then
       begin
-        { Store xi to [x29, #offset] }
-        EmitIndent;
-        writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-        writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-        writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-        writechar(44); writechar(32); writechar(35);  { , # }
-        write(sym_offset[param_indices[i]]);
-        writechar(93);  { ] }
-        EmitNL
+        { Check if this is a string value parameter (needs copy) }
+        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
+        begin
+          { String value param: xi has address of source, copy to local storage }
+          { x9 = source (passed address), compute x8 = dest using large offset handling }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+          writechar(120); writechar(48 + i);  { xi }
+          EmitNL;
+          { Compute dest address: x8 = x29 - offset (handle large negative offset) }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+          writechar(35);
+          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          EmitNL;
+          EmitIndent;
+          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+          writechar(120); writechar(56);  { x8 }
+          EmitNL;
+          EmitBL(rt_str_copy)
+        end
+        else
+        begin
+          { Normal param: store register to stack }
+          EmitIndent;
+          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
+          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
+          writechar(44); writechar(32); writechar(35);  { , # }
+          write(sym_offset[param_indices[i]]);
+          writechar(93);  { ] }
+          EmitNL
+        end
       end
     end
   end;
@@ -489,7 +581,7 @@ procedure ParseFunctionDeclaration;
 var
   idx, func_label: integer;
   saved_level, saved_offset: integer;
-  param_count, param_idx, i: integer;
+  param_count, param_idx, i, j: integer;
   param_indices: array[0..7] of integer;
   is_var_group: integer;
 begin
@@ -560,6 +652,20 @@ begin
             sym_type[param_idx] := TYPE_REAL;
             NextToken
           end
+          else if tok_type = TOK_STRING_TYPE then
+          begin
+            { String parameter }
+            sym_type[param_idx] := TYPE_STRING;
+            if is_var_group = 0 then
+            begin
+              { Value parameter - need 256 bytes total, already have 8, need 248 more }
+              local_offset := local_offset - 248;
+              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-in }
+            end;
+            { var string params keep the 8-byte slot for address }
+            NextToken
+          end
           else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
@@ -594,6 +700,11 @@ begin
     sym_type[idx] := TYPE_REAL;
     NextToken
   end
+  else if tok_type = TOK_STRING_TYPE then
+  begin
+    sym_type[idx] := TYPE_STRING;
+    NextToken
+  end
   else
     Error(9);
 
@@ -621,20 +732,53 @@ begin
   { Allocate space for parameters and copy from registers }
   if param_count > 0 then
   begin
-    EmitSubSP(((param_count * 8 + 15) div 16) * 16);
+    { Allocate based on actual space needed (local_offset tracks it) }
+    { For functions, local_offset includes return value at -16, params start at -24 }
+    j := 0 - local_offset - 16;  { -16 for return value slot }
+    j := ((j + 15) div 16) * 16;  { Align to 16 }
+    if j > 0 then
+      EmitSubSP(j);
     for i := 0 to param_count - 1 do
     begin
       if i < 8 then
       begin
-        { Store xi to [x29, #offset] }
-        EmitIndent;
-        writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-        writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-        writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-        writechar(44); writechar(32); writechar(35);  { , # }
-        write(sym_offset[param_indices[i]]);
-        writechar(93);  { ] }
-        EmitNL
+        { Check if this is a string value parameter (needs copy) }
+        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
+        begin
+          { String value param: xi has address of source, copy to local storage }
+          { x9 = source (passed address), compute x8 = dest using large offset handling }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+          writechar(120); writechar(48 + i);  { xi }
+          EmitNL;
+          { Compute dest address: x8 = x29 - offset (handle large negative offset) }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+          writechar(35);
+          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          EmitNL;
+          EmitIndent;
+          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+          writechar(120); writechar(56);  { x8 }
+          EmitNL;
+          EmitBL(rt_str_copy)
+        end
+        else
+        begin
+          { Normal param: store register to stack }
+          EmitIndent;
+          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
+          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
+          writechar(44); writechar(32); writechar(35);  { , # }
+          write(sym_offset[param_indices[i]]);
+          writechar(93);  { ] }
+          EmitNL
+        end
       end
     end
   end;
@@ -699,6 +843,19 @@ begin
   rt_print_string := NewLabel;
   rt_print_real := NewLabel;
   rt_read_real := NewLabel;
+  rt_heap_init := NewLabel;
+  rt_str_copy := NewLabel;
+  rt_str_compare := NewLabel;
+  rt_str_concat := NewLabel;
+  rt_str_cmp := NewLabel;
+  rt_str_pos := NewLabel;
+  rt_str_delete := NewLabel;
+  rt_str_insert := NewLabel;
+  rt_int_to_str := NewLabel;
+  rt_str_to_int := NewLabel;
+  rt_str_ltrim := NewLabel;
+  rt_str_rtrim := NewLabel;
+  rt_str_trim := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -709,12 +866,26 @@ begin
   EmitPrintStringRuntime;
   EmitPrintRealRuntime;
   EmitReadRealRuntime;
+  EmitHeapInitRuntime;
+  EmitStrCopyRuntime;
+  EmitStrCompareRuntime;
+  EmitStrConcatRuntime;
+  EmitStrCmpRuntime;
+  EmitStrPosRuntime;
+  EmitStrDeleteRuntime;
+  EmitStrInsertRuntime;
+  EmitIntToStrRuntime;
+  EmitStrToIntRuntime;
+  EmitStrLtrimRuntime;
+  EmitStrRtrimRuntime;
+  EmitStrTrimRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
   EmitStp;
   EmitMovFP;
   EmitFileOpenInit;
+  EmitBL(rt_heap_init);
 
   ParseBlock;
 
@@ -747,8 +918,16 @@ begin
   rt_print_string := 0;
   rt_print_real := 0;
   rt_read_real := 0;
+  rt_heap_init := 0;
+  rt_str_copy := 0;
+  rt_str_compare := 0;
+  rt_str_concat := 0;
+  string_temp_idx := 0;
   out_fd := 1;
   pushback_ch := -1;
   expr_type := TYPE_INTEGER;
+  ptr_base_type := TYPE_INTEGER;
   field_count := 0;
+  with_rec_idx := -1;
+  with_rec_type := 0;
 

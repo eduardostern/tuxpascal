@@ -54,7 +54,9 @@ Hello, World!
 | **Statements** | `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `begin`/`end` |
 | **Declarations** | `program`, `const`, `type`, `var`, `procedure`, `function`, `forward` |
 | **Operators** | `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@`, `^` |
-| **I/O** | `write`, `writeln`, `read`, `readln` |
+| **I/O** | `write`, `writeln`, `read`, `readln`, `readchar`, `writechar` |
+| **String Ops** | `length`, `copy`, `concat`, `+`, `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim` |
+| **Utilities** | `abs`, `odd`, `sqr`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`, `halt` |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
 | **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
 

@@ -71,6 +71,8 @@ const
   TOK_NIL = 135;     { nil keyword }
   TOK_RECORD = 136;  { record keyword }
   TOK_TYPE_KW = 137;    { type keyword }
+  TOK_CASE = 138;    { case keyword }
+  TOK_WITH = 139;    { with keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -151,9 +153,36 @@ var
   { Expression type tracking }
   expr_type: integer;
 
+  { Pointer base type tracking for arithmetic }
+  ptr_base_type: integer;
+
   { Output file descriptor - x20 is used to store it }
   out_fd: integer;
 
   { Error flag }
   had_error: integer;
+
+  { WITH statement tracking }
+  with_rec_idx: integer;    { symbol index of active with record, -1 if none }
+  with_rec_type: integer;   { type index for field lookup }
+
+  { Runtime labels for heap }
+  rt_heap_init: integer;
+
+  { Runtime labels for string operations }
+  rt_str_copy: integer;
+  rt_str_compare: integer;
+  rt_str_concat: integer;
+  rt_str_cmp: integer;  { lexicographic compare: returns -1, 0, or 1 }
+  rt_str_pos: integer;  { find substring: returns position or 0 }
+  rt_str_delete: integer;  { delete chars from string in place }
+  rt_str_insert: integer;  { insert string into another }
+  rt_int_to_str: integer;  { convert integer to string }
+  rt_str_to_int: integer;  { convert string to integer with error code }
+  rt_str_ltrim: integer;  { trim leading whitespace }
+  rt_str_rtrim: integer;  { trim trailing whitespace }
+  rt_str_trim: integer;   { trim both leading and trailing whitespace }
+
+  { String temp index (0-3) for copy/concat results }
+  string_temp_idx: integer;
 

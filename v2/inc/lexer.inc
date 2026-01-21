@@ -250,7 +250,13 @@ begin
           tok_type := TOK_REAL_TYPE;
       if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 121) then { ty }
         if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
-          tok_type := TOK_TYPE_KW
+          tok_type := TOK_TYPE_KW;
+      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 97) then { ca }
+        if (ToLower(tok_str[2]) = 115) and (ToLower(tok_str[3]) = 101) then { se }
+          tok_type := TOK_CASE;
+      if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 105) then { wi }
+        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 104) then { th }
+          tok_type := TOK_WITH
     end;
     if tok_len = 9 then
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }

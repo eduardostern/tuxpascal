@@ -116,13 +116,17 @@ The parser emits ARM64 assembly directly to a file as it parses. Key patterns:
 
 **Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `record`
 
-**Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `begin`/`end`
+**Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`
 
 **Declarations:** `program`, `const`, `type`, `var`, `procedure`, `function`, `forward`
 
-**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@` (address-of), `^` (dereference)
+**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@` (address-of), `^` (dereference), pointer arithmetic (`p + n`, `p - n`, `p1 - p2`)
 
-**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `nil` (v2 only: `read`, `readln`, `readchar`, `writechar`)
+**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt` (v2 only: `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`)
+
+**String Functions:** `length`, `copy`, `concat`, `+` (concatenation), `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim`
+
+**Utility Functions:** `abs`, `odd`, `sqr`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`
 
 **Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
 
@@ -130,15 +134,12 @@ The parser emits ARM64 assembly directly to a file as it parses. Key patterns:
 
 ## Not Yet Implemented
 
-- String operations beyond literals
-- Case statement
-- Pointer arithmetic (`p + 1`)
-- `new()` and `dispose()` for heap allocation
-- Pointers to arrays, records, or other pointers
-- Nested records and arrays of records
-- WITH statement for records
+- Pointers to arrays
+- Pointers to pointers
+- Nested records (record fields that are themselves records)
+- Memory deallocation (`dispose` is a no-op; uses bump allocator)
 
-Note: `read`/`readln` are implemented in v2 only, not in the v1 bootstrap compiler.
+Note: `read`/`readln`/`new`/`dispose` are implemented in v2 only, not in the v1 bootstrap compiler.
 
 ## Include Directive
 

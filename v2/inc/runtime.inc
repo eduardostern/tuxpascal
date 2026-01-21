@@ -1564,3 +1564,2388 @@ begin
   EmitLabel(skip_input_lbl)
 end;
 
+procedure EmitHeapInitRuntime;
+begin
+  { Initialize heap using mmap syscall }
+  { Allocates 1MB of memory for heap, stores base in x21 }
+  EmitLabel(rt_heap_init);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+
+  { mov x0, #0  - addr = NULL (let kernel choose) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { mov x1, #1048576  - length = 1MB (0x100000) }
+  { Need movz + movk since 1048576 > 65535 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  writechar(44); writechar(32);
+  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  { mov x2, #3  - PROT_READ | PROT_WRITE }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(51);  { #3 }
+  EmitNL;
+
+  { mov x3, #4098  - MAP_PRIVATE | MAP_ANON (0x1002) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(52); writechar(48); writechar(57); writechar(56);  { #4098 }
+  EmitNL;
+
+  { mov x4, #-1  - fd = -1 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(110); writechar(32);  { movn }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { mov x5, #0  - offset = 0 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { mmap syscall: 0x20000C5 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+  writechar(35); writechar(48); writechar(120); writechar(67); writechar(53);  { #0xC5 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+  writechar(44); writechar(32);
+  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  EmitSvc;
+
+  { mov x21, x0  - store heap base in x21 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrCopyRuntime;
+var
+  loop_lbl, done_lbl: integer;
+begin
+  { Copy string from x1 (source) to x0 (dest) }
+  { Pascal strings: byte 0 = length, bytes 1..length = chars }
+  EmitLabel(rt_str_copy);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Save dest and source addresses }
+  { stur x0, [x29, #-8] - dest }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  { stur x1, [x29, #-16] - source }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { Load length from source [x1] into x2 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+  { Store length to dest [x0] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  { Save length to [x29, #-24] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { Initialize index to 0 }
+  EmitMovX0(0);
+  EmitSturX0(-32);
+
+  { Loop: copy bytes 1..length }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitLabel(loop_lbl);
+
+  { Load index }
+  EmitLdurX0(-32);
+  { Load length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { cmp x0, x2 - if index >= length, done }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  { b.ge done }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { x3 = index + 1 (offset into string) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load source char: ldrb w4, [x1, x3] where x1 = source }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+
+  { Store to dest char: strb w4, [x5, x3] where x5 = dest }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(53); writechar(44); writechar(32);  { [x5, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+
+  { Increment index }
+  EmitLdurX0(-32);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-32);
+  EmitBranchLabel(loop_lbl);
+
+  EmitLabel(done_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrCompareRuntime;
+var
+  loop_lbl, not_equal_lbl, done_lbl: integer;
+begin
+  { Compare strings at x0 and x1, return 1 if equal, 0 if not equal in x0 }
+  EmitLabel(rt_str_compare);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Save addresses }
+  EmitSturX0(-8);  { string 1 }
+  { stur x1, [x29, #-16] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { Load lengths }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  { Compare lengths first }
+  not_equal_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  { b.ne not_equal }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(not_equal_lbl);
+  EmitNL;
+
+  { Save length to [x29, #-24] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { Initialize index to 0 }
+  EmitMovX0(0);
+  EmitSturX0(-32);
+
+  { Loop: compare each byte }
+  loop_lbl := NewLabel;
+  EmitLabel(loop_lbl);
+
+  { Load index }
+  EmitLdurX0(-32);
+  { Load length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { cmp x0, x2 - if index >= length, all equal }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  { b.ge equal (return 1) }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { x3 = index + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load chars from both strings }
+  EmitLdurX0(-8);  { string 1 addr }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+
+  { Compare chars }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(53);  { x5 }
+  EmitNL;
+  { b.ne not_equal }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(not_equal_lbl);
+  EmitNL;
+
+  { Increment index }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-32);
+  EmitBranchLabel(loop_lbl);
+
+  { Equal - return 1 }
+  EmitLabel(done_lbl);
+  EmitMovX0(1);
+  EmitBranchLabel(label_count);
+
+  { Not equal - return 0 }
+  EmitLabel(not_equal_lbl);
+  EmitMovX0(0);
+
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrConcatRuntime;
+var
+  loop1_lbl, loop2_lbl, done_lbl: integer;
+begin
+  { Concatenate strings: x0 = dest, x1 = string1, x2 = string2 }
+  { Result length = len1 + len2 (capped at 255) }
+  EmitLabel(rt_str_concat);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  { Save addresses }
+  EmitSturX0(-8);   { dest }
+  { stur x1, [x29, #-16] - string 1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  { stur x2, [x29, #-24] - string 2 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { Load lengths }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] - len1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] - len2 }
+  EmitNL;
+
+  { Calculate total length (capped at 255) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(52);  { x4 }
+  EmitNL;
+  { cmp x5, #255 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
+  EmitNL;
+  { csel x5, x5, x6, le - if x5 <= 255, keep it; else use 255 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(115); writechar(101); writechar(108); writechar(32);  { csel }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(108); writechar(101);  { le }
+  EmitNL;
+
+  { Store total length to dest }
+  EmitLdurX0(-8);  { dest }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+
+  { Save len1 to [x29, #-32] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+
+  { Initialize index to 0 }
+  EmitMovX0(0);
+  EmitSturX0(-40);
+
+  { Loop 1: copy string1 chars }
+  loop1_lbl := NewLabel;
+  loop2_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitLabel(loop1_lbl);
+
+  { Load index and len1 }
+  EmitLdurX0(-40);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  { cmp x0, x3 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  { b.ge loop2 }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(loop2_lbl);
+  EmitNL;
+
+  { x7 = index + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load source1 char }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { Store to dest }
+  EmitLdurX0(-8);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { Increment index }
+  EmitLdurX0(-40);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-40);
+  EmitBranchLabel(loop1_lbl);
+
+  { Loop 2: copy string2 chars }
+  EmitLabel(loop2_lbl);
+  { Reset index to 0 for string2 }
+  EmitMovX0(0);
+  EmitSturX0(-40);
+
+  { Load len2 into x4 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] - string2 addr }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
+  EmitNL;
+  { Save len2 to [x29, #-48] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+
+  { Loop 2 body label }
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+
+  { Load index and len2 }
+  EmitLdurX0(-40);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+  { cmp x0, x4 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(52);  { x4 }
+  EmitNL;
+  { b.ge done }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { x7 = index + 1 (source offset) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load source2 char }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { Calculate dest offset: len1 + index + 1 }
+  EmitLdurX0(-40);  { index }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] - len1 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Store to dest }
+  EmitLdurX0(-8);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { Increment index }
+  EmitLdurX0(-40);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-40);
+  EmitBranchLabel(label_count - 1);
+
+  EmitLabel(done_lbl);
+  { Return dest address in x0 }
+  EmitLdurX0(-8);
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrCmpRuntime;
+{ Lexicographic string comparison - returns -1 if x0<x1, 0 if x0=x1, 1 if x0>x1 }
+{ Input: x0 = string1 addr, x1 = string2 addr }
+{ Output: x0 = -1/0/1 }
+var
+  loop_lbl, done_lbl, less_lbl, greater_lbl, check_len_lbl: integer;
+begin
+  EmitLabel(rt_str_cmp);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+  { stur x0, [x29, #-8]  - string1 }
+  EmitSturX0(-8);
+  { stur x1, [x29, #-16] - string2 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  less_lbl := NewLabel;
+  greater_lbl := NewLabel;
+  check_len_lbl := NewLabel;
+
+  { index = 0 }
+  EmitMovX0(0);
+  EmitSturX0(-24);
+
+  EmitLabel(loop_lbl);
+
+  { Load lengths }
+  EmitLdurX0(-8);    { x0 = &s1 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;            { x2 = len1 }
+
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;            { x3 = len2 }
+
+  { Load index }
+  EmitLdurX0(-24);   { x0 = index }
+
+  { if index >= min(len1, len2), check length }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(check_len_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(check_len_lbl);
+  EmitNL;
+
+  { Compare chars at index+1 }
+  { x4 = index + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load char from s1 }
+  EmitLdurX0(-8);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+
+  { Load char from s2 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+
+  { Compare chars }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(54);  { x6 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(less_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(greater_lbl);
+  EmitNL;
+
+  { Chars equal, increment index }
+  EmitLdurX0(-24);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-24);
+  EmitBranchLabel(loop_lbl);
+
+  { Check lengths when all compared chars are equal }
+  EmitLabel(check_len_lbl);
+  EmitLdurX0(-8);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(less_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(greater_lbl);
+  EmitNL;
+  { Equal }
+  EmitMovX0(0);
+  EmitBranchLabel(done_lbl);
+
+  EmitLabel(less_lbl);
+  EmitMovX0(0);
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;  { x0 = -1 }
+  EmitBranchLabel(done_lbl);
+
+  EmitLabel(greater_lbl);
+  EmitMovX0(1);
+
+  EmitLabel(done_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrPosRuntime;
+{ Find substring position - returns position (1-based) or 0 if not found }
+{ Input: x0 = substring addr, x1 = string addr }
+{ Output: x0 = position (1-based) or 0 }
+var
+  outer_lbl, inner_lbl, done_lbl, found_lbl, not_found_lbl, next_pos_lbl: integer;
+begin
+  EmitLabel(rt_str_pos);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+  { [x29-8] = substr, [x29-16] = string, [x29-24] = outer idx, [x29-32] = inner idx }
+  EmitSturX0(-8);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  outer_lbl := NewLabel;
+  inner_lbl := NewLabel;
+  done_lbl := NewLabel;
+  found_lbl := NewLabel;
+  not_found_lbl := NewLabel;
+  next_pos_lbl := NewLabel;
+
+  { If substr is empty, return 1 }
+  EmitLdurX0(-8);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(76); write(found_lbl);
+  EmitNL;
+  { x2 = substr len }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
+  EmitNL;
+
+  { Load string length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+  { x3 = string len }
+
+  { outer_idx = 0 (will be 1-based position - 1) }
+  EmitMovX0(0);
+  EmitSturX0(-24);
+
+  EmitLabel(outer_lbl);
+  { Check if outer_idx + substr_len > string_len }
+  EmitLdurX0(-24);  { outer_idx }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  { x4 = outer_idx + substr_len }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(not_found_lbl);
+  EmitNL;
+
+  { inner_idx = 0 }
+  EmitMovX0(0);
+  EmitSturX0(-32);
+
+  EmitLabel(inner_lbl);
+  { if inner_idx >= substr_len, found! }
+  EmitLdurX0(-32);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(found_lbl);
+  EmitNL;
+
+  { Compare substr[inner_idx+1] with string[outer_idx+inner_idx+1] }
+  EmitLdurX0(-8);  { substr addr }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+  { x5 = substr[inner_idx+1] }
+
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitLdurX0(-24);  { outer_idx }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(52);  { x4 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+  { x6 = string[outer_idx+inner_idx+1] }
+
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(54);  { x6 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(next_pos_lbl);
+  EmitNL;
+
+  { Chars match, increment inner_idx }
+  EmitLdurX0(-32);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-32);
+  EmitBranchLabel(inner_lbl);
+
+  EmitLabel(next_pos_lbl);
+  { Chars don't match, try next outer position }
+  EmitLdurX0(-24);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-24);
+  EmitBranchLabel(outer_lbl);
+
+  EmitLabel(found_lbl);
+  { Return outer_idx + 1 (1-based position) }
+  EmitLdurX0(-24);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitBranchLabel(done_lbl);
+
+  EmitLabel(not_found_lbl);
+  EmitMovX0(0);
+
+  EmitLabel(done_lbl);
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrDeleteRuntime;
+{ Delete chars from string in place }
+{ Input: x0 = string addr, x1 = start (1-based), x2 = count }
+var
+  loop_lbl, done_lbl: integer;
+begin
+  EmitLabel(rt_str_delete);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+  { [x29-8]=string, [x29-16]=start, [x29-24]=count, [x29-32]=len, [x29-40]=idx }
+  EmitSturX0(-8);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+
+  { Load string length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  { x3 = len }
+
+  { idx = start }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitSturX0(-40);
+
+  EmitLabel(loop_lbl);
+  { if idx + count > len, done }
+  EmitLdurX0(-40);  { idx }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Copy char from idx+count to idx }
+  EmitLdurX0(-8);  { string addr }
+  EmitLdurX0(-40);  { idx }
+  { RELOAD string addr since we overwrote x0 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  { x3 = idx + count (source position) }
+  { Load char from string[idx+count] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+  { Store to string[idx] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(48); writechar(93);  { x0] }
+  EmitNL;
+
+  { idx++ }
+  EmitLdurX0(-40);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-40);
+  EmitBranchLabel(loop_lbl);
+
+  EmitLabel(done_lbl);
+  { Update string length: new_len = old_len - count }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitLdurX0(-8);
+  { RELOAD x0 for store since we overwrote it }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitStrInsertRuntime;
+{ Insert string into another at position }
+{ Input: x0 = source string, x1 = dest string, x2 = position (1-based) }
+var
+  loop1_lbl, loop2_lbl, copy_lbl, done_lbl: integer;
+begin
+  EmitLabel(rt_str_insert);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(64);
+  { [x29-8]=source, [x29-16]=dest, [x29-24]=pos, [x29-32]=src_len, [x29-40]=dst_len, [x29-48]=idx }
+  EmitSturX0(-8);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  loop1_lbl := NewLabel;
+  loop2_lbl := NewLabel;
+  copy_lbl := NewLabel;
+  done_lbl := NewLabel;
+
+  { Load lengths }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;  { src_len }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
+  EmitNL;  { dst_len }
+
+  { Move existing chars from pos to end, shifting right by src_len }
+  { idx = dst_len }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+
+  EmitLabel(loop1_lbl);
+  { if idx < pos, done moving }
+  EmitLdurX0(-48);  { idx }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(loop2_lbl);
+  EmitNL;
+
+  { Copy dest[idx] to dest[idx+src_len] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(48); writechar(93);  { x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(54); writechar(93);  { x6] }
+  EmitNL;
+
+  { idx-- }
+  EmitLdurX0(-48);
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-48);
+  EmitBranchLabel(loop1_lbl);
+
+  EmitLabel(loop2_lbl);
+  { Now copy source chars to position pos...pos+src_len-1 }
+  { idx = 0 }
+  EmitMovX0(0);
+  EmitSturX0(-48);
+
+  EmitLabel(copy_lbl);
+  { if idx >= src_len, done }
+  EmitLdurX0(-48);
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Copy source[idx+1] to dest[pos+idx] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
+  writechar(91); writechar(120); writechar(53); writechar(44); writechar(32);  { [x5, }
+  writechar(120); writechar(54); writechar(93);  { x6] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(54); writechar(93);  { x6] }
+  EmitNL;
+
+  { idx++ }
+  EmitLdurX0(-48);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-48);
+  EmitBranchLabel(copy_lbl);
+
+  EmitLabel(done_lbl);
+  { Update dest length: new_len = dst_len + src_len }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(52);  { x4 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  EmitAddSP(64);
+  EmitLdp;
+  EmitRet
+end;
+
+{ EmitIntToStrRuntime - Convert integer to string }
+{ x0 = integer value, x1 = destination string address }
+procedure EmitIntToStrRuntime;
+var
+  done_lbl, neg_lbl, pos_lbl, loop_lbl, rev_lbl, rev_done_lbl: integer;
+begin
+  EmitLabel(rt_int_to_str);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  done_lbl := NewLabel;
+  neg_lbl := NewLabel;
+  pos_lbl := NewLabel;
+  loop_lbl := NewLabel;
+  rev_lbl := NewLabel;
+  rev_done_lbl := NewLabel;
+
+  { Save dest string address }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { x2 = digit count, x3 = is_negative }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Check if value is negative }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(neg_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(pos_lbl);
+  EmitNL;
+
+  { Handle negative }
+  EmitLabel(neg_lbl);
+  EmitIndent;
+  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Loop to extract digits (stored in reverse on stack) }
+  EmitLabel(pos_lbl);
+  EmitLabel(loop_lbl);
+  { x4 = x0 / 10, x5 = x0 mod 10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(54);  { x6 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { Convert digit to ASCII and store on stack }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+
+  { Store digit at sp + x2 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(120); writechar(50); writechar(93);  { x2] }
+  EmitNL;
+
+  { Increment digit count }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { x0 = x4 (quotient), continue if x0 > 0 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(52);  { x4 }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  { Now reverse digits into destination string }
+  { x1 = dest string, x4 = write position (starts at 1 if no sign, 2 if negative) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { If negative, store '-' at position 1, start digits at 2 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(rev_lbl);
+  EmitNL;
+
+  { Store '-' sign }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(35); writechar(52); writechar(53);  { #45 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(35); writechar(49); writechar(93);  { #1] }
+  EmitNL;
+
+  { x4 = write position (1 for positive, 2 for negative start) }
+  EmitLabel(rev_lbl);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { x5 = read position (digit count - 1, reading backwards) }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Reverse copy loop }
+  EmitLabel(rev_done_lbl);
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Load digit from stack at position x5 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(120); writechar(53); writechar(93);  { x5] }
+  EmitNL;
+
+  { Store at dest position x4 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(rev_done_lbl);
+  EmitNL;
+
+  { Store length (x2 + x3 = digit count + sign) }
+  EmitLabel(done_lbl);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+{ EmitStrToIntRuntime - Convert string to integer }
+{ x0 = source string address }
+{ Returns: x0 = integer value, x1 = error code (0 = success, position of error otherwise) }
+procedure EmitStrToIntRuntime;
+var
+  done_lbl, error_lbl, loop_lbl, neg_lbl, pos_lbl, skip_sign_lbl, exit_lbl: integer;
+begin
+  EmitLabel(rt_str_to_int);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  done_lbl := NewLabel;
+  error_lbl := NewLabel;
+  loop_lbl := NewLabel;
+  neg_lbl := NewLabel;
+  pos_lbl := NewLabel;
+  skip_sign_lbl := NewLabel;
+  exit_lbl := NewLabel;
+
+  { x1 = length, x2 = index (starts at 1), x3 = result, x4 = is_negative }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Check if empty string }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(error_lbl);
+  EmitNL;
+
+  { Check first char for sign }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(35); writechar(49); writechar(93);  { #1] }
+  EmitNL;
+
+  { Check for '-' (45) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(52); writechar(53);  { #45 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(neg_lbl);
+  EmitNL;
+
+  { Check for '+' (43) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(52); writechar(51);  { #43 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(pos_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  EmitLabel(neg_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitLabel(pos_lbl);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Main loop }
+  EmitLabel(loop_lbl);
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Load char at position x2 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(50); writechar(93);  { x2] }
+  EmitNL;
+
+  { Check if digit (48-57) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(error_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(53); writechar(55);  { #57 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(error_lbl);
+  EmitNL;
+
+  { result = result * 10 + digit }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(54);  { x6 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(53);  { x5 }
+  EmitNL;
+
+  { x2 := x2 + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  { Success }
+  EmitLabel(done_lbl);
+  { Apply sign if negative }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(skip_sign_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+
+  EmitLabel(skip_sign_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(exit_lbl);
+  EmitNL;
+
+  { Error - return position in x1 }
+  EmitLabel(error_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+
+  EmitLabel(exit_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+{ EmitStrLtrimRuntime - Remove leading whitespace from string }
+{ Input: x0 = source string addr }
+{ Output: x0 = new trimmed string addr (allocated from heap) }
+procedure EmitStrLtrimRuntime;
+var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: integer;
+begin
+  EmitLabel(rt_str_ltrim);
+  EmitStp;
+  EmitSubSP(32);
+
+  { x1 = source addr, x2 = source length, x3 = skip count }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  copy_lbl := NewLabel;
+  copy_done_lbl := NewLabel;
+
+  { Save source addr }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { x2 = source length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  { x3 = 0 (skip count) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Loop: skip leading whitespace }
+  EmitLabel(loop_lbl);
+  { if x3 >= x2, done }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { x4 = char at [x1 + x3 + 1] }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(52); writechar(93);  { x4] }
+  EmitNL;
+
+  { if char = 32 (space), skip }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(label_count);
+  EmitNL;
+
+  { if char = 9 (tab), skip }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(57);  { #9 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+
+  { x3 := x3 + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  { Done scanning: x3 = number to skip, x2 = length }
+  EmitLabel(done_lbl);
+
+  { Allocate new string from heap: x0 = x21 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(49);  { x21 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
+  EmitNL;
+
+  { x5 = new length = x2 - x3 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+
+  { Store new length }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+
+  { x6 = copy index (0 to x5-1) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Copy loop }
+  EmitLabel(copy_lbl);
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(53);  { x5 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(copy_done_lbl);
+  EmitNL;
+
+  { x7 = x3 + x6 + 1 (source index) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(54);  { x6 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load char }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { x7 = x6 + 1 (dest index) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Store char }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(55); writechar(93);  { x7] }
+  EmitNL;
+
+  { x6 := x6 + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(copy_lbl);
+  EmitNL;
+
+  EmitLabel(copy_done_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+{ EmitStrRtrimRuntime - Remove trailing whitespace from string }
+{ Input: x0 = source string addr }
+{ Output: x0 = new trimmed string addr (allocated from heap) }
+procedure EmitStrRtrimRuntime;
+var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: integer;
+begin
+  EmitLabel(rt_str_rtrim);
+  EmitStp;
+  EmitSubSP(32);
+
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  copy_lbl := NewLabel;
+  copy_done_lbl := NewLabel;
+
+  { x1 = source addr }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { x2 = source length }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+  EmitNL;
+
+  { x3 = x2 (scan from end) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+
+  { Loop: find last non-whitespace }
+  EmitLabel(loop_lbl);
+  { if x3 <= 0, done }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(101); writechar(32);  { b.le }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { x4 = char at [x1 + x3] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(51); writechar(93);  { x3] }
+  EmitNL;
+
+  { if char = 32 (space), continue }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(label_count);
+  EmitNL;
+
+  { if char = 9 (tab), continue }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(35); writechar(57);  { #9 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+
+  { x3 := x3 - 1 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  { Done: x3 = new length }
+  EmitLabel(done_lbl);
+
+  { Allocate new string from heap }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(49);  { x21 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
+  EmitNL;
+
+  { Store new length }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
+  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+  EmitNL;
+
+  { x5 = copy index (0 to x3-1) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Copy loop }
+  EmitLabel(copy_lbl);
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(copy_done_lbl);
+  EmitNL;
+
+  { x6 = x5 + 1 (index) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Load char from source }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(120); writechar(54); writechar(93);  { x6] }
+  EmitNL;
+
+  { Store char to dest }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(120); writechar(54); writechar(93);  { x6] }
+  EmitNL;
+
+  { x5 := x5 + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(copy_lbl);
+  EmitNL;
+
+  EmitLabel(copy_done_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+{ EmitStrTrimRuntime - Remove both leading and trailing whitespace }
+{ Input: x0 = source string addr }
+{ Output: x0 = new trimmed string addr }
+procedure EmitStrTrimRuntime;
+begin
+  EmitLabel(rt_str_trim);
+  EmitStp;
+  EmitSubSP(16);
+
+  { Call ltrim first }
+  EmitBL(rt_str_ltrim);
+
+  { Then call rtrim on result }
+  EmitBL(rt_str_rtrim);
+
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
