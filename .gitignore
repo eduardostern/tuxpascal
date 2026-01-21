@@ -1,0 +1,14 @@
+# Build outputs
+*.o
+*.s
+a.out
+tpc
+obj/
+
+# Generated files
+v2/compiler.pas
+v2/tpcv2
+
+# Temporary files
+/tmp/
+*.tmp

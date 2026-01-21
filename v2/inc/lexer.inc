@@ -2,14 +2,22 @@
 
 procedure NextChar;
 begin
-  ch := readchar;
-  if ch = 10 then
+  if pushback_ch >= 0 then
   begin
-    line_num := line_num + 1;
-    col_num := 0
+    ch := pushback_ch;
+    pushback_ch := -1
   end
   else
-    col_num := col_num + 1
+  begin
+    ch := readchar;
+    if ch = 10 then
+    begin
+      line_num := line_num + 1;
+      col_num := 0
+    end
+    else
+      col_num := col_num + 1
+  end
 end;
 
 procedure SkipWhitespace;
@@ -46,6 +54,43 @@ begin
     begin
       tok_int := tok_int * 10 + (ch - 48);
       NextChar
+    end;
+    { Check for decimal point (but not ..) }
+    if ch = 46 then  { '.' }
+    begin
+      NextChar;
+      if IsDigit(ch) = 1 then
+      begin
+        { This is a float literal }
+        tok_type := TOK_FLOAT_LITERAL;
+        tok_float_int := tok_int;
+        tok_float_frac := 0;
+        tok_float_neg := 0;
+        { Parse fractional digits (up to 6 digits of precision) }
+        i := 0;
+        while (IsDigit(ch) = 1) and (i < 6) do
+        begin
+          tok_float_frac := tok_float_frac * 10 + (ch - 48);
+          i := i + 1;
+          NextChar
+        end;
+        { Scale frac to 6 digits }
+        while i < 6 do
+        begin
+          tok_float_frac := tok_float_frac * 10;
+          i := i + 1
+        end;
+        { Skip any remaining fractional digits }
+        while IsDigit(ch) = 1 do
+          NextChar
+      end
+      else
+      begin
+        { It was just an integer followed by '.', push back current char }
+        { and set pushback to '.' so next NextToken gets DOT or DOTDOT }
+        pushback_ch := ch;
+        ch := 46  { Put '.' back as current so the DOT handling code gets it }
+      end
     end
   end
   else if IsAlpha(ch) = 1 then
@@ -98,7 +143,10 @@ begin
           tok_type := TOK_NOT;
       if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 111) then { fo }
         if ToLower(tok_str[2]) = 114 then { r }
-          tok_type := TOK_FOR
+          tok_type := TOK_FOR;
+      if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 105) then { ni }
+        if ToLower(tok_str[2]) = 108 then { l }
+          tok_type := TOK_NIL
     end;
     if tok_len = 2 then
     begin
@@ -165,7 +213,11 @@ begin
       if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 116) then { st }
         if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 105) then { ri }
           if (ToLower(tok_str[4]) = 110) and (ToLower(tok_str[5]) = 103) then { ng }
-            tok_type := TOK_STRING_TYPE
+            tok_type := TOK_STRING_TYPE;
+      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
+        if (ToLower(tok_str[2]) = 99) and (ToLower(tok_str[3]) = 111) then { co }
+          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 100) then { rd }
+            tok_type := TOK_RECORD
     end;
     if tok_len = 7 then
     begin
@@ -192,7 +244,13 @@ begin
           tok_type := TOK_CHAR_TYPE;
       if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
         if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
-          tok_type := TOK_READ
+          tok_type := TOK_READ;
+      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
+        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 108) then { al }
+          tok_type := TOK_REAL_TYPE;
+      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 121) then { ty }
+        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
+          tok_type := TOK_TYPE_KW
     end;
     if tok_len = 9 then
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
@@ -329,6 +387,16 @@ begin
     end
     else
       tok_type := TOK_DOT
+  end
+  else if ch = 94 then  { ^ (caret) }
+  begin
+    tok_type := TOK_CARET;
+    NextChar
+  end
+  else if ch = 64 then  { @ }
+  begin
+    tok_type := TOK_AT;
+    NextChar
   end
   else
   begin

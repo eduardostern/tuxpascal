@@ -50,10 +50,10 @@ Hello, World!
 
 | Category | Features |
 |----------|----------|
-| **Types** | `integer`, `char`, `boolean`, `string`, `array` |
+| **Types** | `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `record` |
 | **Statements** | `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `begin`/`end` |
-| **Declarations** | `program`, `const`, `var`, `procedure`, `function`, `forward` |
-| **Operators** | `+`, `-`, `*`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not` |
+| **Declarations** | `program`, `const`, `type`, `var`, `procedure`, `function`, `forward` |
+| **Operators** | `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@`, `^` |
 | **I/O** | `write`, `writeln`, `read`, `readln` |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
 | **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
@@ -64,8 +64,8 @@ Hello, World!
 tuxpascal/
 ├── tpc                # Bootstrap compiler (C)
 ├── v2/
-│   ├── compiler.pas       # Self-hosting compiler (single file)
-│   ├── compiler_split.pas # Self-hosting compiler (modular, uses includes)
+│   ├── compiler.pas       # Self-hosting compiler (generated from inc files)
+│   ├── compiler_split.pas # Self-hosting compiler entry point (uses includes)
 │   ├── inc/               # Include files for modular compiler
 │   │   ├── constants.inc  # Token types, globals
 │   │   ├── utility.inc    # Helper functions

@@ -29,16 +29,41 @@ begin
   if tok_type = TOK_INTEGER then
   begin
     EmitMovX0(tok_int);
+    expr_type := TYPE_INTEGER;
+    NextToken
+  end
+  else if tok_type = TOK_FLOAT_LITERAL then
+  begin
+    { Construct float at runtime: int_part + frac_part/1000000 }
+    { Load integer part and convert to float }
+    EmitMovX0(tok_float_int);
+    EmitScvtfD0X0;
+    { Load fractional part and convert to float }
+    EmitPushD0;
+    EmitMovX0(tok_float_frac);
+    EmitScvtfD0X0;
+    { Divide by 1000000 }
+    EmitPushD0;
+    EmitMovX0(1000000);
+    EmitScvtfD0X0;
+    EmitPopD1;
+    EmitFDiv;  { d0 = d1 / d0 = frac / 1000000 }
+    { Add integer part }
+    EmitPopD1;
+    EmitFAdd;  { d0 = d1 + d0 = int + frac }
+    expr_type := TYPE_REAL;
     NextToken
   end
   else if tok_type = TOK_TRUE then
   begin
     EmitMovX0(1);
+    expr_type := TYPE_INTEGER;
     NextToken
   end
   else if tok_type = TOK_FALSE then
   begin
     EmitMovX0(0);
+    expr_type := TYPE_INTEGER;
     NextToken
   end
   else if tok_type = TOK_LPAREN then
@@ -46,12 +71,32 @@ begin
     NextToken;
     ParseExpression;
     Expect(TOK_RPAREN)
+    { expr_type is already set by ParseExpression }
   end
   else if tok_type = TOK_NOT then
   begin
     NextToken;
     ParseFactor;
-    EmitEorX0(1)
+    EmitEorX0(1);
+    expr_type := TYPE_INTEGER  { not always returns boolean/int }
+  end
+  else if tok_type = TOK_NIL then
+  begin
+    EmitMovX0(0);  { nil = 0 }
+    expr_type := TYPE_POINTER;
+    NextToken
+  end
+  else if tok_type = TOK_AT then
+  begin
+    NextToken;
+    if tok_type <> TOK_IDENT then
+      Error(6);  { expected identifier }
+    idx := SymLookup;
+    if idx < 0 then
+      Error(3);  { undefined identifier }
+    NextToken;
+    EmitVarAddr(idx, scope_level);
+    expr_type := TYPE_POINTER
   end
   else if tok_type = TOK_IDENT then
   begin
@@ -65,7 +110,8 @@ begin
         NextToken;
         Expect(TOK_RPAREN)
       end;
-      EmitBL(rt_readchar)
+      EmitBL(rt_readchar);
+      expr_type := TYPE_INTEGER
     end
     { ord = 111,114,100 }
     else if TokIs8(111, 114, 100, 0, 0, 0, 0, 0) = 1 then
@@ -73,8 +119,9 @@ begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
-      Expect(TOK_RPAREN)
+      Expect(TOK_RPAREN);
       { ord() is identity for integers/chars }
+      expr_type := TYPE_INTEGER
     end
     { chr = 99,104,114 }
     else if TokIs8(99, 104, 114, 0, 0, 0, 0, 0) = 1 then
@@ -82,8 +129,9 @@ begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
-      Expect(TOK_RPAREN)
+      Expect(TOK_RPAREN);
       { chr() is identity for integers/chars }
+      expr_type := TYPE_INTEGER
     end
     else
     begin
@@ -92,7 +140,10 @@ begin
         Error(3);  { undefined identifier }
       NextToken;
       if sym_kind[idx] = SYM_CONST then
-        EmitMovX0(sym_const_val[idx])
+      begin
+        EmitMovX0(sym_const_val[idx]);
+        expr_type := TYPE_INTEGER
+      end
       else if (sym_kind[idx] = SYM_VAR) or (sym_kind[idx] = SYM_PARAM) then
       begin
         if (sym_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
@@ -144,21 +195,125 @@ begin
           writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
           EmitNL
         end
-        else
+        else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
         begin
-          { Load variable value - check for var param }
+          { Record field access: rec.field }
+          NextToken;  { consume '.' }
+          if tok_type <> TOK_IDENT then
+            Error(11);
+          { Find the field in the record type }
+          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count for field_idx }
+          if arg_count < 0 then
+            Error(15);  { undefined field }
+          { Compute address: base + field_offset }
+          { Base is at [x29 + sym_offset] for local, field at positive offset from there }
           if sym_level[idx] < scope_level then
-            EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            { add x0, x8, #sym_offset + field_offset }
+            EmitIndent;
+            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+            writechar(35);
+            write(sym_offset[idx] + field_offset[arg_count]);
+            EmitNL
+          end
           else
-            EmitLdurX0(sym_offset[idx]);
-          { If var param, x0 now contains address - dereference it }
-          if sym_is_var_param[idx] = 1 then
+          begin
+            { add x0, x29, #sym_offset + field_offset }
+            EmitIndent;
+            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+            writechar(35);
+            write(sym_offset[idx] + field_offset[arg_count]);
+            EmitNL
+          end;
+          { Load from computed address }
+          if field_type[arg_count] = TYPE_REAL then
+          begin
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL;
+            expr_type := TYPE_REAL
+          end
+          else
           begin
             EmitIndent;
             writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
             writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
             writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            EmitNL;
+            expr_type := field_type[arg_count]
+          end;
+          NextToken
+        end
+        else
+        begin
+          { Load variable value - check for var param and type }
+          if sym_type[idx] = TYPE_REAL then
+          begin
+            if sym_level[idx] < scope_level then
+              EmitLdurD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitLdurD0(sym_offset[idx]);
+            { If var param, d0 contains address - dereference it }
+            if sym_is_var_param[idx] = 1 then
+            begin
+              { fmov x0, d0; ldr d0, [x0] }
+              EmitFmovX0D0;
+              EmitIndent;
+              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+              EmitNL
+            end;
+            expr_type := TYPE_REAL
+          end
+          else
+          begin
+            if sym_level[idx] < scope_level then
+              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitLdurX0(sym_offset[idx]);
+            { If var param, x0 now contains address - dereference it }
+            if sym_is_var_param[idx] = 1 then
+            begin
+              EmitIndent;
+              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+              EmitNL
+            end;
+            expr_type := sym_type[idx]
+          end
+        end;
+        { Check for pointer dereference }
+        if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
+        begin
+          NextToken;
+          if sym_const_val[idx] = TYPE_REAL then
+          begin
+            { ldr d0, [x0] }
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL;
+            expr_type := TYPE_REAL
+          end
+          else
+          begin
+            { ldr x0, [x0] }
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL;
+            expr_type := sym_const_val[idx]
           end
         end
       end
@@ -252,7 +407,8 @@ begin
         end;
         { Set up static link for callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        EmitBL(sym_label[idx])
+        EmitBL(sym_label[idx]);
+        expr_type := sym_type[idx]  { function return type }
       end
       else
         Error(4)
@@ -268,7 +424,10 @@ begin
   begin
     NextToken;
     ParseFactor;
-    EmitNeg
+    if expr_type = TYPE_REAL then
+      EmitFNeg
+    else
+      EmitNeg
   end
   else if tok_type = TOK_PLUS then
   begin
@@ -279,92 +438,192 @@ begin
     ParseFactor
 end;
 
-procedure EmitPushX1;
-begin
-  { str x1, [sp, #-16]! }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);
-  writechar(35); writechar(45); writechar(49); writechar(54);
-  writechar(93); writechar(33);
-  EmitNL
-end;
-
 procedure ParseTerm;
 var
-  op: integer;
+  op, left_type: integer;
 begin
   ParseUnary;
-  while (tok_type = TOK_STAR) or (tok_type = TOK_DIV) or (tok_type = TOK_MOD) or (tok_type = TOK_AND) do
+  while (tok_type = TOK_STAR) or (tok_type = TOK_DIV) or (tok_type = TOK_MOD) or
+        (tok_type = TOK_AND) or (tok_type = TOK_SLASH) do
   begin
     op := tok_type;
+    left_type := expr_type;
     NextToken;
-    EmitPushX0;
-    ParseUnary;
-    EmitPopX1;
-    if op = TOK_STAR then
-      EmitMul
-    else if op = TOK_DIV then
-      EmitSDiv
-    else if op = TOK_MOD then
-    begin
-      { x1 mod x0: x1 - (x1 / x0) * x0 }
+    { Push left operand appropriately }
+    if left_type = TYPE_REAL then
+      EmitPushD0
+    else
       EmitPushX0;
-      EmitPushX1;
-      EmitSDiv;
-      EmitMovX2X0;
-      EmitPopX1;
-      EmitPopX0;
-      EmitMsub
+    ParseUnary;
+    { right operand is now in x0 or d0 depending on expr_type }
+
+    if op = TOK_SLASH then
+    begin
+      { / always produces real - convert both operands to float }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;  { convert right to float }
+      if left_type = TYPE_REAL then
+        EmitPopD1
+      else
+      begin
+        EmitPopX1;
+        EmitScvtfD1X1  { convert left to float }
+      end;
+      EmitFDiv;
+      expr_type := TYPE_REAL
     end
-    else { TOK_AND }
-      EmitAndX0X1
+    else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
+    begin
+      { Mixed or both real - use float ops }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;  { convert right to float }
+      if left_type = TYPE_REAL then
+        EmitPopD1
+      else
+      begin
+        EmitPopX1;
+        EmitScvtfD1X1  { convert left to float }
+      end;
+      if op = TOK_STAR then
+        EmitFMul
+      else if op = TOK_DIV then
+      begin
+        { div on floats - truncate result to integer }
+        EmitFDiv;
+        EmitFcvtzsX0D0;
+        expr_type := TYPE_INTEGER
+      end
+      else if op = TOK_MOD then
+        Error(13)  { mod not supported for reals }
+      else { TOK_AND }
+        Error(13);  { and not supported for reals }
+      if (op = TOK_STAR) then
+        expr_type := TYPE_REAL
+    end
+    else
+    begin
+      { Both integers - use integer ops }
+      EmitPopX1;
+      if op = TOK_STAR then
+        EmitMul
+      else if op = TOK_DIV then
+        EmitSDiv
+      else if op = TOK_MOD then
+      begin
+        { x1 mod x0: x1 - (x1 / x0) * x0 }
+        EmitPushX0;
+        EmitPushX1;
+        EmitSDiv;
+        EmitMovX2X0;
+        EmitPopX1;
+        EmitPopX0;
+        EmitMsub
+      end
+      else { TOK_AND }
+        EmitAndX0X1;
+      expr_type := TYPE_INTEGER
+    end
   end
 end;
 
 procedure ParseSimpleExpr;
 var
-  op: integer;
+  op, left_type: integer;
 begin
   ParseTerm;
   while (tok_type = TOK_PLUS) or (tok_type = TOK_MINUS) or (tok_type = TOK_OR) do
   begin
     op := tok_type;
+    left_type := expr_type;
     NextToken;
-    EmitPushX0;
+    { Push left operand appropriately }
+    if left_type = TYPE_REAL then
+      EmitPushD0
+    else
+      EmitPushX0;
     ParseTerm;
-    EmitPopX1;
-    if op = TOK_PLUS then
-      EmitAdd
-    else if op = TOK_MINUS then
-      EmitSub
-    else { TOK_OR }
-      EmitOrrX0X1
+
+    if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
+    begin
+      { Mixed or both real - use float ops }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;  { convert right to float }
+      if left_type = TYPE_REAL then
+        EmitPopD1
+      else
+      begin
+        EmitPopX1;
+        EmitScvtfD1X1  { convert left to float }
+      end;
+      if op = TOK_PLUS then
+        EmitFAdd
+      else if op = TOK_MINUS then
+        EmitFSub
+      else { TOK_OR }
+        Error(13);  { or not supported for reals }
+      expr_type := TYPE_REAL
+    end
+    else
+    begin
+      { Both integers }
+      EmitPopX1;
+      if op = TOK_PLUS then
+        EmitAdd
+      else if op = TOK_MINUS then
+        EmitSub
+      else { TOK_OR }
+        EmitOrrX0X1;
+      expr_type := TYPE_INTEGER
+    end
   end
 end;
 
 procedure ParseExpression;
 var
-  op, cond: integer;
+  op, cond, left_type: integer;
 begin
   ParseSimpleExpr;
   if (tok_type = TOK_EQ) or (tok_type = TOK_NEQ) or (tok_type = TOK_LT) or
      (tok_type = TOK_LE) or (tok_type = TOK_GT) or (tok_type = TOK_GE) then
   begin
     op := tok_type;
+    left_type := expr_type;
     NextToken;
-    EmitPushX0;
+    { Push left operand appropriately }
+    if left_type = TYPE_REAL then
+      EmitPushD0
+    else
+      EmitPushX0;
     ParseSimpleExpr;
-    EmitPopX1;
-    EmitCmpX0X1;
+
+    if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
+    begin
+      { Float comparison }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;  { convert right to float }
+      if left_type = TYPE_REAL then
+        EmitPopD1
+      else
+      begin
+        EmitPopX1;
+        EmitScvtfD1X1  { convert left to float }
+      end;
+      EmitFCmp
+    end
+    else
+    begin
+      { Integer comparison }
+      EmitPopX1;
+      EmitCmpX0X1
+    end;
     if op = TOK_EQ then cond := 0
     else if op = TOK_NEQ then cond := 1
     else if op = TOK_LT then cond := 2
     else if op = TOK_LE then cond := 3
     else if op = TOK_GT then cond := 4
     else cond := 5;
-    EmitCset(cond)
+    EmitCset(cond);
+    expr_type := TYPE_INTEGER  { comparison result is always integer (boolean) }
   end
 end;
 
@@ -525,7 +784,7 @@ begin
   end
   else if tok_type = TOK_READ then
   begin
-    { read(var) - reads an integer into a variable }
+    { read(var) - reads an integer or real into a variable }
     NextToken;
     Expect(TOK_LPAREN);
     if tok_type <> TOK_IDENT then
@@ -534,18 +793,31 @@ begin
     if idx < 0 then
       Error(3);
     NextToken;
-    { Call read_int runtime }
-    EmitBL(rt_read_int);
-    { Store result in variable }
-    if sym_level[idx] = scope_level then
-      EmitSturX0(sym_offset[idx])
+    if sym_type[idx] = TYPE_REAL then
+    begin
+      { Call read_real runtime - result in d0 }
+      EmitBL(rt_read_real);
+      { Store result in variable }
+      if sym_level[idx] = scope_level then
+        EmitSturD0(sym_offset[idx])
+      else
+        EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+    end
     else
-      EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level);
+    begin
+      { Call read_int runtime }
+      EmitBL(rt_read_int);
+      { Store result in variable }
+      if sym_level[idx] = scope_level then
+        EmitSturX0(sym_offset[idx])
+      else
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+    end;
     Expect(TOK_RPAREN)
   end
   else if tok_type = TOK_READLN then
   begin
-    { readln(var) or readln - reads integer and skips to end of line }
+    { readln(var) or readln - reads integer/real and skips to end of line }
     NextToken;
     if tok_type = TOK_LPAREN then
     begin
@@ -558,13 +830,26 @@ begin
         if idx < 0 then
           Error(3);
         NextToken;
-        { Call read_int runtime }
-        EmitBL(rt_read_int);
-        { Store result in variable }
-        if sym_level[idx] = scope_level then
-          EmitSturX0(sym_offset[idx])
+        if sym_type[idx] = TYPE_REAL then
+        begin
+          { Call read_real runtime - result in d0 }
+          EmitBL(rt_read_real);
+          { Store result in variable }
+          if sym_level[idx] = scope_level then
+            EmitSturD0(sym_offset[idx])
+          else
+            EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+        end
         else
-          EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+        begin
+          { Call read_int runtime }
+          EmitBL(rt_read_int);
+          { Store result in variable }
+          if sym_level[idx] = scope_level then
+            EmitSturX0(sym_offset[idx])
+          else
+            EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+        end
       end;
       Expect(TOK_RPAREN)
     end;
@@ -614,15 +899,21 @@ begin
               end
               else
               begin
-                { Not a string - parse as expression and print as int }
+                { Not a string - parse as expression and print based on type }
                 ParseExpression;
-                EmitBL(rt_print_int)
+                if expr_type = TYPE_REAL then
+                  EmitBL(rt_print_real)
+                else
+                  EmitBL(rt_print_int)
               end
             end
             else
             begin
               ParseExpression;
-              EmitBL(rt_print_int)
+              if expr_type = TYPE_REAL then
+                EmitBL(rt_print_real)
+              else
+                EmitBL(rt_print_int)
             end
           until tok_type <> TOK_COMMA;
           if tok_type = TOK_COMMA then NextToken
@@ -666,15 +957,21 @@ begin
               end
               else
               begin
-                { Not a string - parse as expression and print as int }
+                { Not a string - parse as expression and print based on type }
                 ParseExpression;
-                EmitBL(rt_print_int)
+                if expr_type = TYPE_REAL then
+                  EmitBL(rt_print_real)
+                else
+                  EmitBL(rt_print_int)
               end
             end
             else
             begin
               ParseExpression;
-              EmitBL(rt_print_int)
+              if expr_type = TYPE_REAL then
+                EmitBL(rt_print_real)
+              else
+                EmitBL(rt_print_int)
             end
           until tok_type <> TOK_COMMA;
           if tok_type = TOK_COMMA then NextToken
@@ -890,6 +1187,129 @@ begin
           writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
           EmitNL
         end
+        else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
+        begin
+          { Record field assignment: rec.field := value }
+          NextToken;  { consume '.' }
+          if tok_type <> TOK_IDENT then
+            Error(11);
+          { Find the field }
+          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count for field_idx }
+          if arg_count < 0 then
+            Error(15);  { undefined field }
+          NextToken;
+          Expect(TOK_ASSIGN);
+          ParseExpression;  { value in x0 or d0 }
+
+          { Compute field address: base + field_offset }
+          if field_type[arg_count] = TYPE_REAL then
+          begin
+            { Value is in d0, need to store to field }
+            if expr_type <> TYPE_REAL then
+              EmitScvtfD0X0;
+            EmitPushD0;  { save value }
+            { Compute address }
+            if sym_level[idx] < scope_level then
+            begin
+              EmitFollowChain(sym_level[idx], scope_level);
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+              writechar(35);
+              write(sym_offset[idx] + field_offset[arg_count]);
+              EmitNL
+            end
+            else
+            begin
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+              writechar(35);
+              write(sym_offset[idx] + field_offset[arg_count]);
+              EmitNL
+            end;
+            EmitPopD0;
+            { str d0, [x0] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end
+          else
+          begin
+            { Value is in x0 }
+            EmitPushX0;  { save value }
+            { Compute address }
+            if sym_level[idx] < scope_level then
+            begin
+              EmitFollowChain(sym_level[idx], scope_level);
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+              writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+              writechar(35);
+              write(sym_offset[idx] + field_offset[arg_count]);
+              EmitNL
+            end
+            else
+            begin
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+              writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+              writechar(35);
+              write(sym_offset[idx] + field_offset[arg_count]);
+              EmitNL
+            end;
+            EmitPopX0;
+            { str x0, [x1] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+            EmitNL
+          end
+        end
+        else if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
+        begin
+          { Pointer dereference assignment: p^ := value }
+          NextToken;  { consume ^ }
+          Expect(TOK_ASSIGN);
+          { Load pointer value (address) and save it }
+          if sym_level[idx] < scope_level then
+            EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          else
+            EmitLdurX0(sym_offset[idx]);
+          EmitPushX0;  { save address }
+          ParseExpression;  { value to store }
+          if sym_const_val[idx] = TYPE_REAL then
+          begin
+            { Value in d0, need to store through pointer }
+            if expr_type <> TYPE_REAL then
+              EmitScvtfD0X0;
+            EmitPopX1;  { get address into x1 }
+            { str d0, [x1] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+            EmitNL
+          end
+          else
+          begin
+            { Value in x0 }
+            EmitPopX1;  { get address into x1 }
+            { str x0, [x1] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+            EmitNL
+          end
+        end
         else if sym_type[idx] = TYPE_STRING then
         begin
           { String assignment }
@@ -942,9 +1362,44 @@ begin
           end;
           NextToken
         end
+        else if sym_type[idx] = TYPE_REAL then
+        begin
+          { Real variable assignment }
+          Expect(TOK_ASSIGN);
+          ParseExpression;
+          { Convert integer to float if needed }
+          if expr_type <> TYPE_REAL then
+            EmitScvtfD0X0;
+          { Check if this is a var param - need to dereference address }
+          if sym_is_var_param[idx] = 1 then
+          begin
+            { d0 has the value, need to store to address in var param }
+            EmitPushD0;  { save value }
+            { Load the address stored in the var param }
+            if sym_level[idx] < scope_level then
+              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitLdurX0(sym_offset[idx]);
+            { x0 now has the address, pop value to d0 }
+            EmitPopD0;
+            { Store d0 to [x0] }
+            EmitIndent;
+            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end
+          else
+          begin
+            if sym_level[idx] < scope_level then
+              EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            else
+              EmitSturD0(sym_offset[idx])
+          end
+        end
         else
         begin
-          { Simple assignment }
+          { Simple integer assignment }
           Expect(TOK_ASSIGN);
           ParseExpression;
           { Check if this is a var param - need to dereference address }
@@ -980,7 +1435,15 @@ begin
         { Function result assignment - store to result variable at -16 }
         Expect(TOK_ASSIGN);
         ParseExpression;
-        EmitSturX0(-16)
+        { For real functions, store in d0 }
+        if sym_type[idx] = TYPE_REAL then
+        begin
+          if expr_type <> TYPE_REAL then
+            EmitScvtfD0X0;
+          EmitSturD0(-16)
+        end
+        else
+          EmitSturX0(-16)
       end
       else
         Error(7)

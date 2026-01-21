@@ -71,3 +71,34 @@ begin
   IsVarParam := result
 end;
 
+{ Find a field in a record type, returns field index or -1 }
+function FindField(type_idx: integer): integer;
+var
+  i, j, base, match: integer;
+  first_fld: integer;
+begin
+  FindField := -1;
+  first_fld := sym_const_val[type_idx];
+  i := first_fld;
+  while (i < field_count) and (field_rec_idx[i] = type_idx) do
+  begin
+    { Compare field name with current token }
+    base := i * 32;
+    match := 1;
+    j := 0;
+    while (j < tok_len) and (match = 1) do
+    begin
+      if ToLower(field_name[base + j]) <> ToLower(tok_str[j]) then
+        match := 0;
+      j := j + 1
+    end;
+    if (match = 1) and (field_name[base + tok_len] = 0) then
+    begin
+      FindField := i;
+      i := field_count  { exit loop }
+    end
+    else
+      i := i + 1
+  end
+end;
+

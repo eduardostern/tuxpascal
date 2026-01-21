@@ -29,6 +29,8 @@ const
   TOK_COMMA = 21;
   TOK_DOT = 22;
   TOK_DOTDOT = 23;
+  TOK_CARET = 24;    { ^ - dereference/pointer type }
+  TOK_AT = 25;       { @ - address-of }
 
   { Keywords - starting at 100 }
   TOK_PROGRAM = 100;
@@ -64,6 +66,11 @@ const
   TOK_FORWARD = 130;
   TOK_READ = 131;
   TOK_READLN = 132;
+  TOK_REAL_TYPE = 133;
+  TOK_FLOAT_LITERAL = 134;
+  TOK_NIL = 135;     { nil keyword }
+  TOK_RECORD = 136;  { record keyword }
+  TOK_TYPE_KW = 137;    { type keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -71,6 +78,7 @@ const
   SYM_PROCEDURE = 2;
   SYM_FUNCTION = 3;
   SYM_PARAM = 4;
+  SYM_TYPEDEF = 5;       { type definition (for records) }
 
   { Type kinds }
   TYPE_INTEGER = 0;
@@ -79,11 +87,15 @@ const
   TYPE_STRING = 3;
   TYPE_ARRAY = 4;
   TYPE_VOID = 5;
+  TYPE_REAL = 6;
+  TYPE_POINTER = 7;
+  TYPE_RECORD = 8;
 
 var
   { Source input }
   ch: integer;
   line_num, col_num: integer;
+  pushback_ch: integer;  { -1 means no pushback }
 
   { Current token }
   tok_type: integer;
@@ -103,6 +115,13 @@ var
   sym_var_param_flags: array[0..499] of integer;  { bitmap: bit i = 1 if param i is var (for proc/func) }
   sym_count: integer;
 
+  { Record field table }
+  field_name: array[0..6399] of integer;   { 200 fields * 32 chars each }
+  field_type: array[0..199] of integer;    { type of each field }
+  field_offset: array[0..199] of integer;  { offset within record }
+  field_rec_idx: array[0..199] of integer; { which record type this field belongs to }
+  field_count: integer;                    { total fields defined }
+
   { Scope tracking }
   scope_level: integer;
   local_offset: integer;
@@ -121,6 +140,16 @@ var
   rt_read_int: integer;
   rt_skip_line: integer;
   rt_print_string: integer;
+  rt_print_real: integer;
+  rt_read_real: integer;
+
+  { Float literal parsing }
+  tok_float_int: integer;   { integer part of float }
+  tok_float_frac: integer;  { fractional part (scaled by 1000000) }
+  tok_float_neg: integer;   { 1 if negative }
+
+  { Expression type tracking }
+  expr_type: integer;
 
   { Output file descriptor - x20 is used to store it }
   out_fd: integer;

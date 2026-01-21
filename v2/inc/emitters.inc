@@ -418,6 +418,18 @@ begin
   EmitNL
 end;
 
+procedure EmitPushX1;
+begin
+  { str x1, [sp, #-16]! }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);
+  writechar(35); writechar(45); writechar(49); writechar(54);
+  writechar(93); writechar(33);
+  EmitNL
+end;
+
 procedure EmitAdd;
 begin
   { add x0, x1, x0 }
@@ -914,6 +926,246 @@ begin
   writechar(120); writechar(48); writechar(44); writechar(32);
   writechar(35);
   write(val);
+  EmitNL
+end;
+
+{ ----- Floating Point Emitters ----- }
+
+procedure EmitPushD0;
+begin
+  { str d0, [sp, #-16]! }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(45); writechar(49); writechar(54);     { #-16 }
+  writechar(93); writechar(33);  { ]! }
+  EmitNL
+end;
+
+procedure EmitPopD0;
+begin
+  { ldr d0, [sp], #16 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(115); writechar(112); writechar(93);   { [sp] }
+  writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
+  EmitNL
+end;
+
+procedure EmitPopD1;
+begin
+  { ldr d1, [sp], #16 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(91); writechar(115); writechar(112); writechar(93);   { [sp] }
+  writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
+  EmitNL
+end;
+
+procedure EmitFAdd;
+begin
+  { fadd d0, d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFSub;
+begin
+  { fsub d0, d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFMul;
+begin
+  { fmul d0, d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFDiv;
+begin
+  { fdiv d0, d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFNeg;
+begin
+  { fneg d0, d0 }
+  EmitIndent;
+  writechar(102); writechar(110); writechar(101); writechar(103); writechar(32);  { fneg }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFCmp;
+begin
+  { fcmp d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitScvtfD0X0;
+begin
+  { scvtf d0, x0 - convert signed int to float }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL
+end;
+
+procedure EmitScvtfD1X1;
+begin
+  { scvtf d1, x1 - convert signed int to float }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL
+end;
+
+procedure EmitFcvtzsX0D0;
+begin
+  { fcvtzs x0, d0 - convert float to signed int (truncate toward zero) }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(118); writechar(116); writechar(122); writechar(115); writechar(32);  { fcvtzs }
+  writechar(120); writechar(48); writechar(44); writechar(32);    { x0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitFmovD0X0;
+begin
+  { fmov d0, x0 - move bits from x0 to d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL
+end;
+
+procedure EmitFmovX0D0;
+begin
+  { fmov x0, d0 - move bits from d0 to x0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(120); writechar(48); writechar(44); writechar(32);    { x0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL
+end;
+
+procedure EmitLdurD0(offset: integer);
+begin
+  { ldur d0, [x29, #offset] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57);    { [x29 }
+  writechar(44); writechar(32); writechar(35);  { , # }
+  write(offset);
+  writechar(93);  { ] }
+  EmitNL
+end;
+
+procedure EmitSturD0(offset: integer);
+begin
+  { stur d0, [x29, #offset] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57);    { [x29 }
+  writechar(44); writechar(32); writechar(35);  { , # }
+  write(offset);
+  writechar(93);  { ] }
+  EmitNL
+end;
+
+procedure EmitLdurD0Outer(offset, sym_level, cur_level: integer);
+var
+  i: integer;
+begin
+  { Follow static link chain to load float from outer scope }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(56); writechar(44); writechar(32);    { x8, }
+  writechar(120); writechar(50); writechar(57);  { x29 }
+  EmitNL;
+  for i := cur_level downto sym_level + 1 do
+  begin
+    EmitIndent;
+    writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+    writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+    writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
+    writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+    EmitNL
+  end;
+  { ldur d0, [x8, #offset] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(120); writechar(56);  { [x8 }
+  writechar(44); writechar(32); writechar(35);  { , # }
+  write(offset);
+  writechar(93);  { ] }
+  EmitNL
+end;
+
+procedure EmitSturD0Outer(offset, sym_level, cur_level: integer);
+var
+  i: integer;
+begin
+  { Follow static link chain to store float to outer scope }
+  { Save d0 temporarily to stack }
+  EmitPushD0;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(56); writechar(44); writechar(32);    { x8, }
+  writechar(120); writechar(50); writechar(57);  { x29 }
+  EmitNL;
+  for i := cur_level downto sym_level + 1 do
+  begin
+    EmitIndent;
+    writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+    writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+    writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
+    writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
+    EmitNL
+  end;
+  { Restore d0 }
+  EmitPopD0;
+  { stur d0, [x8, #offset] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);    { d0, }
+  writechar(91); writechar(120); writechar(56);  { [x8 }
+  writechar(44); writechar(32); writechar(35);  { , # }
+  write(offset);
+  writechar(93);  { ] }
   EmitNL
 end;
 

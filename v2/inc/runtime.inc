@@ -786,6 +786,620 @@ begin
   EmitRet
 end;
 
+procedure EmitPrintRealRuntime;
+var
+  neg_lbl, skip_neg_lbl, print_frac_lbl, frac_loop_lbl: integer;
+begin
+  { Print real in d0 - format: integer.fraction (6 decimal places) }
+  EmitLabel(rt_print_real);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(64);
+
+  { Save original value to [x29, #-16] as double }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { Check for negative }
+  neg_lbl := NewLabel;
+  skip_neg_lbl := NewLabel;
+  { fcmp d0, #0.0 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(35); writechar(48); writechar(46); writechar(48);  { #0.0 }
+  EmitNL;
+  { b.ge skip_neg }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(neg_lbl);
+  EmitNL;
+
+  { Print '-' and negate }
+  EmitMovX0(45);  { '-' }
+  EmitBL(rt_print_char);
+  { fneg d0, d0 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitFNeg;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  EmitLabel(neg_lbl);
+
+  { Load value and get integer part }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { fcvtzs x0, d0 - truncate to integer }
+  EmitFcvtzsX0D0;
+
+  { Save integer part to [x29, #-24] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { Print integer part }
+  EmitBL(rt_print_int);
+
+  { Print '.' }
+  EmitMovX0(46);  { '.' }
+  EmitBL(rt_print_char);
+
+  { Calculate fractional part: (original - int_part) * 1000000 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+
+  { Load integer part and convert to float }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { scvtf d1, x0 }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { fsub d0, d0, d1 - fractional part (d0 = original - int_part) }
+  { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { Multiply by 1000000 }
+  EmitMovX0(1000000);
+  EmitScvtfD0X0;  { d0 = 1000000.0 }
+  EmitPushD0;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { fsub d0, d0, d1 - d0 = frac part (original - int_part) }
+  { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitPopD1;  { d1 = 1000000.0 }
+  EmitFMul;  { d0 = frac * 1000000 }
+
+  { Convert to integer }
+  EmitFcvtzsX0D0;
+
+  { Save fractional digits to [x29, #-32] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+
+  { Print fractional part with leading zeros (6 digits) }
+  { Count digits needed }
+  frac_loop_lbl := NewLabel;
+  print_frac_lbl := NewLabel;
+
+  { Print leading zeros: if frac < 100000, print '0', etc }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+
+  { x1 = 100000 - use movz since 100000 > 65535 }
+  { movz x1, #34464; movk x1, #1, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(51); writechar(52); writechar(52); writechar(54); writechar(52);  { #34464 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(49);  { #1 }
+  writechar(44); writechar(32);
+  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  EmitLabel(frac_loop_lbl);
+  { cmp x1, #10 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  { b.lt print_frac }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(print_frac_lbl);
+  EmitNL;
+  { cmp x0, x1 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+  { b.ge print_frac }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(print_frac_lbl);
+  EmitNL;
+  { Print '0' }
+  EmitPushX0;
+  EmitPushX1;
+  EmitMovX0(48);
+  EmitBL(rt_print_char);
+  EmitPopX1;
+  EmitPopX0;
+  { x1 = x1 / 10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  EmitBranchLabel(frac_loop_lbl);
+
+  EmitLabel(print_frac_lbl);
+  { Load and print the fractional value }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  { Only print if non-zero }
+  EmitBranchLabelZ(label_count);
+  EmitBL(rt_print_int);
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+
+  EmitAddSP(64);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitReadRealRuntime;
+var
+  skip_ws_lbl, read_int_lbl, read_frac_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: integer;
+begin
+  { Read real from input, return in d0 }
+  EmitLabel(rt_read_real);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(64);
+
+  { x21 = integer part, x22 = fractional part (scaled), x23 = neg flag, x24 = frac scale }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, #0 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #0 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x23, #0 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #1 }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+
+  { Skip whitespace }
+  skip_ws_lbl := NewLabel;
+  EmitLabel(skip_ws_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  done_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { Load char }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
+  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { Check whitespace }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #32 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(51); writechar(50);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #10 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #13 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(51);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
+  writechar(76); write(skip_ws_lbl);
+  EmitNL;
+
+  { Check for minus }
+  neg_lbl := NewLabel;
+  not_neg_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #45 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(53);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne not_neg }
+  writechar(76); write(not_neg_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x23, #1 }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitBranchLabel(neg_lbl);
+  EmitLabel(not_neg_lbl);
+
+  { First char is a digit - process it }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(56);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { x21 = x21 * 10 + x25 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
+  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x26 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(54);
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x25 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53);
+  EmitNL;
+
+  { Read integer part loop }
+  EmitLabel(neg_lbl);
+  read_int_lbl := NewLabel;
+  read_frac_lbl := NewLabel;
+  EmitLabel(read_int_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
+  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+
+  { Check for '.' }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #46 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(54);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq read_frac }
+  writechar(76); write(read_frac_lbl);
+  EmitNL;
+
+  { Check if digit }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(56);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { x21 = x21 * 10 + x25 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
+  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x26 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(54);
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x25 }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53);
+  EmitNL;
+  EmitBranchLabel(read_int_lbl);
+
+  { Read fractional part }
+  EmitLabel(read_frac_lbl);
+  skip_neg_lbl := NewLabel;
+  EmitLabel(skip_neg_lbl);
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(49); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read }
+  EmitSvc;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
+  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+
+  { Check if digit }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(52); writechar(56);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
+  writechar(35); writechar(57);
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { x22 = x22 * 10 + x25, x24 = x24 * 10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
+  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
+  writechar(35); writechar(49); writechar(48);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x22, x22, x26 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(54);
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add x22, x22, x25 }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(53);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x24, x24, x26 }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
+  writechar(120); writechar(50); writechar(54);
+  EmitNL;
+  EmitBranchLabel(skip_neg_lbl);
+
+  { Done - combine integer and fractional parts }
+  EmitLabel(done_lbl);
+  { d0 = x21 (integer part) }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(120); writechar(50); writechar(49);  { x21 }
+  EmitNL;
+  { d1 = x22 (fractional part) }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(50); writechar(50);  { x22 }
+  EmitNL;
+  { d2 = x24 (scale) }
+  EmitIndent;
+  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(120); writechar(50); writechar(52);  { x24 }
+  EmitNL;
+  { d1 = d1 / d2 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+  { d0 = d0 + d1 }
+  EmitFAdd;
+
+  { Apply negative if needed }
+  skip_neg_lbl := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz x23, skip }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
+  writechar(76); write(skip_neg_lbl);
+  EmitNL;
+  EmitFNeg;
+  EmitLabel(skip_neg_lbl);
+
+  EmitAddSP(64);
+  EmitLdp;
+  EmitRet
+end;
+
 procedure EmitFileOpenInit;
 var
   skip_input_lbl, skip_output_lbl: integer;

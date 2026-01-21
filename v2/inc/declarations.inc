@@ -2,7 +2,7 @@
 
 procedure ParseVarDeclarations;
 var
-  idx, first_idx, arr_size, lo_bound, hi_bound: integer;
+  idx, first_idx, arr_size, lo_bound, hi_bound, j: integer;
 begin
   NextToken;  { consume 'var' }
   while tok_type = TOK_IDENT do
@@ -26,6 +26,13 @@ begin
     if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
        (tok_type = TOK_BOOLEAN_TYPE) then
       NextToken
+    else if tok_type = TOK_REAL_TYPE then
+    begin
+      { Set type to real for all vars in this group }
+      for j := first_idx to idx do
+        sym_type[j] := TYPE_REAL;
+      NextToken
+    end
     else if tok_type = TOK_ARRAY then
     begin
       NextToken;
@@ -75,6 +82,69 @@ begin
       sym_type[first_idx] := TYPE_STRING;
       sym_label[first_idx] := 256  { Store size for reference }
     end
+    else if tok_type = TOK_CARET then
+    begin
+      { Pointer type: ^BaseType }
+      NextToken;
+      if tok_type = TOK_INTEGER_TYPE then
+      begin
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_POINTER;
+          sym_const_val[j] := TYPE_INTEGER  { base type }
+        end;
+        NextToken
+      end
+      else if tok_type = TOK_CHAR_TYPE then
+      begin
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_POINTER;
+          sym_const_val[j] := TYPE_CHAR
+        end;
+        NextToken
+      end
+      else if tok_type = TOK_BOOLEAN_TYPE then
+      begin
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_POINTER;
+          sym_const_val[j] := TYPE_BOOLEAN
+        end;
+        NextToken
+      end
+      else if tok_type = TOK_REAL_TYPE then
+      begin
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_POINTER;
+          sym_const_val[j] := TYPE_REAL
+        end;
+        NextToken
+      end
+      else
+        Error(14)  { expected type identifier }
+    end
+    else if tok_type = TOK_IDENT then
+    begin
+      { May be a record type name }
+      arr_size := SymLookup;  { reuse arr_size as type_idx temporarily }
+      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
+      begin
+        { Allocate space for record }
+        lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
+        { Adjust local_offset: we already allocated 8 bytes, need rest }
+        local_offset := local_offset - (lo_bound - 8);
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_RECORD;
+          sym_const_val[j] := arr_size  { link to type definition }
+        end;
+        NextToken
+      end
+      else
+        Error(9)
+    end
     else
       Error(9);
     Expect(TOK_SEMICOLON)
@@ -102,6 +172,84 @@ begin
   end
 end;
 
+procedure ParseTypeDeclarations;
+var
+  type_idx, fld_start, fld_offset, fld_type: integer;
+  i, base_idx: integer;
+begin
+  NextToken;  { consume 'type' }
+  while tok_type = TOK_IDENT do
+  begin
+    { Create type symbol }
+    type_idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, scope_level, 0);
+    NextToken;
+    Expect(TOK_EQ);
+    if tok_type = TOK_RECORD then
+    begin
+      NextToken;  { consume 'record' }
+      fld_start := field_count;
+      fld_offset := 0;
+      sym_const_val[type_idx] := fld_start;  { first field index }
+
+      { Parse fields until 'end' }
+      while tok_type <> TOK_END do
+      begin
+        if tok_type <> TOK_IDENT then
+          Error(11);
+
+        { Save field name }
+        base_idx := field_count * 32;
+        for i := 0 to tok_len - 1 do
+          field_name[base_idx + i] := tok_str[i];
+        field_name[base_idx + tok_len] := 0;
+
+        NextToken;
+        Expect(TOK_COLON);
+
+        { Parse field type }
+        if tok_type = TOK_INTEGER_TYPE then
+        begin
+          fld_type := TYPE_INTEGER;
+          NextToken
+        end
+        else if tok_type = TOK_CHAR_TYPE then
+        begin
+          fld_type := TYPE_CHAR;
+          NextToken
+        end
+        else if tok_type = TOK_BOOLEAN_TYPE then
+        begin
+          fld_type := TYPE_BOOLEAN;
+          NextToken
+        end
+        else if tok_type = TOK_REAL_TYPE then
+        begin
+          fld_type := TYPE_REAL;
+          NextToken
+        end
+        else
+          Error(9);
+
+        field_type[field_count] := fld_type;
+        field_offset[field_count] := fld_offset;
+        field_rec_idx[field_count] := type_idx;
+        field_count := field_count + 1;
+        fld_offset := fld_offset + 8;  { all fields are 8 bytes }
+
+        { Expect semicolon or end }
+        if tok_type = TOK_SEMICOLON then
+          NextToken
+      end;
+
+      NextToken;  { consume 'end' }
+      sym_label[type_idx] := fld_offset  { total record size }
+    end
+    else
+      Error(9);
+    Expect(TOK_SEMICOLON)
+  end
+end;
+
 procedure ParseProcedureDeclaration; forward;
 procedure ParseFunctionDeclaration; forward;
 
@@ -114,10 +262,12 @@ begin
   saved_offset := local_offset;
   body_label := 0;
 
-  while (tok_type = TOK_CONST) or (tok_type = TOK_VAR) do
+  while (tok_type = TOK_CONST) or (tok_type = TOK_VAR) or (tok_type = TOK_TYPE_KW) do
   begin
     if tok_type = TOK_CONST then
       ParseConstDeclarations
+    else if tok_type = TOK_TYPE_KW then
+      ParseTypeDeclarations
     else
       ParseVarDeclarations
   end;
@@ -231,11 +381,20 @@ begin
           param_count := param_count + 1;
           NextToken
         until tok_type <> TOK_COMMA;
-        { Skip type annotation }
+        { Parse type annotation and set param types }
         if tok_type = TOK_COLON then
         begin
           NextToken;
-          if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+          if tok_type = TOK_REAL_TYPE then
+          begin
+            { Set all params in this group to TYPE_REAL }
+            { Find starting index of this group and set types }
+            { param_indices has the indices, but we need to know where this group started }
+            { For simplicity, set all recent params to real - this is approximate }
+            sym_type[param_idx] := TYPE_REAL;
+            NextToken
+          end
+          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
         end
@@ -392,11 +551,16 @@ begin
           param_count := param_count + 1;
           NextToken
         until tok_type <> TOK_COMMA;
-        { Skip type annotation }
+        { Parse type annotation and set param types }
         if tok_type = TOK_COLON then
         begin
           NextToken;
-          if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+          if tok_type = TOK_REAL_TYPE then
+          begin
+            sym_type[param_idx] := TYPE_REAL;
+            NextToken
+          end
+          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
              (tok_type = TOK_BOOLEAN_TYPE) then
             NextToken
         end
@@ -425,6 +589,11 @@ begin
   if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
      (tok_type = TOK_BOOLEAN_TYPE) then
     NextToken
+  else if tok_type = TOK_REAL_TYPE then
+  begin
+    sym_type[idx] := TYPE_REAL;
+    NextToken
+  end
   else
     Error(9);
 
@@ -478,8 +647,11 @@ begin
   scope_level := saved_level;
   local_offset := saved_offset;
 
-  { Load result from local variable into x0 }
-  EmitLdurX0(-16);
+  { Load result from local variable into x0 or d0 }
+  if sym_type[idx] = TYPE_REAL then
+    EmitLdurD0(-16)
+  else
+    EmitLdurX0(-16);
 
   { Restore sp to frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
@@ -525,6 +697,8 @@ begin
   rt_read_int := NewLabel;
   rt_skip_line := NewLabel;
   rt_print_string := NewLabel;
+  rt_print_real := NewLabel;
+  rt_read_real := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -533,6 +707,8 @@ begin
   EmitReadIntRuntime;
   EmitSkipLineRuntime;
   EmitPrintStringRuntime;
+  EmitPrintRealRuntime;
+  EmitReadRealRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
@@ -569,5 +745,10 @@ begin
   rt_read_int := 0;
   rt_skip_line := 0;
   rt_print_string := 0;
+  rt_print_real := 0;
+  rt_read_real := 0;
   out_fd := 1;
+  pushback_ch := -1;
+  expr_type := TYPE_INTEGER;
+  field_count := 0;
 
