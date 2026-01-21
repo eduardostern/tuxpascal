@@ -494,6 +494,106 @@ static int emit_print_char_routine(void) {
     return label;
 }
 
+// Emit openfile routine - opens file for reading, returns fd in x0 (-1 on error)
+// Input: x0 = pointer to null-terminated filename
+static int emit_openfile_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Open file routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+
+    // open(path=x0, flags=O_RDONLY, mode=0)
+    // x0 already has path
+    emit("mov x1, #0");           // O_RDONLY
+    emit("mov x2, #0");           // mode
+    emit("mov x16, #5");          // open syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // On macOS, if carry is set, x0 contains errno
+    // Return -1 on error instead of errno
+    int success = new_label();
+    emit("b.cc L%d", success);    // branch if carry clear (success)
+    emit("mov x0, #-1");          // return -1 on error
+    emit_label(success);
+
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit closefile routine - closes file descriptor
+// Input: x0 = fd to close
+static int emit_closefile_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Close file routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+
+    // close(fd=x0)
+    emit("mov x16, #6");          // close syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Return 0 on success, -1 on error
+    int success = new_label();
+    emit("b.cc L%d", success);    // branch if carry clear (success)
+    emit("mov x0, #-1");
+    int done = new_label();
+    emit("b L%d", done);
+    emit_label(success);
+    emit("mov x0, #0");
+    emit_label(done);
+
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit readfromfd routine - reads one char from fd, returns char or -1
+// Input: x0 = fd to read from
+// Output: x0 = char read, or -1 for EOF/error
+static int emit_readfromfd_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Read from fd routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+
+    // read(fd=x0, buf=sp, count=1)
+    emit("mov x1, sp");       // buffer on stack
+    emit("mov x2, #1");       // read 1 byte
+    emit("mov x16, #3");      // read syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Check return value - if 0 or negative, return -1 for EOF
+    emit("cmp x0, #1");
+    int got_char = new_label();
+    emit("b.ge L%d", got_char);
+    emit("mov x0, #-1");      // EOF
+    int done = new_label();
+    emit("b L%d", done);
+
+    emit_label(got_char);
+    emit("ldrb w0, [sp]");    // Load the character
+
+    emit_label(done);
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
 // Emit file initialization code
 // x27 = input fd (default stdin=0)
 // x28 = output fd (default stdout=1)
@@ -555,6 +655,9 @@ static int rt_print_int = -1;
 static int rt_newline = -1;
 static int rt_readchar = -1;
 static int rt_print_char = -1;
+static int rt_openfile = -1;
+static int rt_closefile = -1;
+static int rt_readfromfd = -1;
 
 // Parse factor
 static void parse_factor(Parser *p) {
@@ -592,6 +695,61 @@ static void parse_factor(Parser *p) {
             parse_expression(p);
             expect(p, TOK_RPAREN);
             // chr() is a no-op since we store chars as integers
+            return;
+        }
+        if (strcmp(lower, "openfile") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            parse_expression(p);  // string address in x0
+            expect(p, TOK_RPAREN);
+            emit("bl L%d", rt_openfile);  // returns fd in x0
+            return;
+        }
+        if (strcmp(lower, "closefile") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            parse_expression(p);  // fd in x0
+            expect(p, TOK_RPAREN);
+            emit("bl L%d", rt_closefile);
+            emit("mov x0, #0");  // return 0
+            return;
+        }
+        if (strcmp(lower, "readfromfd") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            parse_expression(p);  // fd in x0
+            expect(p, TOK_RPAREN);
+            emit("bl L%d", rt_readfromfd);  // returns char/-1 in x0
+            return;
+        }
+        if (strcmp(lower, "addrof") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            // Expect an identifier (variable or array)
+            if (!check(p, TOK_IDENT)) {
+                error(p, "addrof requires a variable name");
+            }
+            char *var_name = current(p)->str_val;
+            advance(p);
+            Symbol *var_sym = symtab_lookup(&p->symbols, var_name);
+            if (!var_sym) {
+                char msg[100];
+                snprintf(msg, sizeof(msg), "undefined variable '%s'", var_name);
+                error(p, msg);
+            }
+            free(var_name);
+            expect(p, TOK_RPAREN);
+            // Emit code to compute address
+            int current_level = p->symbols.current->level;
+            if (var_sym->level < current_level) {
+                emit_addr_outer(var_sym->offset, var_sym->level, current_level);
+            } else {
+                emit_addr_fp(var_sym->offset);
+            }
             return;
         }
         // Not a built-in, fall through to regular identifier handling
@@ -1707,6 +1865,9 @@ int parser_compile(Parser *p, const char *output_path) {
     rt_newline = emit_newline_routine();
     rt_readchar = emit_readchar_routine();
     rt_print_char = emit_print_char_routine();
+    rt_openfile = emit_openfile_routine();
+    rt_closefile = emit_closefile_routine();
+    rt_readfromfd = emit_readfromfd_routine();
 
     // Main program
     emit_raw("\n// Main program");

@@ -1,0 +1,573 @@
+{ ----- Declarations ----- }
+
+procedure ParseVarDeclarations;
+var
+  idx, first_idx, arr_size, lo_bound, hi_bound: integer;
+begin
+  NextToken;  { consume 'var' }
+  while tok_type = TOK_IDENT do
+  begin
+    { Remember first var in a group for fixing up array size }
+    local_offset := local_offset - 8;
+    first_idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
+    idx := first_idx;
+    NextToken;
+    while tok_type = TOK_COMMA do
+    begin
+      NextToken;
+      if tok_type <> TOK_IDENT then
+        Error(8);
+      local_offset := local_offset - 8;
+      idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
+      NextToken
+    end;
+    Expect(TOK_COLON);
+    { Parse type }
+    if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+       (tok_type = TOK_BOOLEAN_TYPE) then
+      NextToken
+    else if tok_type = TOK_ARRAY then
+    begin
+      NextToken;
+      Expect(TOK_LBRACKET);
+      { Parse low bound }
+      if tok_type = TOK_INTEGER then
+      begin
+        lo_bound := tok_int;
+        NextToken
+      end
+      else
+        Error(9);
+      Expect(TOK_DOTDOT);
+      { Parse high bound }
+      if tok_type = TOK_INTEGER then
+      begin
+        hi_bound := tok_int;
+        NextToken
+      end
+      else
+        Error(9);
+      Expect(TOK_RBRACKET);
+      Expect(TOK_OF);
+      { Parse element type }
+      if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+         (tok_type = TOK_BOOLEAN_TYPE) then
+        NextToken
+      else
+        Error(9);
+      { Calculate array size and adjust offset }
+      { Each element is 8 bytes for integer, but we'll use simpler 1-byte for char }
+      { For now, use 8 bytes per element for simplicity }
+      arr_size := (hi_bound - lo_bound + 1) * 8;
+      { Adjust local_offset: we already allocated 8 bytes, need (arr_size - 8) more }
+      local_offset := local_offset - (arr_size - 8);
+      { Store array info: use sym_const_val for low bound, sym_label for size }
+      sym_type[first_idx] := TYPE_ARRAY;
+      sym_const_val[first_idx] := lo_bound;
+      sym_label[first_idx] := arr_size
+    end
+    else if tok_type = TOK_STRING_TYPE then
+    begin
+      { String type: 256 bytes (1 length byte + 255 char bytes) }
+      NextToken;
+      { Adjust local_offset: we already allocated 8 bytes, need 248 more }
+      local_offset := local_offset - 248;
+      sym_type[first_idx] := TYPE_STRING;
+      sym_label[first_idx] := 256  { Store size for reference }
+    end
+    else
+      Error(9);
+    Expect(TOK_SEMICOLON)
+  end
+end;
+
+procedure ParseConstDeclarations;
+var
+  idx: integer;
+begin
+  NextToken;  { consume 'const' }
+  while tok_type = TOK_IDENT do
+  begin
+    idx := SymAdd(SYM_CONST, TYPE_INTEGER, scope_level, 0);
+    NextToken;
+    Expect(TOK_EQ);
+    if tok_type = TOK_INTEGER then
+    begin
+      sym_const_val[idx] := tok_int;
+      NextToken
+    end
+    else
+      Error(10);
+    Expect(TOK_SEMICOLON)
+  end
+end;
+
+procedure ParseProcedureDeclaration; forward;
+procedure ParseFunctionDeclaration; forward;
+
+procedure ParseBlock;
+var
+  saved_offset: integer;
+  alloc_size: integer;
+  body_label: integer;
+begin
+  saved_offset := local_offset;
+  body_label := 0;
+
+  while (tok_type = TOK_CONST) or (tok_type = TOK_VAR) do
+  begin
+    if tok_type = TOK_CONST then
+      ParseConstDeclarations
+    else
+      ParseVarDeclarations
+  end;
+
+  { If there are procedure/function declarations, jump over them }
+  if (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) then
+  begin
+    body_label := NewLabel;
+    EmitBranchLabel(body_label)
+  end;
+
+  while (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) do
+  begin
+    if tok_type = TOK_PROCEDURE then
+      ParseProcedureDeclaration
+    else
+      ParseFunctionDeclaration
+  end;
+
+  if body_label > 0 then
+    EmitLabel(body_label);
+
+  { Allocate stack space - round up to 16 for alignment }
+  alloc_size := 0;
+  if local_offset < saved_offset then
+  begin
+    alloc_size := saved_offset - local_offset;
+    alloc_size := ((alloc_size + 15) div 16) * 16;
+    EmitSubSP(alloc_size)
+  end;
+
+  Expect(TOK_BEGIN);
+  ParseStatement;
+  while tok_type = TOK_SEMICOLON do
+  begin
+    NextToken;
+    ParseStatement
+  end;
+  Expect(TOK_END);
+
+  { Deallocate stack space }
+  if alloc_size > 0 then
+  begin
+    EmitAddSP(alloc_size)
+  end
+end;
+
+procedure ParseProcedureDeclaration;
+var
+  idx, proc_label: integer;
+  saved_level, saved_offset: integer;
+  param_count, param_idx, i: integer;
+  param_indices: array[0..7] of integer;
+  is_var_group: integer;
+begin
+  NextToken;  { consume 'procedure' }
+
+  if tok_type <> TOK_IDENT then
+    Error(11);
+
+  { Check if procedure already exists (forward declaration) }
+  idx := SymLookup;
+  if (idx >= 0) and (sym_kind[idx] = SYM_PROCEDURE) then
+  begin
+    { Reuse existing forward-declared procedure }
+    proc_label := sym_label[idx]
+  end
+  else
+  begin
+    { Create new procedure symbol }
+    idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, scope_level, 0);
+    proc_label := NewLabel;
+    sym_label[idx] := proc_label
+  end;
+  NextToken;
+
+  { Save state and enter new scope for parameters }
+  saved_level := scope_level;
+  saved_offset := local_offset;
+  scope_level := scope_level + 1;
+  local_offset := -8;  { Reserve -8 for static link }
+  param_count := 0;
+
+  { Handle optional parameters }
+  if tok_type = TOK_LPAREN then
+  begin
+    NextToken;
+    if tok_type <> TOK_RPAREN then
+    begin
+      repeat
+        if tok_type = TOK_SEMICOLON then NextToken;
+        { Check for 'var' keyword - applies to all idents in this group }
+        is_var_group := 0;
+        if tok_type = TOK_VAR then
+        begin
+          is_var_group := 1;
+          NextToken
+        end;
+        { Parse identifier list for this parameter group }
+        if tok_type <> TOK_IDENT then Error(11);
+        repeat
+          if tok_type = TOK_COMMA then NextToken;
+          if tok_type <> TOK_IDENT then Error(11);
+          { Add parameter }
+          local_offset := local_offset - 8;
+          param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
+          if is_var_group = 1 then
+            sym_is_var_param[param_idx] := 1;
+          if param_count < 8 then
+            param_indices[param_count] := param_idx;
+          param_count := param_count + 1;
+          NextToken
+        until tok_type <> TOK_COMMA;
+        { Skip type annotation }
+        if tok_type = TOK_COLON then
+        begin
+          NextToken;
+          if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+             (tok_type = TOK_BOOLEAN_TYPE) then
+            NextToken
+        end
+      until tok_type <> TOK_SEMICOLON
+    end;
+    Expect(TOK_RPAREN)
+  end;
+
+  { Build var-param bitmap and store on procedure symbol }
+  sym_var_param_flags[idx] := 0;
+  for i := 0 to param_count - 1 do
+    if sym_is_var_param[param_indices[i]] = 1 then
+    begin
+      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    end;
+
+  Expect(TOK_SEMICOLON);
+
+  { Check for forward declaration }
+  if tok_type = TOK_FORWARD then
+  begin
+    NextToken;
+    Expect(TOK_SEMICOLON);
+    PopScope(scope_level);
+    scope_level := saved_level;
+    local_offset := saved_offset
+  end
+  else
+  begin
+
+  { Emit procedure label and prolog - save x29, x30, static link }
+  EmitLabel(proc_label);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);  { Allocate space for static link }
+  EmitStoreStaticLink;
+
+  { Allocate space for parameters and copy from registers }
+  if param_count > 0 then
+  begin
+    EmitSubSP(((param_count * 8 + 15) div 16) * 16);
+    for i := 0 to param_count - 1 do
+    begin
+      if i < 8 then
+      begin
+        { Store xi to [x29, #offset] }
+        EmitIndent;
+        writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+        writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
+        writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
+        writechar(44); writechar(32); writechar(35);  { , # }
+        write(sym_offset[param_indices[i]]);
+        writechar(93);  { ] }
+        EmitNL
+      end
+    end
+  end;
+
+  { Parse procedure body }
+  ParseBlock;
+
+  { Pop local symbols and restore scope }
+  PopScope(scope_level);
+  scope_level := saved_level;
+  local_offset := saved_offset;
+
+  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+  writechar(120); writechar(50); writechar(57);  { x29 }
+  EmitNL;
+
+  { Restore frame and return }
+  EmitLdp;
+  EmitIndent;
+  writechar(114); writechar(101); writechar(116);  { ret }
+  EmitNL;
+
+  Expect(TOK_SEMICOLON)
+  end  { end of else for non-forward declaration }
+end;
+
+procedure ParseFunctionDeclaration;
+var
+  idx, func_label: integer;
+  saved_level, saved_offset: integer;
+  param_count, param_idx, i: integer;
+  param_indices: array[0..7] of integer;
+  is_var_group: integer;
+begin
+  NextToken;  { consume 'function' }
+
+  if tok_type <> TOK_IDENT then
+    Error(11);
+
+  { Check if function already exists (forward declaration) }
+  idx := SymLookup;
+  if (idx >= 0) and (sym_kind[idx] = SYM_FUNCTION) then
+  begin
+    { Reuse existing forward-declared function }
+    func_label := sym_label[idx]
+  end
+  else
+  begin
+    { Create new function symbol }
+    idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, scope_level, 0);
+    func_label := NewLabel;
+    sym_label[idx] := func_label
+  end;
+  NextToken;
+
+  { Save state and enter new scope for parameters }
+  saved_level := scope_level;
+  saved_offset := local_offset;
+  scope_level := scope_level + 1;
+  local_offset := -16;  { Reserve -8 for static link, -16 for result }
+  param_count := 0;
+
+  { Handle optional parameters }
+  if tok_type = TOK_LPAREN then
+  begin
+    NextToken;
+    if tok_type <> TOK_RPAREN then
+    begin
+      repeat
+        if tok_type = TOK_SEMICOLON then NextToken;
+        { Check for 'var' keyword - applies to all idents in this group }
+        is_var_group := 0;
+        if tok_type = TOK_VAR then
+        begin
+          is_var_group := 1;
+          NextToken
+        end;
+        { Parse identifier list for this parameter group }
+        if tok_type <> TOK_IDENT then Error(11);
+        repeat
+          if tok_type = TOK_COMMA then NextToken;
+          if tok_type <> TOK_IDENT then Error(11);
+          { Add parameter }
+          local_offset := local_offset - 8;
+          param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
+          if is_var_group = 1 then
+            sym_is_var_param[param_idx] := 1;
+          if param_count < 8 then
+            param_indices[param_count] := param_idx;
+          param_count := param_count + 1;
+          NextToken
+        until tok_type <> TOK_COMMA;
+        { Skip type annotation }
+        if tok_type = TOK_COLON then
+        begin
+          NextToken;
+          if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+             (tok_type = TOK_BOOLEAN_TYPE) then
+            NextToken
+        end
+      until tok_type <> TOK_SEMICOLON
+    end;
+    Expect(TOK_RPAREN)
+  end;
+
+  { Build var-param bitmap and store on function symbol }
+  sym_var_param_flags[idx] := 0;
+  for i := 0 to param_count - 1 do
+    if sym_is_var_param[param_indices[i]] = 1 then
+    begin
+      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    end;
+
+  { Parse return type }
+  Expect(TOK_COLON);
+  if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
+     (tok_type = TOK_BOOLEAN_TYPE) then
+    NextToken
+  else
+    Error(9);
+
+  Expect(TOK_SEMICOLON);
+
+  { Check for forward declaration }
+  if tok_type = TOK_FORWARD then
+  begin
+    NextToken;
+    Expect(TOK_SEMICOLON);
+    PopScope(scope_level);
+    scope_level := saved_level;
+    local_offset := saved_offset
+  end
+  else
+  begin
+
+  { Emit function label and prolog - save x29, x30, static link }
+  EmitLabel(func_label);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);  { Allocate space for static link }
+  EmitStoreStaticLink;
+
+  { Allocate space for parameters and copy from registers }
+  if param_count > 0 then
+  begin
+    EmitSubSP(((param_count * 8 + 15) div 16) * 16);
+    for i := 0 to param_count - 1 do
+    begin
+      if i < 8 then
+      begin
+        { Store xi to [x29, #offset] }
+        EmitIndent;
+        writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+        writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
+        writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
+        writechar(44); writechar(32); writechar(35);  { , # }
+        write(sym_offset[param_indices[i]]);
+        writechar(93);  { ] }
+        EmitNL
+      end
+    end
+  end;
+
+  { Parse function body }
+  ParseBlock;
+
+  { Pop local symbols and restore scope }
+  PopScope(scope_level);
+  scope_level := saved_level;
+  local_offset := saved_offset;
+
+  { Load result from local variable into x0 }
+  EmitLdurX0(-16);
+
+  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+  writechar(120); writechar(50); writechar(57);  { x29 }
+  EmitNL;
+
+  { Restore frame and return }
+  EmitLdp;
+  EmitIndent;
+  writechar(114); writechar(101); writechar(116);  { ret }
+  EmitNL;
+
+  Expect(TOK_SEMICOLON)
+  end  { end of else for non-forward declaration }
+end;
+
+procedure ParseProgram;
+var
+  main_lbl: integer;
+begin
+  Expect(TOK_PROGRAM);
+  if tok_type <> TOK_IDENT then
+    Error(11);
+  NextToken;
+  Expect(TOK_SEMICOLON);
+
+  { Emit header }
+  EmitGlobl;
+  EmitAlign4;
+  EmitMain;
+
+  { Jump over runtime routines }
+  main_lbl := NewLabel;
+  EmitBranchLabel(main_lbl);
+
+  { Emit runtime routines }
+  rt_print_int := NewLabel;
+  rt_newline := NewLabel;
+  rt_readchar := NewLabel;
+  rt_print_char := NewLabel;
+  rt_read_int := NewLabel;
+  rt_skip_line := NewLabel;
+  rt_print_string := NewLabel;
+
+  EmitPrintIntRuntime;
+  EmitNewlineRuntime;
+  EmitReadcharRuntime;
+  EmitPrintCharRuntime;
+  EmitReadIntRuntime;
+  EmitSkipLineRuntime;
+  EmitPrintStringRuntime;
+
+  { Main program entry }
+  EmitLabel(main_lbl);
+  EmitStp;
+  EmitMovFP;
+  EmitFileOpenInit;
+
+  ParseBlock;
+
+  Expect(TOK_DOT);
+
+  { Exit syscall }
+  EmitMovX0(0);
+  EmitMovX16(33554433);  { 0x2000001 }
+  EmitSvc
+end;
+
+{ ----- Main ----- }
+
+begin
+  { Initialize }
+  line_num := 1;
+  col_num := 0;
+  sym_count := 0;
+  scope_level := 0;
+  local_offset := 0;
+  label_count := 0;
+  string_count := 0;
+  had_error := 0;
+  rt_print_int := 0;
+  rt_newline := 0;
+  rt_readchar := 0;
+  rt_print_char := 0;
+  rt_read_int := 0;
+  rt_skip_line := 0;
+  rt_print_string := 0;
+  out_fd := 1;
+

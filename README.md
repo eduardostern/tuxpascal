@@ -56,16 +56,28 @@ Hello, World!
 | **Operators** | `+`, `-`, `*`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not` |
 | **I/O** | `write`, `writeln`, `read`, `readln` |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
+| **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
 
 ## Project Structure
 
 ```
 tuxpascal/
-├── tpcv2              # Main compiler wrapper script
+├── tpc                # Bootstrap compiler (C)
 ├── v2/
-│   ├── compiler.pas   # Self-hosting compiler source (Pascal)
-│   └── tpcv2          # Compiled v2 compiler binary
-├── src/               # Bootstrap compiler (C) - frozen
+│   ├── compiler.pas       # Self-hosting compiler (single file)
+│   ├── compiler_split.pas # Self-hosting compiler (modular, uses includes)
+│   ├── inc/               # Include files for modular compiler
+│   │   ├── constants.inc  # Token types, globals
+│   │   ├── utility.inc    # Helper functions
+│   │   ├── lexer.inc      # Tokenizer
+│   │   ├── symbols.inc    # Symbol table
+│   │   ├── emitters.inc   # Assembly output
+│   │   ├── runtime.inc    # Runtime code generators
+│   │   ├── parser.inc     # Expression/statement parsing
+│   │   ├── declarations.inc # Proc/func/block parsing
+│   │   └── main.inc       # Main entry point
+│   └── tpcv2              # Compiled v2 compiler binary
+├── src/               # Bootstrap compiler source (C)
 ├── examples/          # Example Pascal programs
 └── Makefile
 ```

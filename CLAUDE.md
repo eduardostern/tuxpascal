@@ -69,13 +69,24 @@ Source (.pas) → Lexer → Parser → Assembly (.s) → clang → Executable
 ### v2 Source Files (Pascal - active development)
 
 - `v2/compiler.pas` - Complete self-hosting compiler in a single file
+- `v2/compiler_split.pas` - Modular version using include files
+- `v2/inc/` - Include files for the modular compiler:
+  - `constants.inc` - Token types, symbol kinds, type kinds, global variables
+  - `utility.inc` - Helper functions (Error, IsDigit, IsAlpha, ToLower, etc.)
+  - `lexer.inc` - Tokenizer (NextChar, NextToken, SkipWhitespace)
+  - `symbols.inc` - Symbol table management
+  - `emitters.inc` - Assembly output procedures (Emit*, WriteChar sequences)
+  - `runtime.inc` - Runtime code generators (print routines, read routines)
+  - `parser.inc` - Expression and statement parsing
+  - `declarations.inc` - Procedure/function/block parsing
+  - `main.inc` - Main initialization and entry point
 
 ### Code Generation
 
 The parser emits ARM64 assembly directly to a file as it parses. Key patterns:
 - Stack-based expression evaluation (push/pop via `str`/`ldr` with pre/post-indexing)
 - Frame pointer (x29) based local variable access
-- macOS syscalls for I/O (write=0x2000004, exit=0x2000001)
+- macOS syscalls for I/O (read=0x2000003, write=0x2000004, exit=0x2000001)
 - Runtime routines for integer printing and newline output
 
 ## Supported Pascal Features
@@ -88,15 +99,38 @@ The parser emits ARM64 assembly directly to a file as it parses. Key patterns:
 
 **Operators:** `+`, `-`, `*`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`
 
-**Built-ins:** `write`, `writeln` (strings and integers)
+**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar` (v2 only: `read`, `readln`, `readchar`, `writechar`)
 
 **Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
 
+**Include Directives:** `{$I filename}` or `{$INCLUDE filename}` - processed by v1 preprocessor before compilation
+
 ## Not Yet Implemented
 
-- `read`/`readln`
 - Real numbers
 - Pointers and records
 - String operations beyond literals
 - Case statement
 - Unary minus in expressions
+
+Note: `read`/`readln` are implemented in v2 only, not in the v1 bootstrap compiler.
+
+## Include Directive
+
+The v1 compiler supports Pascal-style include directives for splitting source files:
+
+```pascal
+{$I filename.inc}
+{$INCLUDE path/to/file.inc}
+```
+
+Features:
+- Paths are relative to the including file's directory
+- Circular includes are detected and prevented
+- Maximum include depth of 8 levels
+- Works with both `{$I}` and `{$INCLUDE}` syntax
+
+To compile the modular v2 compiler:
+```bash
+./tpc v2/compiler_split.pas -o v2/tpcv2
+```
