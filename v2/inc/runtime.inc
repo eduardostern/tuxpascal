@@ -1400,6 +1400,152 @@ begin
   EmitRet
 end;
 
+procedure EmitReadStringRuntime;
+var
+  loop_lbl, done_lbl, store_len_lbl: integer;
+begin
+  { Read string from input (x19), string buffer address passed in x0 }
+  { String format: byte 0 = length, bytes 1-255 = characters }
+  { Reads until newline or max 255 chars }
+  EmitLabel(rt_read_string);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Save string buffer address in x21 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { x22 = character count (starts at 0) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { Read loop }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitLabel(loop_lbl);
+
+  { Check if count >= 255 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Read one character: read(x19, sp, 1) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(57);  { x19 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitMovX16(33554435);  { 0x2000003 = read syscall }
+  EmitSvc;
+
+  { Check if read failed or EOF (x0 < 1) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Load character into x23 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);  { w23, }
+  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+  EmitNL;
+
+  { Check if newline (10) or carriage return (13) }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+  writechar(35); writechar(49); writechar(51);  { #13 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(done_lbl);
+  EmitNL;
+
+  { Store character at buffer[count+1] }
+  { x24 = x21 + x22 + 1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(50); writechar(50);  { x22 }
+  EmitNL;
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);  { w23, }
+  writechar(91); writechar(120); writechar(50); writechar(52); writechar(93);  { [x24] }
+  EmitNL;
+
+  { Increment count }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { Loop back }
+  EmitIndent;
+  writechar(98); writechar(32);  { b }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  { Done - store length at buffer[0] }
+  EmitLabel(done_lbl);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(50); writechar(50); writechar(44); writechar(32);  { w22, }
+  writechar(91); writechar(120); writechar(50); writechar(49); writechar(93);  { [x21] }
+  EmitNL;
+
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
 procedure EmitFileOpenInit;
 var
   skip_input_lbl, skip_output_lbl: integer;

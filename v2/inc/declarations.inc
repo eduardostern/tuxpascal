@@ -843,6 +843,7 @@ begin
   rt_print_string := NewLabel;
   rt_print_real := NewLabel;
   rt_read_real := NewLabel;
+  rt_read_string := NewLabel;
   rt_heap_init := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
@@ -866,6 +867,7 @@ begin
   EmitPrintStringRuntime;
   EmitPrintRealRuntime;
   EmitReadRealRuntime;
+  EmitReadStringRuntime;
   EmitHeapInitRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
@@ -918,6 +920,7 @@ begin
   rt_print_string := 0;
   rt_print_real := 0;
   rt_read_real := 0;
+  rt_read_string := 0;
   rt_heap_init := 0;
   rt_str_copy := 0;
   rt_str_compare := 0;

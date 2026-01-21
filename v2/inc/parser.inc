@@ -2062,6 +2062,13 @@ begin
           else
             EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
         end
+        else if sym_type[idx] = TYPE_STRING then
+        begin
+          { Load string variable address into x0 }
+          EmitVarAddr(idx, scope_level);
+          { Call read_string runtime }
+          EmitBL(rt_read_string)
+        end
         else
         begin
           { Call read_int runtime }

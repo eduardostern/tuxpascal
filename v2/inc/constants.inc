@@ -144,6 +144,7 @@ var
   rt_print_string: integer;
   rt_print_real: integer;
   rt_read_real: integer;
+  rt_read_string: integer;
 
   { Float literal parsing }
   tok_float_int: integer;   { integer part of float }
