@@ -4,46 +4,71 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TuxPascal is a minimal Pascal compiler written in C, targeting ARM64 macOS. It compiles a subset of Turbo Pascal 1.0-style Pascal to native executables via assembly output.
+TuxPascal is a minimal Pascal compiler targeting ARM64 macOS. It compiles a subset of Turbo Pascal 1.0-style Pascal to native executables via assembly output.
+
+There are two compiler implementations:
+- **v1 (`src/`)** - Bootstrap compiler written in C. Frozen - only modify if needed to compile v2.
+- **v2 (`v2/compiler.pas`)** - Self-hosting compiler written in Pascal. **All new features go here.**
+
+The v2 compiler can compile itself (v2 → v3 → v4 produces identical output).
 
 ## Build Commands
 
 ```bash
-make        # Build the compiler (produces ./tpc)
+make        # Build v1 bootstrap compiler (produces ./tpc)
 make clean  # Remove build artifacts
 make test   # Build and run all example programs
 ```
 
-## Running the Compiler
+## Running the Compilers
 
+**v1 (bootstrap):**
 ```bash
 ./tpc <input.pas> [-o <output>] [-S]
 ```
 
-Options:
+**v2 (self-hosting):**
+```bash
+cat input.pas | ./v2/tpcv2 > output.s
+clang output.s -o output
+```
+
+Options for v1:
 - `-o <file>` - Output file name (default: a.out)
 - `-S` - Output assembly only (don't assemble/link)
 
-Example:
+## Rebuilding v2
+
+To rebuild the v2 compiler after making changes:
 ```bash
-./tpc examples/hello.pas -o hello
-./hello
+./tpc v2/compiler.pas -o v2/tpcv2
+```
+
+To verify self-hosting (v2 compiles itself):
+```bash
+cat v2/compiler.pas | ./v2/tpcv2 > /tmp/v3.s && clang /tmp/v3.s -o /tmp/v3
+cat v2/compiler.pas | /tmp/v3 > /tmp/v4.s
+diff /tmp/v3.s /tmp/v4.s  # Should be identical
 ```
 
 ## Architecture
 
-The compiler is a single-pass recursive descent compiler that outputs ARM64 assembly, then uses clang to assemble/link:
+Both compilers are single-pass recursive descent compilers that output ARM64 assembly:
 
 ```
 Source (.pas) → Lexer → Parser → Assembly (.s) → clang → Executable
 ```
 
-### Source Files
+### v1 Source Files (C bootstrap - frozen)
 
 - `src/main.c` - Entry point, file I/O, invokes clang for assembly/linking
 - `src/lexer.c/h` - Tokenizer for Pascal source (case-insensitive keywords)
 - `src/parser.c/h` - Recursive descent parser with inline code generation
 - `src/symbols.c/h` - Symbol table with scope management
+
+### v2 Source Files (Pascal - active development)
+
+- `v2/compiler.pas` - Complete self-hosting compiler in a single file
 
 ### Code Generation
 
@@ -59,17 +84,19 @@ The parser emits ARM64 assembly directly to a file as it parses. Key patterns:
 
 **Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `begin`/`end`
 
-**Declarations:** `program`, `const`, `var`
+**Declarations:** `program`, `const`, `var`, `procedure`, `function`, `forward`
 
 **Operators:** `+`, `-`, `*`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`
 
 **Built-ins:** `write`, `writeln` (strings and integers)
 
+**Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
+
 ## Not Yet Implemented
 
-- Procedures and functions
 - `read`/`readln`
-- Nested scopes
 - Real numbers
 - Pointers and records
 - String operations beyond literals
+- Case statement
+- Unary minus in expressions
