@@ -190,6 +190,19 @@ var
   rt_str_rtrim: integer;  { trim trailing whitespace }
   rt_str_trim: integer;   { trim both leading and trailing whitespace }
 
+  { Runtime labels for screen/terminal control }
+  rt_clrscr: integer;     { clear screen and home cursor }
+  rt_gotoxy: integer;     { move cursor to x,y position }
+  rt_clreol: integer;     { clear to end of line }
+  rt_textcolor: integer;  { set foreground color }
+  rt_textbackground: integer;  { set background color }
+  rt_normvideo: integer;  { reset attributes }
+  rt_highvideo: integer;  { bold/bright }
+  rt_lowvideo: integer;   { dim }
+  rt_hidecursor: integer; { hide cursor }
+  rt_showcursor: integer; { show cursor }
+  rt_sleep: integer;      { sleep for N milliseconds using nanosleep syscall }
+
   { String temp index (0-3) for copy/concat results }
   string_temp_idx: integer;
 
@@ -6115,6 +6128,741 @@ begin
   EmitRet
 end;
 
+{ ----- Screen/Terminal Control Routines ----- }
+
+procedure EmitStrbAtOffset(offset: integer);
+{ Emit: sturb w0, [x29, #offset] - stores low byte of w0 at x29+offset }
+begin
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114);  { stur }
+  writechar(98); writechar(32);  { b }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
+  writechar(44); writechar(32); writechar(35);  { , # }
+  write(offset);
+  writechar(93);  { ] }
+  EmitNL
+end;
+
+procedure EmitClrScrRuntime;
+{ Emits code to clear screen and home cursor: ESC[2J ESC[H }
+begin
+  EmitLabel(rt_clrscr);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store escape sequence on stack: ESC[2J ESC[H = 27,91,50,74,27,91,72 }
+  { Use sturb to store individual bytes }
+  EmitMovX0(27);       { ESC }
+  EmitStrbAtOffset(-15);
+  EmitMovX0(91);       { [ }
+  EmitStrbAtOffset(-14);
+  EmitMovX0(50);       { 2 }
+  EmitStrbAtOffset(-13);
+  EmitMovX0(74);       { J }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(27);       { ESC }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(91);       { [ }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(72);       { H }
+  EmitStrbAtOffset(-9);
+  { Write syscall: x0=fd, x1=buf, x2=count }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #15 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(53);  { #15 }
+  EmitNL;
+  { mov x2, #7 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(55);  { #7 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitGotoXYRuntime;
+{ Emits code to move cursor: ESC[y;xH }
+{ x1=x (column), x0=y (row) }
+var
+  loop1, done1, loop2, done2, end_lbl: integer;
+begin
+  EmitLabel(rt_gotoxy);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+  { Save x and y to registers first to avoid memory corruption }
+  { x11 = y (row), x12 = x (column) - using higher regs to avoid conflicts with division }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(50); writechar(44); writechar(32);  { x12, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+  { Build escape sequence at stack offset -20 onwards (leave room for digits) }
+  { Format: ESC [ y ; x H }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-20);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-19);
+  { x8 = pointer to next byte (start at -18) }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(56);  { #18 }
+  EmitNL;
+  { Convert y to decimal digits (y is in x11) }
+  { mov x0, x11 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(49);  { x11 }
+  EmitNL;
+  { If y >= 10, output tens digit }
+  loop1 := NewLabel;
+  done1 := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76);
+  write(done1);
+  EmitNL;
+  { Divide by 10: x1 = x0 / 10, x2 = x0 mod 10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(57);  { x9 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { x1=tens, x0=units - store tens digit }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { strb w1, [x8], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
+  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitLabel(done1);
+  { Store units digit }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { strb w0, [x8], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { Store semicolon }
+  EmitMovX0(59);  { ; }
+  { strb w0, [x8], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { Convert x to decimal digits (x is in x12) }
+  { mov x0, x12 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(50);  { x12 }
+  EmitNL;
+  done2 := NewLabel;
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76);
+  write(done2);
+  EmitNL;
+  { Divide by 10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(35); writechar(49); writechar(48);  { #10 }
+  EmitNL;
+  EmitIndent;
+  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(57);  { x9 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { Store tens digit }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { strb w1, [x8], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
+  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitLabel(done2);
+  { Store units digit }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { strb w0, [x8], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { Store H terminator }
+  EmitMovX0(72);  { H }
+  { strb w0, [x8] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+  EmitNL;
+  { Calculate length: x8 points past last byte, buffer starts at x29-20 }
+  { add x8, x8, #1 (point past H) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { x2 = x8 - (x29-20) = x8 - x29 + 20 }
+  { sub x2, x8, x29 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(120); writechar(50); writechar(57);  { x29 }
+  EmitNL;
+  { add x2, x2, #20 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(50); writechar(48);  { #20 }
+  EmitNL;
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #20 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(50); writechar(48);  { #20 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitClrEolRuntime;
+{ Emits code to clear to end of line: ESC[K }
+begin
+  EmitLabel(rt_clreol);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[K = 27,91,75 }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(75);  { K }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #11 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(49);  { #11 }
+  EmitNL;
+  { mov x2, #3 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(51);  { #3 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitTextColorRuntime;
+{ Emits code to set foreground color: ESC[3Xm where X=x0 (0-7) }
+begin
+  EmitLabel(rt_textcolor);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Save color parameter (x0) to x9 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { Store ESC[3Xm = 27,91,51,X,109 (5 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-13);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(51);  { 3 }
+  EmitStrbAtOffset(-11);
+  { Store color digit: x9 + 48 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitStrbAtOffset(-10);
+  { Store 'm' }
+  EmitMovX0(109);  { m }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #13 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(51);  { #13 }
+  EmitNL;
+  { mov x2, #5 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(53);  { #5 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitTextBackgroundRuntime;
+{ Emits code to set background color: ESC[4Xm where X=x0 (0-7) }
+begin
+  EmitLabel(rt_textbackground);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Save color parameter (x0) to x9 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { Store ESC[4Xm = 27,91,52,X,109 (5 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-13);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(52);  { 4 }
+  EmitStrbAtOffset(-11);
+  { Store color digit: x9 + 48 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitStrbAtOffset(-10);
+  { Store 'm' }
+  EmitMovX0(109);  { m }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #13 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(51);  { #13 }
+  EmitNL;
+  { mov x2, #5 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(53);  { #5 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitNormVideoRuntime;
+{ Emits code to reset attributes: ESC[0m }
+begin
+  EmitLabel(rt_normvideo);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[0m = 27,91,48,109 (4 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(48);  { 0 }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(109); { m }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #12 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(50);  { #12 }
+  EmitNL;
+  { mov x2, #4 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(52);  { #4 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitHighVideoRuntime;
+{ Emits code to enable bold: ESC[1m }
+begin
+  EmitLabel(rt_highvideo);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[1m = 27,91,49,109 (4 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(49);  { 1 }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(109); { m }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #12 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(50);  { #12 }
+  EmitNL;
+  { mov x2, #4 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(52);  { #4 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitLowVideoRuntime;
+{ Emits code to enable dim: ESC[2m }
+begin
+  EmitLabel(rt_lowvideo);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[2m = 27,91,50,109 (4 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(50);  { 2 }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(109); { m }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #12 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(50);  { #12 }
+  EmitNL;
+  { mov x2, #4 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(52);  { #4 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitHideCursorRuntime;
+{ Emits code to hide cursor: ESC[?25l }
+begin
+  EmitLabel(rt_hidecursor);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[?25l = 27,91,63,50,53,108 (6 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-14);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-13);
+  EmitMovX0(63);  { ? }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(50);  { 2 }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(53);  { 5 }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(108); { l }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #14 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(52);  { #14 }
+  EmitNL;
+  { mov x2, #6 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(54);  { #6 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitShowCursorRuntime;
+{ Emits code to show cursor: ESC[?25h }
+begin
+  EmitLabel(rt_showcursor);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store ESC[?25h = 27,91,63,50,53,104 (6 bytes) }
+  EmitMovX0(27);  { ESC }
+  EmitStrbAtOffset(-14);
+  EmitMovX0(91);  { [ }
+  EmitStrbAtOffset(-13);
+  EmitMovX0(63);  { ? }
+  EmitStrbAtOffset(-12);
+  EmitMovX0(50);  { 2 }
+  EmitStrbAtOffset(-11);
+  EmitMovX0(53);  { 5 }
+  EmitStrbAtOffset(-10);
+  EmitMovX0(104); { h }
+  EmitStrbAtOffset(-9);
+  { Write syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX0X20;          { fd from x20 }
+  { sub x1, x29, #14 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+  writechar(35); writechar(49); writechar(52);  { #14 }
+  EmitNL;
+  { mov x2, #6 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(54);  { #6 }
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitSleepRuntime;
+{ Emits code to sleep for x0 milliseconds using select syscall }
+{ x0 = milliseconds }
+{ select(0, NULL, NULL, NULL, &timeval) with nfds=0, all fd_sets=NULL }
+{ struct timeval: tv_sec (8 bytes), tv_usec (8 bytes) }
+begin
+  EmitLabel(rt_sleep);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);  { 16 bytes for timeval + alignment }
+
+  { x10 = ms (save original) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { x11 = 1000 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
+  writechar(35); writechar(49); writechar(48); writechar(48); writechar(48);  { #1000 }
+  EmitNL;
+
+  { x0 = ms / 1000 (seconds) }
+  EmitIndent;
+  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(120); writechar(49); writechar(49);  { x11 }
+  EmitNL;
+
+  { x1 = ms mod 1000 (remainder): msub x1, x0, x11, x10 = x10 - (x0 * x11) }
+  EmitIndent;
+  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
+  writechar(120); writechar(49); writechar(48);  { x10 }
+  EmitNL;
+
+  { x1 = x1 * 1000 (microseconds, not nanoseconds for timeval) }
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(49); writechar(49);  { x11 (x11 is still 1000) }
+  EmitNL;
+
+  { Store timeval at sp: [sp] = tv_sec, [sp+8] = tv_usec }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+  EmitNL;
+
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+
+  { select(nfds=0, readfds=NULL, writefds=NULL, exceptfds=NULL, timeout=sp) }
+  { x0 = 0 (nfds) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x1 = NULL }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x2 = NULL }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x3 = NULL }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x4 = pointer to timeval (sp) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
+  EmitMovX16(33554525);
+  EmitSvc;
+
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
 { ----- Parser ----- }
 
 procedure ParseExpression; forward;
@@ -8791,6 +9539,107 @@ begin
       EmitNL;
       Expect(TOK_RPAREN)
     end
+    { clrscr = 99,108,114,115,99,114 }
+    else if TokIs8(99, 108, 114, 115, 99, 114, 0, 0) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_clrscr)
+    end
+    { gotoxy = 103,111,116,111,120,121 }
+    else if TokIs8(103, 111, 116, 111, 120, 121, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { x }
+      EmitPushX0;
+      Expect(TOK_COMMA);
+      ParseExpression;    { y }
+      EmitPopX1;          { x1=x, x0=y }
+      EmitBL(rt_gotoxy);
+      Expect(TOK_RPAREN)
+    end
+    { clreol = 99,108,114,101,111,108 }
+    else if TokIs8(99, 108, 114, 101, 111, 108, 0, 0) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_clreol)
+    end
+    { textcolor = 116,101,120,116,99,111,108,111,114 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 111) and (ToLower(tok_str[6]) = 108) and (ToLower(tok_str[7]) = 111) and
+            (ToLower(tok_str[8]) = 114) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { color code 0-7 }
+      EmitBL(rt_textcolor);
+      Expect(TOK_RPAREN)
+    end
+    { textbackground = 116,101,120,116,98,97,99,107,103,114,111,117,110,100 (14 chars) }
+    else if (tok_len = 14) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 98) and
+            (ToLower(tok_str[5]) = 97) and (ToLower(tok_str[6]) = 99) and (ToLower(tok_str[7]) = 107) and
+            (ToLower(tok_str[8]) = 103) and (ToLower(tok_str[9]) = 114) and (ToLower(tok_str[10]) = 111) and
+            (ToLower(tok_str[11]) = 117) and (ToLower(tok_str[12]) = 110) and (ToLower(tok_str[13]) = 100) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { color code 0-7 }
+      EmitBL(rt_textbackground);
+      Expect(TOK_RPAREN)
+    end
+    { normvideo = 110,111,114,109,118,105,100,101,111 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 111) and
+            (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 109) and (ToLower(tok_str[4]) = 118) and
+            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
+            (ToLower(tok_str[8]) = 111) then
+    begin
+      NextToken;
+      EmitBL(rt_normvideo)
+    end
+    { highvideo = 104,105,103,104,118,105,100,101,111 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
+            (ToLower(tok_str[2]) = 103) and (ToLower(tok_str[3]) = 104) and (ToLower(tok_str[4]) = 118) and
+            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
+            (ToLower(tok_str[8]) = 111) then
+    begin
+      NextToken;
+      EmitBL(rt_highvideo)
+    end
+    { lowvideo = 108,111,119,118,105,100,101,111 (8 chars) }
+    else if TokIs8(108, 111, 119, 118, 105, 100, 101, 111) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_lowvideo)
+    end
+    { hidecursor = 104,105,100,101,99,117,114,115,111,114 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
+            (ToLower(tok_str[2]) = 100) and (ToLower(tok_str[3]) = 101) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
+    begin
+      NextToken;
+      EmitBL(rt_hidecursor)
+    end
+    { showcursor = 115,104,111,119,99,117,114,115,111,114 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 104) and
+            (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 119) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
+    begin
+      NextToken;
+      EmitBL(rt_showcursor)
+    end
+    { sleep = 115,108,101,101,112 (5 chars) - Sleep(ms) }
+    else if TokIs8(115, 108, 101, 101, 112, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;  { ms in x0 }
+      EmitBL(rt_sleep);
+      Expect(TOK_RPAREN)
+    end
     else
     begin
       { Check for WITH context - try to find identifier as a field }
@@ -10370,6 +11219,17 @@ begin
   rt_str_ltrim := NewLabel;
   rt_str_rtrim := NewLabel;
   rt_str_trim := NewLabel;
+  rt_clrscr := NewLabel;
+  rt_gotoxy := NewLabel;
+  rt_clreol := NewLabel;
+  rt_textcolor := NewLabel;
+  rt_textbackground := NewLabel;
+  rt_normvideo := NewLabel;
+  rt_highvideo := NewLabel;
+  rt_lowvideo := NewLabel;
+  rt_hidecursor := NewLabel;
+  rt_showcursor := NewLabel;
+  rt_sleep := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -10394,6 +11254,17 @@ begin
   EmitStrLtrimRuntime;
   EmitStrRtrimRuntime;
   EmitStrTrimRuntime;
+  EmitClrScrRuntime;
+  EmitGotoXYRuntime;
+  EmitClrEolRuntime;
+  EmitTextColorRuntime;
+  EmitTextBackgroundRuntime;
+  EmitNormVideoRuntime;
+  EmitHighVideoRuntime;
+  EmitLowVideoRuntime;
+  EmitHideCursorRuntime;
+  EmitShowCursorRuntime;
+  EmitSleepRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);

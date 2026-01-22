@@ -857,6 +857,17 @@ begin
   rt_str_ltrim := NewLabel;
   rt_str_rtrim := NewLabel;
   rt_str_trim := NewLabel;
+  rt_clrscr := NewLabel;
+  rt_gotoxy := NewLabel;
+  rt_clreol := NewLabel;
+  rt_textcolor := NewLabel;
+  rt_textbackground := NewLabel;
+  rt_normvideo := NewLabel;
+  rt_highvideo := NewLabel;
+  rt_lowvideo := NewLabel;
+  rt_hidecursor := NewLabel;
+  rt_showcursor := NewLabel;
+  rt_sleep := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -881,6 +892,17 @@ begin
   EmitStrLtrimRuntime;
   EmitStrRtrimRuntime;
   EmitStrTrimRuntime;
+  EmitClrScrRuntime;
+  EmitGotoXYRuntime;
+  EmitClrEolRuntime;
+  EmitTextColorRuntime;
+  EmitTextBackgroundRuntime;
+  EmitNormVideoRuntime;
+  EmitHighVideoRuntime;
+  EmitLowVideoRuntime;
+  EmitHideCursorRuntime;
+  EmitShowCursorRuntime;
+  EmitSleepRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);

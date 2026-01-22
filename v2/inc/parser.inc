@@ -2674,6 +2674,107 @@ begin
       EmitNL;
       Expect(TOK_RPAREN)
     end
+    { clrscr = 99,108,114,115,99,114 }
+    else if TokIs8(99, 108, 114, 115, 99, 114, 0, 0) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_clrscr)
+    end
+    { gotoxy = 103,111,116,111,120,121 }
+    else if TokIs8(103, 111, 116, 111, 120, 121, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { x }
+      EmitPushX0;
+      Expect(TOK_COMMA);
+      ParseExpression;    { y }
+      EmitPopX1;          { x1=x, x0=y }
+      EmitBL(rt_gotoxy);
+      Expect(TOK_RPAREN)
+    end
+    { clreol = 99,108,114,101,111,108 }
+    else if TokIs8(99, 108, 114, 101, 111, 108, 0, 0) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_clreol)
+    end
+    { textcolor = 116,101,120,116,99,111,108,111,114 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 111) and (ToLower(tok_str[6]) = 108) and (ToLower(tok_str[7]) = 111) and
+            (ToLower(tok_str[8]) = 114) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { color code 0-7 }
+      EmitBL(rt_textcolor);
+      Expect(TOK_RPAREN)
+    end
+    { textbackground = 116,101,120,116,98,97,99,107,103,114,111,117,110,100 (14 chars) }
+    else if (tok_len = 14) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 98) and
+            (ToLower(tok_str[5]) = 97) and (ToLower(tok_str[6]) = 99) and (ToLower(tok_str[7]) = 107) and
+            (ToLower(tok_str[8]) = 103) and (ToLower(tok_str[9]) = 114) and (ToLower(tok_str[10]) = 111) and
+            (ToLower(tok_str[11]) = 117) and (ToLower(tok_str[12]) = 110) and (ToLower(tok_str[13]) = 100) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;    { color code 0-7 }
+      EmitBL(rt_textbackground);
+      Expect(TOK_RPAREN)
+    end
+    { normvideo = 110,111,114,109,118,105,100,101,111 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 111) and
+            (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 109) and (ToLower(tok_str[4]) = 118) and
+            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
+            (ToLower(tok_str[8]) = 111) then
+    begin
+      NextToken;
+      EmitBL(rt_normvideo)
+    end
+    { highvideo = 104,105,103,104,118,105,100,101,111 (9 chars) }
+    else if (tok_len = 9) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
+            (ToLower(tok_str[2]) = 103) and (ToLower(tok_str[3]) = 104) and (ToLower(tok_str[4]) = 118) and
+            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
+            (ToLower(tok_str[8]) = 111) then
+    begin
+      NextToken;
+      EmitBL(rt_highvideo)
+    end
+    { lowvideo = 108,111,119,118,105,100,101,111 (8 chars) }
+    else if TokIs8(108, 111, 119, 118, 105, 100, 101, 111) = 1 then
+    begin
+      NextToken;
+      EmitBL(rt_lowvideo)
+    end
+    { hidecursor = 104,105,100,101,99,117,114,115,111,114 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
+            (ToLower(tok_str[2]) = 100) and (ToLower(tok_str[3]) = 101) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
+    begin
+      NextToken;
+      EmitBL(rt_hidecursor)
+    end
+    { showcursor = 115,104,111,119,99,117,114,115,111,114 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 104) and
+            (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 119) and (ToLower(tok_str[4]) = 99) and
+            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
+    begin
+      NextToken;
+      EmitBL(rt_showcursor)
+    end
+    { sleep = 115,108,101,101,112 (5 chars) - Sleep(ms) }
+    else if TokIs8(115, 108, 101, 101, 112, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;  { ms in x0 }
+      EmitBL(rt_sleep);
+      Expect(TOK_RPAREN)
+    end
     else
     begin
       { Check for WITH context - try to find identifier as a field }

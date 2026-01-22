@@ -184,6 +184,19 @@ var
   rt_str_rtrim: integer;  { trim trailing whitespace }
   rt_str_trim: integer;   { trim both leading and trailing whitespace }
 
+  { Runtime labels for screen/terminal control }
+  rt_clrscr: integer;     { clear screen and home cursor }
+  rt_gotoxy: integer;     { move cursor to x,y position }
+  rt_clreol: integer;     { clear to end of line }
+  rt_textcolor: integer;  { set foreground color }
+  rt_textbackground: integer;  { set background color }
+  rt_normvideo: integer;  { reset attributes }
+  rt_highvideo: integer;  { bold/bright }
+  rt_lowvideo: integer;   { dim }
+  rt_hidecursor: integer; { hide cursor }
+  rt_showcursor: integer; { show cursor }
+  rt_sleep: integer;      { sleep for N milliseconds using nanosleep syscall }
+
   { String temp index (0-3) for copy/concat results }
   string_temp_idx: integer;
 

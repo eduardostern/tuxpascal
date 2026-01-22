@@ -30,7 +30,9 @@ Options:
 - `-o <file>` - Output file name (default: input name without .pas extension)
 - `-S` - Output assembly only (don't assemble/link)
 
-## Example
+## Examples
+
+### Hello World
 
 ```pascal
 program Hello;
@@ -39,11 +41,34 @@ begin
 end.
 ```
 
+### Towers of Hanoi with Animated Graphics
+
+TuxPascal includes ANSI terminal support for creating retro-style games and animations:
+
+```pascal
+program TowersOfHanoi;
+const
+  NumDisks = 5;
+  AnimDelay = 12;
+var
+  tower1, tower2, tower3: array[0..9] of integer;
+begin
+  ClrScr;
+  HideCursor;
+  TextColor(3);
+  GotoXY(25, 1);
+  write('*** TOWERS OF HANOI ***');
+  NormVideo;
+  { ... animate disks with smooth movement ... }
+  Sleep(AnimDelay);  { millisecond timer }
+  ShowCursor;
+end.
+```
+
+Run the full example:
 ```bash
-$ ./tpcv2 hello.pas
-Compiled hello.pas -> hello
-$ ./hello
-Hello, World!
+cat examples/hanoi.pas | ./v2/tpcv2 > /tmp/hanoi.s && clang /tmp/hanoi.s -o /tmp/hanoi
+/tmp/hanoi
 ```
 
 ## Supported Pascal Features
@@ -57,6 +82,7 @@ Hello, World!
 | **I/O** | `write`, `writeln`, `read`, `readln`, `readchar`, `writechar` |
 | **String Ops** | `length`, `copy`, `concat`, `+`, `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim` |
 | **Utilities** | `abs`, `odd`, `sqr`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`, `halt` |
+| **Screen/Terminal** | `ClrScr`, `GotoXY`, `ClrEol`, `TextColor`, `TextBackground`, `NormVideo`, `HighVideo`, `LowVideo`, `HideCursor`, `ShowCursor`, `Sleep` |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
 | **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
 
@@ -115,6 +141,10 @@ diff /tmp/v3.s /tmp/v4.s  # Should be identical
 
 - macOS on Apple Silicon (ARM64)
 - Xcode Command Line Tools (`xcode-select --install`)
+
+## Author
+
+**Eduardo Stern** - eduardostern@icloud.com
 
 ## License
 
