@@ -573,6 +573,7 @@ var
   param_count, param_idx, i, j: integer;
   param_indices: array[0..7] of integer;
   is_var_group: integer;
+  saved_exit_label, proc_exit_label: integer;
 begin
   NextToken;  { consume 'procedure' }
 
@@ -758,6 +759,11 @@ begin
     end
   end;
 
+  { Set up exit label for this procedure }
+  saved_exit_label := exit_label;
+  proc_exit_label := NewLabel;
+  exit_label := proc_exit_label;
+
   { Parse procedure body }
   ParseBlock;
 
@@ -765,6 +771,10 @@ begin
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
+
+  { Emit exit label for exit statements }
+  EmitLabel(proc_exit_label);
+  exit_label := saved_exit_label;
 
   { Restore sp to frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
@@ -790,6 +800,7 @@ var
   param_count, param_idx, i, j: integer;
   param_indices: array[0..7] of integer;
   is_var_group: integer;
+  saved_exit_label, func_exit_label: integer;
 begin
   NextToken;  { consume 'function' }
 
@@ -989,6 +1000,11 @@ begin
     end
   end;
 
+  { Set up exit label for this function }
+  saved_exit_label := exit_label;
+  func_exit_label := NewLabel;
+  exit_label := func_exit_label;
+
   { Parse function body }
   ParseBlock;
 
@@ -996,6 +1012,10 @@ begin
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
+
+  { Emit exit label for exit statements }
+  EmitLabel(func_exit_label);
+  exit_label := saved_exit_label;
 
   { Load result from local variable into x0 or d0 }
   if sym_type[idx] = TYPE_REAL then
@@ -1088,6 +1108,7 @@ begin
   rt_arctan := NewLabel;
   rt_arcsin := NewLabel;
   rt_arccos := NewLabel;
+  rt_paramstr := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -1137,11 +1158,27 @@ begin
   EmitArctanRuntime;
   EmitArcsinRuntime;
   EmitArccosRuntime;
+  EmitParamStrRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
   EmitStp;
   EmitMovFP;
+
+  { Save argc to x25, argv to x26 (before any calls clobber x0/x1) }
+  { mov x25, x0 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  { mov x26, x1 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);  { x26, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+
   EmitFileOpenInit;
   EmitBL(rt_heap_init);
 
@@ -1189,6 +1226,9 @@ begin
   field_count := 0;
   with_rec_idx := -1;
   with_rec_type := 0;
+  break_label := 0;
+  continue_label := 0;
+  exit_label := 0;
   ptr_arr_count := 0;
   file_count := 0;
   rt_alloc := 0;

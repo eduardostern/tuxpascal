@@ -115,19 +115,21 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 **Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested), `text` (files)
 
-**Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`
+**Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`, `break`, `continue`, `exit`
 
 **Declarations:** `program`, `const`, `type`, `var`, `procedure`, `function`, `forward`
 
-**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@` (address-of), `^` (dereference), pointer arithmetic
+**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and` (short-circuit), `or` (short-circuit), `not`, `@` (address-of), `^` (dereference), pointer arithmetic
 
-**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt`
+**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt`, `sizeof`, `paramcount`, `paramstr`
 
 **File I/O:** `assign`, `reset`, `rewrite`, `close`, `eof`, `seek`, `filepos`, `filesize`
 
 **String Functions:** `length`, `copy`, `concat`, `+` (concatenation), `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim`
 
-**Utility Functions:** `abs`, `odd`, `sqr`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`
+**Math Functions:** `sin`, `cos`, `tan`, `arctan`, `arcsin`, `arccos`, `sqrt`, `sqr`, `exp`, `ln`, `log10`, `log2`, `power`, `abs`, `round`, `trunc`, `frac`, `int`, `pi`, `random`, `randomize`
+
+**Utility Functions:** `odd`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`
 
 **Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
 
@@ -140,6 +142,5 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 - Subrange types
 - Variant records
 - Units/modules (`unit`, `uses`)
-- Math functions (`sqrt`, `sin`, `cos`, etc.)
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.

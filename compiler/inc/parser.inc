@@ -823,6 +823,81 @@ begin
       EmitNL;
       expr_type := TYPE_INTEGER
     end
+    { sizeof = 115,105,122,101,111,102 }
+    else if (tok_len = 6) and (tok_str[0] = 115) and (tok_str[1] = 105) and
+            (tok_str[2] = 122) and (tok_str[3] = 101) and (tok_str[4] = 111) and
+            (tok_str[5] = 102) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      { Check for type name or variable }
+      if tok_type = TOK_INTEGER_TYPE then
+      begin
+        EmitMovX0(8);
+        NextToken
+      end
+      else if tok_type = TOK_CHAR_TYPE then
+      begin
+        EmitMovX0(1);
+        NextToken
+      end
+      else if tok_type = TOK_BOOLEAN_TYPE then
+      begin
+        EmitMovX0(1);
+        NextToken
+      end
+      else if tok_type = TOK_REAL_TYPE then
+      begin
+        EmitMovX0(8);
+        NextToken
+      end
+      else if tok_type = TOK_STRING_TYPE then
+      begin
+        EmitMovX0(256);
+        NextToken
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { Look up identifier - could be variable or type name }
+        idx := SymLookup;
+        if idx < 0 then
+          Error(3);
+        if sym_kind[idx] = SYM_TYPEDEF then
+        begin
+          { Type definition - get size from sym_label (record size) }
+          EmitMovX0(sym_label[idx])
+        end
+        else if sym_type[idx] = TYPE_INTEGER then
+          EmitMovX0(8)
+        else if sym_type[idx] = TYPE_CHAR then
+          EmitMovX0(1)  { Logical size, not storage size }
+        else if sym_type[idx] = TYPE_BOOLEAN then
+          EmitMovX0(1)  { Logical size, not storage size }
+        else if sym_type[idx] = TYPE_REAL then
+          EmitMovX0(8)
+        else if sym_type[idx] = TYPE_STRING then
+          EmitMovX0(256)
+        else if sym_type[idx] = TYPE_POINTER then
+          EmitMovX0(8)
+        else if sym_type[idx] = TYPE_ARRAY then
+        begin
+          { Array: sym_label already contains total size in bytes }
+          EmitMovX0(sym_label[idx])
+        end
+        else if sym_type[idx] = TYPE_RECORD then
+        begin
+          { Record: sym_const_val has typedef index, get size from typedef's sym_label }
+          EmitMovX0(sym_label[sym_const_val[idx]])
+        end
+        else
+          EmitMovX0(8);  { Default to 8 bytes }
+        NextToken
+      end
+      else
+        Error(9);
+      Expect(TOK_RPAREN);
+      expr_type := TYPE_INTEGER
+    end
     { upcase = 117,112,99,97,115,101 }
     else if (tok_len = 6) and (tok_str[0] = 117) and (tok_str[1] = 112) and
             (tok_str[2] = 99) and (tok_str[3] = 97) and (tok_str[4] = 115) and
@@ -1608,6 +1683,36 @@ begin
       Expect(TOK_RPAREN);
       expr_type := TYPE_INTEGER
     end
+    { paramcount = 112,97,114,97,109,99,111,117,110,116 }
+    else if (tok_len = 10) and (tok_str[0] = 112) and (tok_str[1] = 97) and
+            (tok_str[2] = 114) and (tok_str[3] = 97) and (tok_str[4] = 109) and
+            (tok_str[5] = 99) and (tok_str[6] = 111) and (tok_str[7] = 117) and
+            (tok_str[8] = 110) and (tok_str[9] = 116) then
+    begin
+      { paramcount - returns argc - 1 (number of command-line parameters) }
+      NextToken;
+      { x25 holds argc, return argc - 1 }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { paramstr = 112,97,114,97,109,115,116,114 }
+    else if (tok_len = 8) and (tok_str[0] = 112) and (tok_str[1] = 97) and
+            (tok_str[2] = 114) and (tok_str[3] = 97) and (tok_str[4] = 109) and
+            (tok_str[5] = 115) and (tok_str[6] = 116) and (tok_str[7] = 114) then
+    begin
+      { paramstr(n) - returns argv[n] as Pascal string }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;  { n in x0 }
+      Expect(TOK_RPAREN);
+      EmitBL(rt_paramstr);
+      expr_type := TYPE_STRING
+    end
     else
     begin
       { Check for WITH context - try to find identifier as a field }
@@ -2255,111 +2360,150 @@ end;
 
 procedure ParseTerm;
 var
-  op, left_type: integer;
+  op, left_type, and_skip_label, had_and: integer;
 begin
   ParseUnary;
+  had_and := 0;
+  and_skip_label := 0;
   while (tok_type = TOK_STAR) or (tok_type = TOK_DIV) or (tok_type = TOK_MOD) or
         (tok_type = TOK_AND) or (tok_type = TOK_SLASH) do
   begin
     op := tok_type;
     left_type := expr_type;
     NextToken;
-    { Push left operand appropriately }
-    if left_type = TYPE_REAL then
-      EmitPushD0
-    else
-      EmitPushX0;
-    ParseUnary;
-    { right operand is now in x0 or d0 depending on expr_type }
 
-    if op = TOK_SLASH then
+    if op = TOK_AND then
     begin
-      { / always produces real - convert both operands to float }
-      if expr_type <> TYPE_REAL then
-        EmitScvtfD0X0;  { convert right to float }
-      if left_type = TYPE_REAL then
-        EmitPopD1
-      else
+      { Short-circuit AND: if current value is 0, skip rest }
+      if had_and = 0 then
       begin
-        EmitPopX1;
-        EmitScvtfD1X1  { convert left to float }
+        and_skip_label := NewLabel;
+        had_and := 1
       end;
-      EmitFDiv;
-      expr_type := TYPE_REAL
-    end
-    else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
-    begin
-      { Mixed or both real - use float ops }
-      if expr_type <> TYPE_REAL then
-        EmitScvtfD0X0;  { convert right to float }
-      if left_type = TYPE_REAL then
-        EmitPopD1
-      else
-      begin
-        EmitPopX1;
-        EmitScvtfD1X1  { convert left to float }
-      end;
-      if op = TOK_STAR then
-        EmitFMul
-      else if op = TOK_DIV then
-      begin
-        { div on floats - truncate result to integer }
-        EmitFDiv;
-        EmitFcvtzsX0D0;
-        expr_type := TYPE_INTEGER
-      end
-      else if op = TOK_MOD then
-        Error(13)  { mod not supported for reals }
-      else { TOK_AND }
-        Error(13);  { and not supported for reals }
-      if (op = TOK_STAR) then
-        expr_type := TYPE_REAL
-    end
-    else
-    begin
-      { Both integers - use integer ops }
-      EmitPopX1;
-      if op = TOK_STAR then
-        EmitMul
-      else if op = TOK_DIV then
-        EmitSDiv
-      else if op = TOK_MOD then
-      begin
-        { x1 mod x0: x1 - (x1 / x0) * x0 }
-        EmitPushX0;
-        EmitPushX1;
-        EmitSDiv;
-        EmitMovX2X0;
-        EmitPopX1;
-        EmitPopX0;
-        EmitMsub
-      end
-      else { TOK_AND }
-        EmitAndX0X1;
+      { cbz x0, .Lskip - branch if zero }
+      EmitBranchLabelZ(and_skip_label);
+      ParseUnary;
       expr_type := TYPE_INTEGER
     end
-  end
+    else
+    begin
+      { Regular operators - push left, eval right, pop, compute }
+      if left_type = TYPE_REAL then
+        EmitPushD0
+      else
+        EmitPushX0;
+      ParseUnary;
+      { right operand is now in x0 or d0 depending on expr_type }
+
+      if op = TOK_SLASH then
+      begin
+        { / always produces real - convert both operands to float }
+        if expr_type <> TYPE_REAL then
+          EmitScvtfD0X0;  { convert right to float }
+        if left_type = TYPE_REAL then
+          EmitPopD1
+        else
+        begin
+          EmitPopX1;
+          EmitScvtfD1X1  { convert left to float }
+        end;
+        EmitFDiv;
+        expr_type := TYPE_REAL
+      end
+      else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
+      begin
+        { Mixed or both real - use float ops }
+        if expr_type <> TYPE_REAL then
+          EmitScvtfD0X0;  { convert right to float }
+        if left_type = TYPE_REAL then
+          EmitPopD1
+        else
+        begin
+          EmitPopX1;
+          EmitScvtfD1X1  { convert left to float }
+        end;
+        if op = TOK_STAR then
+          EmitFMul
+        else if op = TOK_DIV then
+        begin
+          { div on floats - truncate result to integer }
+          EmitFDiv;
+          EmitFcvtzsX0D0;
+          expr_type := TYPE_INTEGER
+        end
+        else if op = TOK_MOD then
+          Error(13);  { mod not supported for reals }
+        if (op = TOK_STAR) then
+          expr_type := TYPE_REAL
+      end
+      else
+      begin
+        { Both integers - use integer ops }
+        EmitPopX1;
+        if op = TOK_STAR then
+          EmitMul
+        else if op = TOK_DIV then
+          EmitSDiv
+        else if op = TOK_MOD then
+        begin
+          { x1 mod x0: x1 - (x1 / x0) * x0 }
+          EmitPushX0;
+          EmitPushX1;
+          EmitSDiv;
+          EmitMovX2X0;
+          EmitPopX1;
+          EmitPopX0;
+          EmitMsub
+        end;
+        expr_type := TYPE_INTEGER
+      end
+    end
+  end;
+
+  { Emit skip label for short-circuit AND if we had any }
+  if had_and = 1 then
+    EmitLabel(and_skip_label)
 end;
 
 procedure ParseSimpleExpr;
 var
-  op, left_type, left_ptr_base: integer;
+  op, left_type, left_ptr_base, or_true_label, or_end_label, had_or: integer;
 begin
   ParseTerm;
+  had_or := 0;
+  or_true_label := 0;
+  or_end_label := 0;
   while (tok_type = TOK_PLUS) or (tok_type = TOK_MINUS) or (tok_type = TOK_OR) do
   begin
     op := tok_type;
     left_type := expr_type;
     left_ptr_base := ptr_base_type;
     NextToken;
-    { Push left operand appropriately }
-    if left_type = TYPE_REAL then
-      EmitPushD0
-    else
-      EmitPushX0;
-    ParseTerm;
 
-    if (left_type = TYPE_POINTER) and (op = TOK_PLUS) then
+    if op = TOK_OR then
+    begin
+      { Short-circuit OR: if current value is non-zero, skip rest with result 1 }
+      if had_or = 0 then
+      begin
+        or_true_label := NewLabel;
+        or_end_label := NewLabel;
+        had_or := 1
+      end;
+      { cbnz x0, .Ltrue - branch if not zero }
+      EmitBranchLabelNZ(or_true_label);
+      ParseTerm;
+      expr_type := TYPE_INTEGER
+    end
+    else
+    begin
+      { Regular operators (+, -) - push left, eval right, pop, compute }
+      if left_type = TYPE_REAL then
+        EmitPushD0
+      else
+        EmitPushX0;
+      ParseTerm;
+
+      if (left_type = TYPE_POINTER) and (op = TOK_PLUS) then
     begin
       { pointer + integer: scale integer by 8 and SUBTRACT (arrays grow downward) }
       EmitPopX1;  { pointer in x1 }
@@ -2562,16 +2706,25 @@ begin
     end
     else
     begin
-      { Both integers }
+      { Both integers (only + and - reach here) }
       EmitPopX1;
       if op = TOK_PLUS then
         EmitAdd
-      else if op = TOK_MINUS then
-        EmitSub
-      else { TOK_OR }
-        EmitOrrX0X1;
+      else
+        EmitSub;
       expr_type := TYPE_INTEGER
     end
+    end  { end of else for non-OR operators }
+  end;
+
+  { Emit labels for short-circuit OR if we had any }
+  if had_or = 1 then
+  begin
+    { b .Lend - skip the mov x0, #1 }
+    EmitBranchLabel(or_end_label);
+    EmitLabel(or_true_label);
+    EmitMovX0(1);
+    EmitLabel(or_end_label)
   end
 end;
 
@@ -2717,6 +2870,7 @@ procedure ParseStatement;
 var
   idx, lbl1, lbl2, lbl3, arg_count, i: integer;
   var_flags, arg_idx, var_arg_idx: integer;
+  old_break, old_continue: integer;
 begin
   if tok_type = TOK_BEGIN then
   begin
@@ -2751,8 +2905,13 @@ begin
   end
   else if tok_type = TOK_WHILE then
   begin
-    lbl1 := NewLabel;
-    lbl2 := NewLabel;
+    lbl1 := NewLabel;  { loop start / continue target }
+    lbl2 := NewLabel;  { loop end / break target }
+    { Save old break/continue labels }
+    old_break := break_label;
+    old_continue := continue_label;
+    break_label := lbl2;
+    continue_label := lbl1;
     EmitLabel(lbl1);
     NextToken;
     ParseExpression;
@@ -2760,11 +2919,20 @@ begin
     EmitBranchLabelZ(lbl2);
     ParseStatement;
     EmitBranchLabel(lbl1);
-    EmitLabel(lbl2)
+    EmitLabel(lbl2);
+    { Restore old break/continue labels }
+    break_label := old_break;
+    continue_label := old_continue
   end
   else if tok_type = TOK_REPEAT then
   begin
-    lbl1 := NewLabel;
+    lbl1 := NewLabel;  { loop start / continue target }
+    lbl2 := NewLabel;  { loop end / break target }
+    { Save old break/continue labels }
+    old_break := break_label;
+    old_continue := continue_label;
+    break_label := lbl2;
+    continue_label := lbl1;
     EmitLabel(lbl1);
     NextToken;
     ParseStatement;
@@ -2775,7 +2943,11 @@ begin
     end;
     Expect(TOK_UNTIL);
     ParseExpression;
-    EmitBranchLabelZ(lbl1)
+    EmitBranchLabelZ(lbl1);
+    EmitLabel(lbl2);
+    { Restore old break/continue labels }
+    break_label := old_break;
+    continue_label := old_continue
   end
   else if tok_type = TOK_FOR then
   begin
@@ -2790,8 +2962,15 @@ begin
     ParseExpression;
     EmitSturX0(sym_offset[idx]);
 
-    lbl1 := NewLabel;
-    lbl2 := NewLabel;
+    lbl1 := NewLabel;  { condition check }
+    lbl2 := NewLabel;  { loop end / break target }
+    lbl3 := NewLabel;  { increment / continue target }
+
+    { Save old break/continue labels }
+    old_break := break_label;
+    old_continue := continue_label;
+    break_label := lbl2;
+    continue_label := lbl3;
 
     if tok_type = TOK_TO then
     begin
@@ -2811,7 +2990,8 @@ begin
       EmitCset(2);  { lt: exit when end < i, meaning i > end }
       EmitBranchLabelNZ(lbl2);
       ParseStatement;
-      { increment }
+      { continue target - increment }
+      EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
       EmitIndent;
       writechar(97); writechar(100); writechar(100); writechar(32);  { add x0, x0, #1 }
@@ -2822,6 +3002,9 @@ begin
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
+      { Restore old break/continue labels }
+      break_label := old_break;
+      continue_label := old_continue;
       { Pop end value from stack }
       EmitIndent;
       writechar(97); writechar(100); writechar(100); writechar(32);  { add }
@@ -2848,7 +3031,8 @@ begin
       EmitCset(4);  { gt: exit when end > i, meaning i < end }
       EmitBranchLabelNZ(lbl2);
       ParseStatement;
-      { decrement }
+      { continue target - decrement }
+      EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
       EmitIndent;
       writechar(115); writechar(117); writechar(98); writechar(32);  { sub x0, x0, #1 }
@@ -2859,6 +3043,9 @@ begin
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
+      { Restore old break/continue labels }
+      break_label := old_break;
+      continue_label := old_continue;
       { Pop end value from stack }
       EmitIndent;
       writechar(97); writechar(100); writechar(100); writechar(32);  { add }
@@ -3195,12 +3382,57 @@ begin
   else if tok_type = TOK_IDENT then
   begin
     { Check for built-in procedures first }
+    { break = 98,114,101,97,107 }
+    if (tok_len = 5) and (tok_str[0] = 98) and (tok_str[1] = 114) and
+       (tok_str[2] = 101) and (tok_str[3] = 97) and (tok_str[4] = 107) then
+    begin
+      NextToken;
+      if break_label = 0 then
+        Error(15)  { break not inside a loop }
+      else
+        EmitBranchLabel(break_label)
+    end
+    { continue = 99,111,110,116,105,110,117,101 }
+    else if (tok_len = 8) and (tok_str[0] = 99) and (tok_str[1] = 111) and
+            (tok_str[2] = 110) and (tok_str[3] = 116) and (tok_str[4] = 105) and
+            (tok_str[5] = 110) and (tok_str[6] = 117) and (tok_str[7] = 101) then
+    begin
+      NextToken;
+      if continue_label = 0 then
+        Error(15)  { continue not inside a loop }
+      else
+        EmitBranchLabel(continue_label)
+    end
+    { exit = 101,120,105,116 }
+    else if (tok_len = 4) and (tok_str[0] = 101) and (tok_str[1] = 120) and
+            (tok_str[2] = 105) and (tok_str[3] = 116) then
+    begin
+      NextToken;
+      if exit_label = 0 then
+      begin
+        { In main program - just call halt with exit code 0 }
+        EmitMovX0(0);
+        { mov x16, #1 }
+        EmitIndent;
+        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+        writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+        writechar(35); writechar(49);  { #1 }
+        EmitNL;
+        { svc #0x80 }
+        EmitIndent;
+        writechar(115); writechar(118); writechar(99); writechar(32);  { svc }
+        writechar(35); writechar(48); writechar(120); writechar(56); writechar(48);  { #0x80 }
+        EmitNL
+      end
+      else
+        EmitBranchLabel(exit_label)
+    end
     { write = 119,114,105,116,101 }
     { writeln = 119,114,105,116,101,108,110 }
     { readchar = 114,101,97,100,99,104,97,114 }
     { writechar = 119,114,105,116,101,99,104,97 - actually too long, use 8 }
     { halt = 104,97,108,116 }
-    if TokIs8(119, 114, 105, 116, 101, 108, 110, 0) = 1 then
+    else if TokIs8(119, 114, 105, 116, 101, 108, 110, 0) = 1 then
     begin
       { writeln }
       NextToken;
@@ -3270,6 +3502,8 @@ begin
                   ParseExpression;
                   if expr_type = TYPE_REAL then
                     EmitBL(rt_print_real)
+                  else if expr_type = TYPE_STRING then
+                    EmitBL(rt_print_string)
                   else
                     EmitBL(rt_print_int)
                 end
@@ -3279,6 +3513,8 @@ begin
                 ParseExpression;
                 if expr_type = TYPE_REAL then
                   EmitBL(rt_print_real)
+                else if expr_type = TYPE_STRING then
+                  EmitBL(rt_print_string)
                 else
                   EmitBL(rt_print_int)
               end;
@@ -3370,6 +3606,8 @@ begin
                   ParseExpression;
                   if expr_type = TYPE_REAL then
                     EmitBL(rt_print_real)
+                  else if expr_type = TYPE_STRING then
+                    EmitBL(rt_print_string)
                   else
                     EmitBL(rt_print_int)
                 end
@@ -3379,6 +3617,8 @@ begin
                 ParseExpression;
                 if expr_type = TYPE_REAL then
                   EmitBL(rt_print_real)
+                else if expr_type = TYPE_STRING then
+                  EmitBL(rt_print_string)
                 else
                   EmitBL(rt_print_int)
               end;

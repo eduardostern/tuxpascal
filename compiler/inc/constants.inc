@@ -186,6 +186,13 @@ var
   with_rec_idx: integer;    { symbol index of active with record, -1 if none }
   with_rec_type: integer;   { type index for field lookup }
 
+  { Loop control for break/continue }
+  break_label: integer;     { label to jump to for break, 0 if not in loop }
+  continue_label: integer;  { label to jump to for continue, 0 if not in loop }
+
+  { Exit label for current procedure/function }
+  exit_label: integer;      { label to jump to for exit, 0 if in main program }
+
   { Runtime labels for heap }
   rt_heap_init: integer;
 
@@ -229,6 +236,14 @@ var
   rt_arctan: integer;  { arctan(x) - Taylor series }
   rt_arcsin: integer;  { arcsin(x) - derived from arctan }
   rt_arccos: integer;  { arccos(x) - pi/2 - arcsin }
+
+  { Runtime labels for command line }
+  rt_paramstr: integer;  { paramstr(n) - get command line argument as Pascal string }
+
+  { Register usage:
+    x25 = argc (saved at program start)
+    x26 = argv (saved at program start)
+    x27 = random seed }
 
   { Saved terminal settings for restore }
   saved_termios: array[0..79] of integer;  { 80 bytes for termios struct }

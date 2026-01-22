@@ -7360,3 +7360,207 @@ begin
   EmitRet
 end;
 
+procedure EmitParamStrRuntime;
+var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl, empty_lbl: integer;
+begin
+  { paramstr(n) - convert argv[n] to Pascal string }
+  { Input: x0 = n (index into argv) }
+  { Output: x0 = pointer to Pascal string allocated from heap }
+  { Uses x25 = argc, x26 = argv (saved at program start) }
+  { Uses x21 = heap pointer for allocation }
+  EmitLabel(rt_paramstr);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Allocate string buffer from heap: x8 = x21, x21 += 256 }
+  { Save dest addr in x8 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(120); writechar(50); writechar(49);  { x21 }
+  EmitNL;
+  { Advance heap pointer }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
+  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
+  EmitNL;
+
+  done_lbl := NewLabel;
+  empty_lbl := NewLabel;
+  loop_lbl := NewLabel;
+  copy_lbl := NewLabel;
+  copy_done_lbl := NewLabel;
+
+  { Check bounds: if n >= argc, return empty string }
+  { cmp x0, x25 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(53);  { x25 }
+  EmitNL;
+  { b.ge empty }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(empty_lbl);
+  EmitNL;
+
+  { Check for negative index }
+  { cmp x0, #0 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  { b.lt empty }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(empty_lbl);
+  EmitNL;
+
+  { Load argv[n] pointer: x1 = argv[n] = *(x26 + n*8) }
+  { ldr x1, [x26, x0, lsl #3] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);  { [x26, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+  writechar(35); writechar(51); writechar(93);  { #3] }
+  EmitNL;
+
+  { Check if argv[n] is null }
+  { cbz x1, empty }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(76); write(empty_lbl);
+  EmitNL;
+
+  { x1 = pointer to C string, x8 = dest buffer }
+  { First count length (max 255) }
+  { mov x2, #0 - length counter }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  { mov x3, x1 - save string pointer }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+
+  EmitLabel(loop_lbl);
+  { ldrb w4, [x1], #1 - load byte and increment }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(93); writechar(44); writechar(32);  { [x1], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { cbz w4, copy_start - if null terminator, start copying }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(76); write(copy_lbl);
+  EmitNL;
+  { add x2, x2, #1 - increment length }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { cmp x2, #255 - max length }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
+  EmitNL;
+  { b.lt loop }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(loop_lbl);
+  EmitNL;
+
+  EmitLabel(copy_lbl);
+  { x2 = length, x3 = source pointer, x8 = dest buffer }
+  { Store length byte at [x8] }
+  { strb w2, [x8] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
+  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+  EmitNL;
+  { x0 = x8 + 1 (dest for chars), x1 = x3 (source) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { mov x1, x3 - restore source pointer }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+
+  { Copy loop }
+  EmitLabel(copy_done_lbl);
+  { cbz x2, done - if count = 0, done }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { ldrb w4, [x1], #1 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(49); writechar(93); writechar(44); writechar(32);  { [x1], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { strb w4, [x0], #1 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+  writechar(91); writechar(120); writechar(48); writechar(93); writechar(44); writechar(32);  { [x0], }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  { sub x2, x2, #1 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitBranchLabel(copy_done_lbl);
+
+  { Empty string: store length 0 }
+  EmitLabel(empty_lbl);
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
+  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+  EmitNL;
+
+  EmitLabel(done_lbl);
+  { Return pointer to string buffer (x8) }
+  { mov x0, x8 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(56);  { x8 }
+  EmitNL;
+
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
