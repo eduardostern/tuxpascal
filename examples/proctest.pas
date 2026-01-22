@@ -1,5 +1,8 @@
 program ProcTest;
 
+var
+  a: integer;
+
 procedure PrintNum(n: integer);
 begin
   writeln(n)
@@ -18,8 +21,6 @@ begin
     Factorial := n * Factorial(n - 1)
 end;
 
-var
-  a: integer;
 begin
   PrintNum(42);
   a := Double(21);

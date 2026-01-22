@@ -9,21 +9,38 @@ A minimal Pascal compiler targeting ARM64 macOS. Compiles a subset of Turbo Pasc
 - **Single-pass**: Fast compilation via recursive descent parsing with inline code generation
 - **Zero dependencies**: Only requires `clang` for assembly/linking (included with Xcode)
 
+## Installation
+
+```bash
+# Clone and build
+git clone https://github.com/yourusername/tuxpascal.git
+cd tuxpascal
+make
+
+# Install system-wide (optional)
+sudo make install
+```
+
+Or use the install script:
+```bash
+./scripts/install.sh
+```
+
 ## Quick Start
 
 ```bash
-# Build the bootstrap compiler
+# Build the compiler
 make
 
 # Compile a Pascal program
-./tpcv2 examples/hello.pas -o hello
+./build/bin/tpc examples/hello.pas -o hello
 ./hello
 ```
 
 ## Usage
 
 ```bash
-./tpcv2 <input.pas> [-o <output>] [-S]
+tuxpascal <input.pas> [-o <output>] [-S]
 ```
 
 Options:
@@ -67,8 +84,7 @@ end.
 
 Run the full example:
 ```bash
-cat examples/hanoi.pas | ./v2/tpcv2 > /tmp/hanoi.s && clang /tmp/hanoi.s -o /tmp/hanoi
-/tmp/hanoi
+./build/bin/tpc examples/hanoi.pas -o hanoi && ./hanoi
 ```
 
 ### Tetris
@@ -98,8 +114,7 @@ end.
 
 Run it:
 ```bash
-cat examples/tetris.pas | ./v2/tpcv2 > /tmp/tetris.s && clang /tmp/tetris.s -o /tmp/tetris
-/tmp/tetris
+./build/bin/tpc examples/tetris.pas -o tetris && ./tetris
 ```
 
 Controls: Arrow keys or WASD, Space to drop, Q to quit.
@@ -124,24 +139,35 @@ Controls: Arrow keys or WASD, Space to drop, Q to quit.
 
 ```
 tuxpascal/
-├── tpc                # Bootstrap compiler (C)
-├── v2/
-│   ├── compiler.pas       # Self-hosting compiler (generated from inc files)
-│   ├── compiler_split.pas # Self-hosting compiler entry point (uses includes)
-│   ├── inc/               # Include files for modular compiler
-│   │   ├── constants.inc  # Token types, globals
-│   │   ├── utility.inc    # Helper functions
-│   │   ├── lexer.inc      # Tokenizer
-│   │   ├── symbols.inc    # Symbol table
-│   │   ├── emitters.inc   # Assembly output
-│   │   ├── runtime.inc    # Runtime code generators
-│   │   ├── parser.inc     # Expression/statement parsing
-│   │   ├── declarations.inc # Proc/func/block parsing
-│   │   └── main.inc       # Main entry point
-│   └── tpcv2              # Compiled v2 compiler binary
-├── src/               # Bootstrap compiler source (C)
-├── examples/          # Example Pascal programs
+├── bootstrap/           # C bootstrap compiler (frozen)
+│   ├── main.c
+│   ├── lexer.c/h
+│   ├── parser.c/h
+│   └── symbols.c/h
+├── compiler/            # Pascal self-hosting compiler (active development)
+│   ├── tuxpascal.pas         # Single-file version (generated)
+│   ├── tuxpascal_modular.pas # Entry point with includes
+│   └── inc/                  # Modular source files
+├── examples/            # Example Pascal programs
+├── build/               # Build output (gitignored)
+│   ├── bootstrap/       # Bootstrap compiler binary
+│   └── bin/             # Pascal compiler binary
+├── scripts/             # Build and install scripts
+├── docs/                # Additional documentation
 └── Makefile
+```
+
+## Build Targets
+
+```bash
+make              # Build the Pascal compiler (default)
+make bootstrap    # Build only the C bootstrap compiler
+make test         # Run example programs
+make self-host    # Verify self-hosting capability
+make install      # Install to /usr/local/bin
+make uninstall    # Remove from /usr/local/bin
+make clean        # Remove build artifacts
+make help         # Show all targets
 ```
 
 ## Architecture
@@ -153,23 +179,110 @@ Source (.pas) → Lexer → Parser → Assembly (.s) → clang → Executable
 ```
 
 Two implementations exist:
-- **v1 (`src/`)** - Bootstrap compiler in C. Frozen; only modified if needed to compile v2.
-- **v2 (`v2/compiler.pas`)** - Self-hosting compiler in Pascal. All active development happens here.
+- **Bootstrap (`bootstrap/`)** - C compiler used to build the Pascal compiler. Frozen.
+- **Compiler (`compiler/`)** - Self-hosting compiler in Pascal. All active development happens here.
 
-## Building from Source
+## Self-Hosting & Compiler Generations
+
+TuxPascal is fully self-hosting. The compiler can compile itself, and successive generations produce identical output:
+
+```
+Bootstrap (C) → compiles → v2 (Pascal)
+v2            → compiles → v3
+v3            → compiles → v4
+v4            → compiles → v5 (identical to v4)
+```
+
+### Quick Verification
 
 ```bash
-# Build the C bootstrap compiler
-make
-
-# Rebuild v2 compiler using v1
-./tpc v2/compiler.pas -o v2/tpcv2
-
-# Verify self-hosting (v2 compiles itself to v3, v3 compiles itself to v4)
-cat v2/compiler.pas | ./v2/tpcv2 > /tmp/v3.s && clang /tmp/v3.s -o /tmp/v3
-cat v2/compiler.pas | /tmp/v3 > /tmp/v4.s
-diff /tmp/v3.s /tmp/v4.s  # Should be identical
+make self-host
 ```
+
+### Manual Self-Hosting Build
+
+Build the complete compiler chain manually:
+
+```bash
+# Generate single-file compiler from modular source
+./scripts/merge-compiler.sh
+
+# Build v3 (compiled by v2)
+cat compiler/tuxpascal.pas | ./build/bin/tuxpascal > /tmp/v3.s
+clang /tmp/v3.s -o build/bin/v3
+
+# Build v4 (compiled by v3)
+cat compiler/tuxpascal.pas | ./build/bin/v3 > /tmp/v4.s
+clang /tmp/v4.s -o build/bin/v4
+
+# Verify: v3 and v4 produce identical output
+diff /tmp/v3.s /tmp/v4.s  # No output = success
+```
+
+### Compiling Programs with v4
+
+Use the v4 compiler (compiled by v3, which was compiled by v2) to build programs:
+
+```bash
+# Compile Tetris with v4
+cat examples/tetris.pas | ./build/bin/v4 > /tmp/tetris.s
+clang /tmp/tetris.s -o build/bin/tetris
+
+# Compile Towers of Hanoi with v4
+cat examples/hanoi.pas | ./build/bin/v4 > /tmp/hanoi.s
+clang /tmp/hanoi.s -o build/bin/hanoi
+```
+
+### Build Output
+
+After a full build with self-hosting verification:
+
+```
+build/bin/
+├── tpc        # Wrapper script (user-friendly CLI)
+├── tuxpascal  # v2 compiler (compiled by bootstrap)
+├── v3         # v3 compiler (compiled by v2)
+├── v4         # v4 compiler (compiled by v3)
+├── tetris     # Compiled by v4
+├── hanoi      # Compiled by v4
+├── hello      # Test programs
+├── factorial
+└── fizzbuzz
+```
+
+### Binary Size Differences
+
+Interestingly, v2 and v3 have different sizes despite producing identical output:
+
+| Compiler | Size | Compiled by |
+|----------|------|-------------|
+| v2 | 297,736 bytes | C bootstrap |
+| v3 | 281,024 bytes | v2 (Pascal) |
+| v4 | 281,024 bytes | v3 (Pascal) |
+
+The ~16KB difference comes from how each compiler handles string literals:
+
+| Segment | v2 (bootstrap) | v3 (Pascal) |
+|---------|----------------|-------------|
+| __TEXT (code) | 278,528 | 278,528 |
+| __DATA | 16,384 | 0 |
+
+- **Bootstrap (C)** creates a `.data` section with string constants, requiring a 16KB page-aligned segment
+- **Pascal compiler** writes strings character-by-character inline, requiring no data segment
+
+```asm
+# Bootstrap approach - uses data section
+.data
+str0: .ascii "Error "
+
+# Pascal approach - inline character writes
+mov x0, #69   ; 'E'
+; ...syscall...
+mov x0, #114  ; 'r'
+; ...syscall...
+```
+
+The actual machine code is the same size. Once self-hosted, binary size stabilizes (v3 = v4).
 
 ## Requirements
 

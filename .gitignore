@@ -1,14 +1,29 @@
-# Build outputs
-*.o
-*.s
-a.out
-tpc
-obj/
+# Build output directory
+build/
 
-# Generated files
-v2/compiler.pas
-v2/tpcv2
+# Old build artifacts (can be removed after migration)
+obj/
+tpc
+tpc2
+tpcv2
+*.o
+
+# Assembly output
+*.s
+
+# Compiled examples
+a.out
+
+# Generated compiler file
+compiler/tuxpascal.pas
 
 # Temporary files
 /tmp/
 *.tmp
+
+# macOS
+.DS_Store
+
+# Editor files
+*.swp
+*~

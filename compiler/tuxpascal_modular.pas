@@ -1,8 +1,8 @@
-{ TuxPascal v2 - Self-hosting Pascal Compiler }
-{ Written in Pascal, compiled by v1 }
+{ TuxPascal - Self-hosting Pascal Compiler }
+{ Written in Pascal, compiled by the bootstrap compiler }
 { Split into include files for modularity }
 
-program TuxPascalV2;
+program TuxPascal;
 
 {$I inc/constants.inc}
 {$I inc/utility.inc}
