@@ -75,6 +75,8 @@ const
   TOK_WITH = 139;    { with keyword }
   TOK_TEXT = 140;    { text file type }
   TOK_FILE = 141;    { file keyword }
+  TOK_SET = 142;     { set keyword }
+  TOK_IN = 143;      { in keyword (set membership) }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -96,6 +98,9 @@ const
   TYPE_RECORD = 8;
   TYPE_FILE = 9;      { file of T - typed file }
   TYPE_TEXT = 10;     { text file }
+  TYPE_ENUM = 11;     { enumerated type }
+  TYPE_SUBRANGE = 12; { subrange type }
+  TYPE_SET = 13;      { set type }
 
 var
   { Source input }
@@ -256,6 +261,23 @@ var
   file_elem_size: array[0..99] of integer;  { element size in bytes }
   file_rec_idx: array[0..99] of integer;    { if element is record, type index }
   file_count: integer;                      { count of file types defined }
+
+  { Enumerated type metadata }
+  enum_low: array[0..99] of integer;        { first value (always 0) }
+  enum_high: array[0..99] of integer;       { last value }
+  enum_count: integer;                      { count of enum types defined }
+
+  { Subrange type metadata }
+  subr_low: array[0..99] of integer;        { low bound }
+  subr_high: array[0..99] of integer;       { high bound }
+  subr_base: array[0..99] of integer;       { base type (integer, char, enum) }
+  subr_count: integer;                      { count of subrange types defined }
+
+  { Set type metadata - sets limited to 64 elements (fits in one register) }
+  set_base: array[0..99] of integer;        { base type (char, enum, subrange) }
+  set_low: array[0..99] of integer;         { low bound of base type }
+  set_high: array[0..99] of integer;        { high bound of base type }
+  set_count: integer;                       { count of set types defined }
 
   { File variable structure (at runtime, 272 bytes per file var):
     offset 0: fd (8 bytes) - file descriptor, -1 if not open

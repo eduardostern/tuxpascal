@@ -113,13 +113,13 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Supported Pascal Features
 
-**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested), `text` (files)
+**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested), `text` (files), `set of` (64-bit bitmask), enumerated types `(val1, val2, ...)`, subrange types `lo..hi`
 
 **Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`, `break`, `continue`, `exit`
 
 **Declarations:** `program`, `const`, `type`, `var`, `procedure`, `function`, `forward`
 
-**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and` (short-circuit), `or` (short-circuit), `not`, `@` (address-of), `^` (dereference), pointer arithmetic
+**Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and` (short-circuit), `or` (short-circuit), `not`, `@` (address-of), `^` (dereference), pointer arithmetic, `in` (set membership), set operators (`+` union, `-` difference, `*` intersection)
 
 **Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt`, `sizeof`, `paramcount`, `paramstr`
 
@@ -137,9 +137,6 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Not Yet Implemented
 
-- Sets (`set of`)
-- Enumerated types
-- Subrange types
 - Variant records
 - Units/modules (`unit`, `uses`)
 

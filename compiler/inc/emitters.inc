@@ -945,6 +945,18 @@ begin
   EmitNL
 end;
 
+procedure EmitAndImm(val: integer);
+begin
+  { and x0, x0, #val }
+  EmitIndent;
+  writechar(97); writechar(110); writechar(100); writechar(32);
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35);
+  write(val);
+  EmitNL
+end;
+
 procedure EmitEorX0(val: integer);
 begin
   { eor x0, x0, #val }

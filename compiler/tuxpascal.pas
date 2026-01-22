@@ -81,6 +81,8 @@ const
   TOK_WITH = 139;    { with keyword }
   TOK_TEXT = 140;    { text file type }
   TOK_FILE = 141;    { file keyword }
+  TOK_SET = 142;     { set keyword }
+  TOK_IN = 143;      { in keyword (set membership) }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -102,6 +104,9 @@ const
   TYPE_RECORD = 8;
   TYPE_FILE = 9;      { file of T - typed file }
   TYPE_TEXT = 10;     { text file }
+  TYPE_ENUM = 11;     { enumerated type }
+  TYPE_SUBRANGE = 12; { subrange type }
+  TYPE_SET = 13;      { set type }
 
 var
   { Source input }
@@ -262,6 +267,23 @@ var
   file_elem_size: array[0..99] of integer;  { element size in bytes }
   file_rec_idx: array[0..99] of integer;    { if element is record, type index }
   file_count: integer;                      { count of file types defined }
+
+  { Enumerated type metadata }
+  enum_low: array[0..99] of integer;        { first value (always 0) }
+  enum_high: array[0..99] of integer;       { last value }
+  enum_count: integer;                      { count of enum types defined }
+
+  { Subrange type metadata }
+  subr_low: array[0..99] of integer;        { low bound }
+  subr_high: array[0..99] of integer;       { high bound }
+  subr_base: array[0..99] of integer;       { base type (integer, char, enum) }
+  subr_count: integer;                      { count of subrange types defined }
+
+  { Set type metadata - sets limited to 64 elements (fits in one register) }
+  set_base: array[0..99] of integer;        { base type (char, enum, subrange) }
+  set_low: array[0..99] of integer;         { low bound of base type }
+  set_high: array[0..99] of integer;        { high bound of base type }
+  set_count: integer;                       { count of set types defined }
 
   { File variable structure (at runtime, 272 bytes per file var):
     offset 0: fd (8 bytes) - file descriptor, -1 if not open
@@ -525,7 +547,10 @@ begin
           tok_type := TOK_FOR;
       if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 105) then { ni }
         if ToLower(tok_str[2]) = 108 then { l }
-          tok_type := TOK_NIL
+          tok_type := TOK_NIL;
+      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 101) then { se }
+        if ToLower(tok_str[2]) = 116 then { t }
+          tok_type := TOK_SET
     end;
     if tok_len = 2 then
     begin
@@ -538,7 +563,9 @@ begin
       if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 114) then { or }
         tok_type := TOK_OR;
       if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 102) then { of }
-        tok_type := TOK_OF
+        tok_type := TOK_OF;
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+        tok_type := TOK_IN
     end;
     if tok_len = 4 then
     begin
@@ -1844,6 +1871,18 @@ begin
   writechar(120); writechar(48); writechar(44); writechar(32);
   writechar(120); writechar(49); writechar(44); writechar(32);
   writechar(120); writechar(48);
+  EmitNL
+end;
+
+procedure EmitAndImm(val: integer);
+begin
+  { and x0, x0, #val }
+  EmitIndent;
+  writechar(97); writechar(110); writechar(100); writechar(32);
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(120); writechar(48); writechar(44); writechar(32);
+  writechar(35);
+  write(val);
   EmitNL
 end;
 
@@ -9747,6 +9786,103 @@ begin
     EmitEorX0(1);
     expr_type := TYPE_INTEGER  { not always returns boolean/int }
   end
+  else if tok_type = TOK_LBRACKET then
+  begin
+    { Set constructor: [1, 3, 5] or [1..5] or ['a'..'z'] }
+    NextToken;
+    EmitMovX0(0);  { start with empty set }
+    if tok_type <> TOK_RBRACKET then
+    begin
+      repeat
+        if tok_type = TOK_COMMA then NextToken;
+        { Save set so far }
+        EmitPushX0;
+        { Parse first value }
+        ParseExpression;
+        if tok_type = TOK_DOTDOT then
+        begin
+          { Range: lo..hi - create mask for all bits from lo to hi }
+          EmitPushX0;  { save lo }
+          NextToken;
+          ParseExpression;  { hi in x0 }
+          { x0 = hi, need to set bits from lo to hi inclusive }
+          { Algorithm: create mask with bits set from lo to hi }
+          { For simplicity, use a loop: for i := lo to hi do set |= (1 << i) }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+          writechar(120); writechar(48);  { x0 - hi }
+          EmitNL;
+          EmitPopX1;  { x1 = lo }
+          EmitPopX0;  { x0 = set so far }
+          { Loop: while x1 <= x2 do x0 |= (1 << x1); x1++ }
+          lbl1 := NewLabel;
+          lbl2 := NewLabel;
+          EmitLabel(lbl1);
+          { cmp x1, x2 }
+          EmitIndent;
+          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(50);  { x2 }
+          EmitNL;
+          { b.gt done }
+          EmitIndent;
+          writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+          writechar(76); write(lbl2);
+          EmitNL;
+          { x3 = 1 << x1 }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitIndent;
+          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(120); writechar(49);  { x1 }
+          EmitNL;
+          { x0 |= x3 }
+          EmitIndent;
+          writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(51);  { x3 }
+          EmitNL;
+          { x1++ }
+          EmitIndent;
+          writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitBranchLabel(lbl1);
+          EmitLabel(lbl2)
+        end
+        else
+        begin
+          { Single element: set the bit }
+          { x0 has the element value, stack has set so far }
+          { mask = 1 << x0, then OR with saved set }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitIndent;
+          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(48);  { x0 }
+          EmitNL;
+          EmitPopX0;  { saved set }
+          EmitOrrX0X1  { set | (1 << element) }
+        end
+      until tok_type = TOK_RBRACKET
+    end;
+    NextToken;
+    expr_type := TYPE_SET
+  end
   else if tok_type = TOK_NIL then
   begin
     EmitMovX0(0);  { nil = 0 }
@@ -12103,6 +12239,18 @@ begin
         if (op = TOK_STAR) then
           expr_type := TYPE_REAL
       end
+      else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
+      begin
+        { Set intersection: x0 = x1 AND x0 }
+        EmitPopX1;
+        EmitIndent;
+        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL;
+        expr_type := TYPE_SET
+      end
       else
       begin
         { Both integers - use integer ops }
@@ -12351,6 +12499,39 @@ begin
       end;
       expr_type := TYPE_STRING
     end
+    else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
+    begin
+      { Set operations: + is union, - is difference }
+      EmitPopX1;  { left set in x1 }
+      if op = TOK_PLUS then
+      begin
+        { Union: x0 = x1 OR x0 }
+        EmitIndent;
+        writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL
+      end
+      else if op = TOK_MINUS then
+      begin
+        { Difference: x0 = x1 AND NOT x0 }
+        { First: mvn x0, x0 (NOT x0) }
+        EmitIndent;
+        writechar(109); writechar(118); writechar(110); writechar(32);  { mvn }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL;
+        { Then: and x0, x1, x0 }
+        EmitIndent;
+        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL
+      end;
+      expr_type := TYPE_SET
+    end
     else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
     begin
       { Mixed or both real - use float ops }
@@ -12530,6 +12711,27 @@ begin
       EmitCset(cond);
       expr_type := TYPE_INTEGER
     end
+  end
+  else if tok_type = TOK_IN then
+  begin
+    { Set membership: value in set }
+    { x0 = value, need to check if bit is set in the set }
+    EmitPushX0;  { push value }
+    NextToken;
+    ParseSimpleExpr;  { set in x0 }
+    { x0 = set, stack = value }
+    { Result: (set >> value) & 1 }
+    EmitPopX1;  { value in x1 }
+    { lsr x0, x0, x1 }
+    EmitIndent;
+    writechar(108); writechar(115); writechar(114); writechar(32);  { lsr }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(49);  { x1 }
+    EmitNL;
+    { and x0, x0, #1 }
+    EmitAndImm(1);
+    expr_type := TYPE_BOOLEAN
   end
 end;
 
@@ -15339,6 +15541,68 @@ begin
       end;
       file_count := file_count + 1
     end
+    else if tok_type = TOK_SET then
+    begin
+      { Inline set type: set of char / set of 0..63 }
+      NextToken;  { consume 'set' }
+      Expect(TOK_OF);
+      if tok_type = TOK_CHAR_TYPE then
+      begin
+        { set of char - uses 64-bit bitmask }
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_SET;
+          sym_const_val[j] := set_count
+        end;
+        set_base[set_count] := TYPE_CHAR;
+        set_low[set_count] := 0;
+        set_high[set_count] := 63;  { limited to 64 elements }
+        set_count := set_count + 1;
+        NextToken
+      end
+      else if tok_type = TOK_INTEGER then
+      begin
+        { set of 0..N - inline subrange }
+        lo_bound := tok_int;
+        NextToken;
+        Expect(TOK_DOTDOT);
+        if tok_type <> TOK_INTEGER then Error(9);
+        hi_bound := tok_int;
+        NextToken;
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_SET;
+          sym_const_val[j] := set_count
+        end;
+        set_base[set_count] := TYPE_INTEGER;
+        set_low[set_count] := lo_bound;
+        set_high[set_count] := hi_bound;
+        set_count := set_count + 1
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { set of EnumType }
+        base_idx := SymLookup;
+        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and
+           (sym_type[base_idx] = TYPE_ENUM) then
+        begin
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SET;
+            sym_const_val[j] := set_count
+          end;
+          set_base[set_count] := TYPE_ENUM;
+          set_low[set_count] := 0;
+          set_high[set_count] := sym_label[base_idx] - 1;  { enum count - 1 }
+          set_count := set_count + 1;
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else
+        Error(9)
+    end
     else if tok_type = TOK_CARET then
     begin
       { Pointer type: ^BaseType or ^^BaseType or ^array[lo..hi] of T }
@@ -15483,19 +15747,51 @@ begin
     end
     else if tok_type = TOK_IDENT then
     begin
-      { May be a record type name }
+      { May be a record, enum, subrange, or set type name }
       arr_size := SymLookup;  { reuse arr_size as type_idx temporarily }
-      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
+      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) then
       begin
-        { Allocate space for record }
-        lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
-        { Adjust local_offset: we already allocated 8 bytes, need rest }
-        local_offset := local_offset - (lo_bound - 8);
-        for j := first_idx to idx do
+        if sym_type[arr_size] = TYPE_RECORD then
         begin
-          sym_type[j] := TYPE_RECORD;
-          sym_const_val[j] := arr_size  { link to type definition }
-        end;
+          { Allocate space for record }
+          lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
+          { Adjust local_offset: we already allocated 8 bytes, need rest }
+          local_offset := local_offset - (lo_bound - 8);
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_RECORD;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_ENUM then
+        begin
+          { Enum variables use 8 bytes (same as integer) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_ENUM;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_SUBRANGE then
+        begin
+          { Subrange variables use 8 bytes (same as integer) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SUBRANGE;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_SET then
+        begin
+          { Set variables use 8 bytes (64-bit bitmask) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SET;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else
+          Error(9);
         NextToken
       end
       else
@@ -15532,16 +15828,19 @@ procedure ParseTypeDeclarations;
 var
   type_idx, fld_start, fld_offset, fld_type: integer;
   i, base_idx, nested_idx, nested_size, first_fld: integer;
+  enum_val, lo_val, hi_val, set_base_type: integer;
 begin
   NextToken;  { consume 'type' }
   while tok_type = TOK_IDENT do
   begin
-    { Create type symbol }
+    { Create type symbol - will set actual type later }
     type_idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
+
     if tok_type = TOK_RECORD then
     begin
+      { Record type }
       NextToken;  { consume 'record' }
       fld_start := field_count;
       fld_offset := 0;
@@ -15598,13 +15897,23 @@ begin
         end
         else if tok_type = TOK_IDENT then
         begin
-          { Nested record type }
+          { Nested record type or enum type }
           nested_idx := SymLookup;
-          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) and
-             (sym_type[nested_idx] = TYPE_RECORD) then
+          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) then
           begin
-            fld_type := TYPE_RECORD;
-            nested_size := sym_label[nested_idx];
+            if sym_type[nested_idx] = TYPE_RECORD then
+            begin
+              fld_type := TYPE_RECORD;
+              nested_size := sym_label[nested_idx]
+            end
+            else if sym_type[nested_idx] = TYPE_ENUM then
+              fld_type := TYPE_ENUM
+            else if sym_type[nested_idx] = TYPE_SUBRANGE then
+              fld_type := TYPE_SUBRANGE
+            else if sym_type[nested_idx] = TYPE_SET then
+              fld_type := TYPE_SET
+            else
+              Error(9);
             NextToken
           end
           else
@@ -15633,6 +15942,168 @@ begin
 
       NextToken;  { consume 'end' }
       sym_label[type_idx] := fld_offset  { total record size }
+    end
+    else if tok_type = TOK_LPAREN then
+    begin
+      { Enumerated type: (Red, Green, Blue) }
+      sym_type[type_idx] := TYPE_ENUM;
+      sym_const_val[type_idx] := enum_count;  { index into enum arrays }
+      enum_low[enum_count] := 0;
+      enum_val := 0;
+      NextToken;  { consume '(' }
+      while tok_type <> TOK_RPAREN do
+      begin
+        if tok_type <> TOK_IDENT then
+          Error(11);
+        { Add enum value as a constant }
+        base_idx := SymAdd(SYM_CONST, TYPE_ENUM, scope_level, 0);
+        sym_const_val[base_idx] := enum_val;
+        sym_label[base_idx] := type_idx;  { link to enum type }
+        enum_val := enum_val + 1;
+        NextToken;
+        if tok_type = TOK_COMMA then
+          NextToken
+      end;
+      enum_high[enum_count] := enum_val - 1;
+      sym_label[type_idx] := enum_val;  { number of values }
+      enum_count := enum_count + 1;
+      NextToken  { consume ')' }
+    end
+    else if tok_type = TOK_SET then
+    begin
+      { Set type: set of char / set of EnumType / set of 0..63 }
+      sym_type[type_idx] := TYPE_SET;
+      NextToken;  { consume 'set' }
+      Expect(TOK_OF);
+      sym_const_val[type_idx] := set_count;  { index into set arrays }
+      if tok_type = TOK_CHAR_TYPE then
+      begin
+        set_base[set_count] := TYPE_CHAR;
+        set_low[set_count] := 0;
+        set_high[set_count] := 255;
+        NextToken
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        base_idx := SymLookup;
+        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) then
+        begin
+          if sym_type[base_idx] = TYPE_ENUM then
+          begin
+            set_base[set_count] := TYPE_ENUM;
+            nested_idx := sym_const_val[base_idx];  { enum index }
+            set_low[set_count] := enum_low[nested_idx];
+            set_high[set_count] := enum_high[nested_idx]
+          end
+          else if sym_type[base_idx] = TYPE_SUBRANGE then
+          begin
+            set_base[set_count] := TYPE_SUBRANGE;
+            nested_idx := sym_const_val[base_idx];  { subrange index }
+            set_low[set_count] := subr_low[nested_idx];
+            set_high[set_count] := subr_high[nested_idx]
+          end
+          else
+            Error(9);
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else if tok_type = TOK_INTEGER then
+      begin
+        { set of 0..63 - inline subrange }
+        lo_val := tok_int;
+        NextToken;
+        Expect(TOK_DOTDOT);
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        hi_val := tok_int;
+        if hi_val - lo_val > 63 then
+          Error(16);  { set too large }
+        set_base[set_count] := TYPE_SUBRANGE;
+        set_low[set_count] := lo_val;
+        set_high[set_count] := hi_val;
+        NextToken
+      end
+      else
+        Error(9);
+      set_count := set_count + 1
+    end
+    else if (tok_type = TOK_INTEGER) or (tok_type = TOK_MINUS) then
+    begin
+      { Subrange type: 0..9 or -10..10 }
+      if tok_type = TOK_MINUS then
+      begin
+        NextToken;
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        lo_val := 0 - tok_int
+      end
+      else
+        lo_val := tok_int;
+      NextToken;
+      Expect(TOK_DOTDOT);
+      if tok_type = TOK_MINUS then
+      begin
+        NextToken;
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        hi_val := 0 - tok_int
+      end
+      else if tok_type = TOK_INTEGER then
+        hi_val := tok_int
+      else
+        Error(9);
+      sym_type[type_idx] := TYPE_SUBRANGE;
+      sym_const_val[type_idx] := subr_count;  { index into subrange arrays }
+      subr_low[subr_count] := lo_val;
+      subr_high[subr_count] := hi_val;
+      subr_base[subr_count] := TYPE_INTEGER;
+      sym_label[type_idx] := hi_val - lo_val + 1;  { number of values }
+      subr_count := subr_count + 1;
+      NextToken
+    end
+    else if tok_type = TOK_IDENT then
+    begin
+      { Could be alias to another type, or subrange of enum }
+      base_idx := SymLookup;
+      if base_idx >= 0 then
+      begin
+        if sym_kind[base_idx] = SYM_CONST then
+        begin
+          { Subrange starting with enum constant }
+          lo_val := sym_const_val[base_idx];
+          nested_idx := sym_label[base_idx];  { enum type }
+          NextToken;
+          Expect(TOK_DOTDOT);
+          if tok_type <> TOK_IDENT then
+            Error(9);
+          base_idx := SymLookup;
+          if (base_idx < 0) or (sym_kind[base_idx] <> SYM_CONST) then
+            Error(9);
+          hi_val := sym_const_val[base_idx];
+          sym_type[type_idx] := TYPE_SUBRANGE;
+          sym_const_val[type_idx] := subr_count;
+          subr_low[subr_count] := lo_val;
+          subr_high[subr_count] := hi_val;
+          subr_base[subr_count] := TYPE_ENUM;
+          sym_label[type_idx] := hi_val - lo_val + 1;
+          subr_count := subr_count + 1;
+          NextToken
+        end
+        else if sym_kind[base_idx] = SYM_TYPEDEF then
+        begin
+          { Type alias - copy the type info }
+          sym_type[type_idx] := sym_type[base_idx];
+          sym_const_val[type_idx] := sym_const_val[base_idx];
+          sym_label[type_idx] := sym_label[base_idx];
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else
+        Error(9)
     end
     else
       Error(9);
@@ -16370,6 +16841,9 @@ begin
   exit_label := 0;
   ptr_arr_count := 0;
   file_count := 0;
+  enum_count := 0;
+  subr_count := 0;
+  set_count := 0;
   rt_alloc := 0;
   rt_free := 0;
 

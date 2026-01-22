@@ -146,7 +146,10 @@ begin
           tok_type := TOK_FOR;
       if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 105) then { ni }
         if ToLower(tok_str[2]) = 108 then { l }
-          tok_type := TOK_NIL
+          tok_type := TOK_NIL;
+      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 101) then { se }
+        if ToLower(tok_str[2]) = 116 then { t }
+          tok_type := TOK_SET
     end;
     if tok_len = 2 then
     begin
@@ -159,7 +162,9 @@ begin
       if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 114) then { or }
         tok_type := TOK_OR;
       if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 102) then { of }
-        tok_type := TOK_OF
+        tok_type := TOK_OF;
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+        tok_type := TOK_IN
     end;
     if tok_len = 4 then
     begin

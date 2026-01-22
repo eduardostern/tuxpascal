@@ -80,6 +80,103 @@ begin
     EmitEorX0(1);
     expr_type := TYPE_INTEGER  { not always returns boolean/int }
   end
+  else if tok_type = TOK_LBRACKET then
+  begin
+    { Set constructor: [1, 3, 5] or [1..5] or ['a'..'z'] }
+    NextToken;
+    EmitMovX0(0);  { start with empty set }
+    if tok_type <> TOK_RBRACKET then
+    begin
+      repeat
+        if tok_type = TOK_COMMA then NextToken;
+        { Save set so far }
+        EmitPushX0;
+        { Parse first value }
+        ParseExpression;
+        if tok_type = TOK_DOTDOT then
+        begin
+          { Range: lo..hi - create mask for all bits from lo to hi }
+          EmitPushX0;  { save lo }
+          NextToken;
+          ParseExpression;  { hi in x0 }
+          { x0 = hi, need to set bits from lo to hi inclusive }
+          { Algorithm: create mask with bits set from lo to hi }
+          { For simplicity, use a loop: for i := lo to hi do set |= (1 << i) }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+          writechar(120); writechar(48);  { x0 - hi }
+          EmitNL;
+          EmitPopX1;  { x1 = lo }
+          EmitPopX0;  { x0 = set so far }
+          { Loop: while x1 <= x2 do x0 |= (1 << x1); x1++ }
+          lbl1 := NewLabel;
+          lbl2 := NewLabel;
+          EmitLabel(lbl1);
+          { cmp x1, x2 }
+          EmitIndent;
+          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(50);  { x2 }
+          EmitNL;
+          { b.gt done }
+          EmitIndent;
+          writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+          writechar(76); write(lbl2);
+          EmitNL;
+          { x3 = 1 << x1 }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitIndent;
+          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+          writechar(120); writechar(49);  { x1 }
+          EmitNL;
+          { x0 |= x3 }
+          EmitIndent;
+          writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(51);  { x3 }
+          EmitNL;
+          { x1++ }
+          EmitIndent;
+          writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitBranchLabel(lbl1);
+          EmitLabel(lbl2)
+        end
+        else
+        begin
+          { Single element: set the bit }
+          { x0 has the element value, stack has set so far }
+          { mask = 1 << x0, then OR with saved set }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(35); writechar(49);  { #1 }
+          EmitNL;
+          EmitIndent;
+          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(48);  { x0 }
+          EmitNL;
+          EmitPopX0;  { saved set }
+          EmitOrrX0X1  { set | (1 << element) }
+        end
+      until tok_type = TOK_RBRACKET
+    end;
+    NextToken;
+    expr_type := TYPE_SET
+  end
   else if tok_type = TOK_NIL then
   begin
     EmitMovX0(0);  { nil = 0 }
@@ -2436,6 +2533,18 @@ begin
         if (op = TOK_STAR) then
           expr_type := TYPE_REAL
       end
+      else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
+      begin
+        { Set intersection: x0 = x1 AND x0 }
+        EmitPopX1;
+        EmitIndent;
+        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL;
+        expr_type := TYPE_SET
+      end
       else
       begin
         { Both integers - use integer ops }
@@ -2684,6 +2793,39 @@ begin
       end;
       expr_type := TYPE_STRING
     end
+    else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
+    begin
+      { Set operations: + is union, - is difference }
+      EmitPopX1;  { left set in x1 }
+      if op = TOK_PLUS then
+      begin
+        { Union: x0 = x1 OR x0 }
+        EmitIndent;
+        writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL
+      end
+      else if op = TOK_MINUS then
+      begin
+        { Difference: x0 = x1 AND NOT x0 }
+        { First: mvn x0, x0 (NOT x0) }
+        EmitIndent;
+        writechar(109); writechar(118); writechar(110); writechar(32);  { mvn }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL;
+        { Then: and x0, x1, x0 }
+        EmitIndent;
+        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(120); writechar(48);  { x0 }
+        EmitNL
+      end;
+      expr_type := TYPE_SET
+    end
     else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
     begin
       { Mixed or both real - use float ops }
@@ -2863,6 +3005,27 @@ begin
       EmitCset(cond);
       expr_type := TYPE_INTEGER
     end
+  end
+  else if tok_type = TOK_IN then
+  begin
+    { Set membership: value in set }
+    { x0 = value, need to check if bit is set in the set }
+    EmitPushX0;  { push value }
+    NextToken;
+    ParseSimpleExpr;  { set in x0 }
+    { x0 = set, stack = value }
+    { Result: (set >> value) & 1 }
+    EmitPopX1;  { value in x1 }
+    { lsr x0, x0, x1 }
+    EmitIndent;
+    writechar(108); writechar(115); writechar(114); writechar(32);  { lsr }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+    writechar(120); writechar(49);  { x1 }
+    EmitNL;
+    { and x0, x0, #1 }
+    EmitAndImm(1);
+    expr_type := TYPE_BOOLEAN
   end
 end;
 

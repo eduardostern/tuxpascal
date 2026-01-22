@@ -200,6 +200,68 @@ begin
       end;
       file_count := file_count + 1
     end
+    else if tok_type = TOK_SET then
+    begin
+      { Inline set type: set of char / set of 0..63 }
+      NextToken;  { consume 'set' }
+      Expect(TOK_OF);
+      if tok_type = TOK_CHAR_TYPE then
+      begin
+        { set of char - uses 64-bit bitmask }
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_SET;
+          sym_const_val[j] := set_count
+        end;
+        set_base[set_count] := TYPE_CHAR;
+        set_low[set_count] := 0;
+        set_high[set_count] := 63;  { limited to 64 elements }
+        set_count := set_count + 1;
+        NextToken
+      end
+      else if tok_type = TOK_INTEGER then
+      begin
+        { set of 0..N - inline subrange }
+        lo_bound := tok_int;
+        NextToken;
+        Expect(TOK_DOTDOT);
+        if tok_type <> TOK_INTEGER then Error(9);
+        hi_bound := tok_int;
+        NextToken;
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_SET;
+          sym_const_val[j] := set_count
+        end;
+        set_base[set_count] := TYPE_INTEGER;
+        set_low[set_count] := lo_bound;
+        set_high[set_count] := hi_bound;
+        set_count := set_count + 1
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { set of EnumType }
+        base_idx := SymLookup;
+        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and
+           (sym_type[base_idx] = TYPE_ENUM) then
+        begin
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SET;
+            sym_const_val[j] := set_count
+          end;
+          set_base[set_count] := TYPE_ENUM;
+          set_low[set_count] := 0;
+          set_high[set_count] := sym_label[base_idx] - 1;  { enum count - 1 }
+          set_count := set_count + 1;
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else
+        Error(9)
+    end
     else if tok_type = TOK_CARET then
     begin
       { Pointer type: ^BaseType or ^^BaseType or ^array[lo..hi] of T }
@@ -344,19 +406,51 @@ begin
     end
     else if tok_type = TOK_IDENT then
     begin
-      { May be a record type name }
+      { May be a record, enum, subrange, or set type name }
       arr_size := SymLookup;  { reuse arr_size as type_idx temporarily }
-      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
+      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) then
       begin
-        { Allocate space for record }
-        lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
-        { Adjust local_offset: we already allocated 8 bytes, need rest }
-        local_offset := local_offset - (lo_bound - 8);
-        for j := first_idx to idx do
+        if sym_type[arr_size] = TYPE_RECORD then
         begin
-          sym_type[j] := TYPE_RECORD;
-          sym_const_val[j] := arr_size  { link to type definition }
-        end;
+          { Allocate space for record }
+          lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
+          { Adjust local_offset: we already allocated 8 bytes, need rest }
+          local_offset := local_offset - (lo_bound - 8);
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_RECORD;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_ENUM then
+        begin
+          { Enum variables use 8 bytes (same as integer) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_ENUM;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_SUBRANGE then
+        begin
+          { Subrange variables use 8 bytes (same as integer) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SUBRANGE;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else if sym_type[arr_size] = TYPE_SET then
+        begin
+          { Set variables use 8 bytes (64-bit bitmask) }
+          for j := first_idx to idx do
+          begin
+            sym_type[j] := TYPE_SET;
+            sym_const_val[j] := arr_size  { link to type definition }
+          end
+        end
+        else
+          Error(9);
         NextToken
       end
       else
@@ -393,16 +487,19 @@ procedure ParseTypeDeclarations;
 var
   type_idx, fld_start, fld_offset, fld_type: integer;
   i, base_idx, nested_idx, nested_size, first_fld: integer;
+  enum_val, lo_val, hi_val, set_base_type: integer;
 begin
   NextToken;  { consume 'type' }
   while tok_type = TOK_IDENT do
   begin
-    { Create type symbol }
+    { Create type symbol - will set actual type later }
     type_idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
+
     if tok_type = TOK_RECORD then
     begin
+      { Record type }
       NextToken;  { consume 'record' }
       fld_start := field_count;
       fld_offset := 0;
@@ -459,13 +556,23 @@ begin
         end
         else if tok_type = TOK_IDENT then
         begin
-          { Nested record type }
+          { Nested record type or enum type }
           nested_idx := SymLookup;
-          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) and
-             (sym_type[nested_idx] = TYPE_RECORD) then
+          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) then
           begin
-            fld_type := TYPE_RECORD;
-            nested_size := sym_label[nested_idx];
+            if sym_type[nested_idx] = TYPE_RECORD then
+            begin
+              fld_type := TYPE_RECORD;
+              nested_size := sym_label[nested_idx]
+            end
+            else if sym_type[nested_idx] = TYPE_ENUM then
+              fld_type := TYPE_ENUM
+            else if sym_type[nested_idx] = TYPE_SUBRANGE then
+              fld_type := TYPE_SUBRANGE
+            else if sym_type[nested_idx] = TYPE_SET then
+              fld_type := TYPE_SET
+            else
+              Error(9);
             NextToken
           end
           else
@@ -494,6 +601,168 @@ begin
 
       NextToken;  { consume 'end' }
       sym_label[type_idx] := fld_offset  { total record size }
+    end
+    else if tok_type = TOK_LPAREN then
+    begin
+      { Enumerated type: (Red, Green, Blue) }
+      sym_type[type_idx] := TYPE_ENUM;
+      sym_const_val[type_idx] := enum_count;  { index into enum arrays }
+      enum_low[enum_count] := 0;
+      enum_val := 0;
+      NextToken;  { consume '(' }
+      while tok_type <> TOK_RPAREN do
+      begin
+        if tok_type <> TOK_IDENT then
+          Error(11);
+        { Add enum value as a constant }
+        base_idx := SymAdd(SYM_CONST, TYPE_ENUM, scope_level, 0);
+        sym_const_val[base_idx] := enum_val;
+        sym_label[base_idx] := type_idx;  { link to enum type }
+        enum_val := enum_val + 1;
+        NextToken;
+        if tok_type = TOK_COMMA then
+          NextToken
+      end;
+      enum_high[enum_count] := enum_val - 1;
+      sym_label[type_idx] := enum_val;  { number of values }
+      enum_count := enum_count + 1;
+      NextToken  { consume ')' }
+    end
+    else if tok_type = TOK_SET then
+    begin
+      { Set type: set of char / set of EnumType / set of 0..63 }
+      sym_type[type_idx] := TYPE_SET;
+      NextToken;  { consume 'set' }
+      Expect(TOK_OF);
+      sym_const_val[type_idx] := set_count;  { index into set arrays }
+      if tok_type = TOK_CHAR_TYPE then
+      begin
+        set_base[set_count] := TYPE_CHAR;
+        set_low[set_count] := 0;
+        set_high[set_count] := 255;
+        NextToken
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        base_idx := SymLookup;
+        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) then
+        begin
+          if sym_type[base_idx] = TYPE_ENUM then
+          begin
+            set_base[set_count] := TYPE_ENUM;
+            nested_idx := sym_const_val[base_idx];  { enum index }
+            set_low[set_count] := enum_low[nested_idx];
+            set_high[set_count] := enum_high[nested_idx]
+          end
+          else if sym_type[base_idx] = TYPE_SUBRANGE then
+          begin
+            set_base[set_count] := TYPE_SUBRANGE;
+            nested_idx := sym_const_val[base_idx];  { subrange index }
+            set_low[set_count] := subr_low[nested_idx];
+            set_high[set_count] := subr_high[nested_idx]
+          end
+          else
+            Error(9);
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else if tok_type = TOK_INTEGER then
+      begin
+        { set of 0..63 - inline subrange }
+        lo_val := tok_int;
+        NextToken;
+        Expect(TOK_DOTDOT);
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        hi_val := tok_int;
+        if hi_val - lo_val > 63 then
+          Error(16);  { set too large }
+        set_base[set_count] := TYPE_SUBRANGE;
+        set_low[set_count] := lo_val;
+        set_high[set_count] := hi_val;
+        NextToken
+      end
+      else
+        Error(9);
+      set_count := set_count + 1
+    end
+    else if (tok_type = TOK_INTEGER) or (tok_type = TOK_MINUS) then
+    begin
+      { Subrange type: 0..9 or -10..10 }
+      if tok_type = TOK_MINUS then
+      begin
+        NextToken;
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        lo_val := 0 - tok_int
+      end
+      else
+        lo_val := tok_int;
+      NextToken;
+      Expect(TOK_DOTDOT);
+      if tok_type = TOK_MINUS then
+      begin
+        NextToken;
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        hi_val := 0 - tok_int
+      end
+      else if tok_type = TOK_INTEGER then
+        hi_val := tok_int
+      else
+        Error(9);
+      sym_type[type_idx] := TYPE_SUBRANGE;
+      sym_const_val[type_idx] := subr_count;  { index into subrange arrays }
+      subr_low[subr_count] := lo_val;
+      subr_high[subr_count] := hi_val;
+      subr_base[subr_count] := TYPE_INTEGER;
+      sym_label[type_idx] := hi_val - lo_val + 1;  { number of values }
+      subr_count := subr_count + 1;
+      NextToken
+    end
+    else if tok_type = TOK_IDENT then
+    begin
+      { Could be alias to another type, or subrange of enum }
+      base_idx := SymLookup;
+      if base_idx >= 0 then
+      begin
+        if sym_kind[base_idx] = SYM_CONST then
+        begin
+          { Subrange starting with enum constant }
+          lo_val := sym_const_val[base_idx];
+          nested_idx := sym_label[base_idx];  { enum type }
+          NextToken;
+          Expect(TOK_DOTDOT);
+          if tok_type <> TOK_IDENT then
+            Error(9);
+          base_idx := SymLookup;
+          if (base_idx < 0) or (sym_kind[base_idx] <> SYM_CONST) then
+            Error(9);
+          hi_val := sym_const_val[base_idx];
+          sym_type[type_idx] := TYPE_SUBRANGE;
+          sym_const_val[type_idx] := subr_count;
+          subr_low[subr_count] := lo_val;
+          subr_high[subr_count] := hi_val;
+          subr_base[subr_count] := TYPE_ENUM;
+          sym_label[type_idx] := hi_val - lo_val + 1;
+          subr_count := subr_count + 1;
+          NextToken
+        end
+        else if sym_kind[base_idx] = SYM_TYPEDEF then
+        begin
+          { Type alias - copy the type info }
+          sym_type[type_idx] := sym_type[base_idx];
+          sym_const_val[type_idx] := sym_const_val[base_idx];
+          sym_label[type_idx] := sym_label[base_idx];
+          NextToken
+        end
+        else
+          Error(9)
+      end
+      else
+        Error(9)
     end
     else
       Error(9);
@@ -1231,6 +1500,9 @@ begin
   exit_label := 0;
   ptr_arr_count := 0;
   file_count := 0;
+  enum_count := 0;
+  subr_count := 0;
+  set_count := 0;
   rt_alloc := 0;
   rt_free := 0;
 
