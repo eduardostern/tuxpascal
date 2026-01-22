@@ -71,6 +71,39 @@ cat examples/hanoi.pas | ./v2/tpcv2 > /tmp/hanoi.s && clang /tmp/hanoi.s -o /tmp
 /tmp/hanoi
 ```
 
+### Tetris
+
+A complete Tetris game with real-time keyboard input:
+
+```pascal
+program Tetris;
+begin
+  ClrScr;
+  HideCursor;
+  InitKeyboard;  { Enable raw keyboard mode }
+
+  while gameOver = 0 do
+  begin
+    if KeyPressed then
+    begin
+      ch := readchar;
+      { Handle arrow keys and WASD }
+    end;
+    Sleep(25)
+  end;
+
+  DoneKeyboard;  { Restore terminal }
+end.
+```
+
+Run it:
+```bash
+cat examples/tetris.pas | ./v2/tpcv2 > /tmp/tetris.s && clang /tmp/tetris.s -o /tmp/tetris
+/tmp/tetris
+```
+
+Controls: Arrow keys or WASD, Space to drop, Q to quit.
+
 ## Supported Pascal Features
 
 | Category | Features |
@@ -83,6 +116,7 @@ cat examples/hanoi.pas | ./v2/tpcv2 > /tmp/hanoi.s && clang /tmp/hanoi.s -o /tmp
 | **String Ops** | `length`, `copy`, `concat`, `+`, `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim` |
 | **Utilities** | `abs`, `odd`, `sqr`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`, `halt` |
 | **Screen/Terminal** | `ClrScr`, `GotoXY`, `ClrEol`, `TextColor`, `TextBackground`, `NormVideo`, `HighVideo`, `LowVideo`, `HideCursor`, `ShowCursor`, `Sleep` |
+| **Keyboard** | `KeyPressed`, `InitKeyboard`, `DoneKeyboard` - non-blocking input for games |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
 | **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
 

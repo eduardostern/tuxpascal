@@ -197,7 +197,7 @@ begin
   end
   else if tok_type = TOK_IDENT then
   begin
-    { Check for built-in functions: readchar, ord, chr }
+    { Check for built-in functions: readchar, keypressed, ord, chr }
     { readchar = 114,101,97,100,99,104,97,114 }
     if TokIs8(114, 101, 97, 100, 99, 104, 97, 114) = 1 then
     begin
@@ -209,6 +209,21 @@ begin
       end;
       EmitBL(rt_readchar);
       expr_type := TYPE_INTEGER
+    end
+    { keypressed = 107,101,121,112,114,101,115,115,101,100 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 107) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 121) and (ToLower(tok_str[3]) = 112) and (ToLower(tok_str[4]) = 114) and
+            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 115) and (ToLower(tok_str[7]) = 115) and
+            (ToLower(tok_str[8]) = 101) and (ToLower(tok_str[9]) = 100) then
+    begin
+      NextToken;
+      if tok_type = TOK_LPAREN then
+      begin
+        NextToken;
+        Expect(TOK_RPAREN)
+      end;
+      EmitBL(rt_keypressed);
+      expr_type := TYPE_BOOLEAN
     end
     { ord = 111,114,100 }
     else if TokIs8(111, 114, 100, 0, 0, 0, 0, 0) = 1 then
@@ -2774,6 +2789,26 @@ begin
       ParseExpression;  { ms in x0 }
       EmitBL(rt_sleep);
       Expect(TOK_RPAREN)
+    end
+    { initkeyboard = 105,110,105,116,107,101,121,98,111,97,114,100 (12 chars) }
+    else if (tok_len = 12) and (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) and
+            (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 107) and
+            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 121) and (ToLower(tok_str[7]) = 98) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 97) and (ToLower(tok_str[10]) = 114) and
+            (ToLower(tok_str[11]) = 100) then
+    begin
+      NextToken;
+      EmitBL(rt_initkeyboard)
+    end
+    { donekeyboard = 100,111,110,101,107,101,121,98,111,97,114,100 (12 chars) }
+    else if (tok_len = 12) and (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) and
+            (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 101) and (ToLower(tok_str[4]) = 107) and
+            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 121) and (ToLower(tok_str[7]) = 98) and
+            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 97) and (ToLower(tok_str[10]) = 114) and
+            (ToLower(tok_str[11]) = 100) then
+    begin
+      NextToken;
+      EmitBL(rt_donekeyboard)
     end
     else
     begin

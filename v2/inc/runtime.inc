@@ -4830,3 +4830,342 @@ begin
   EmitRet
 end;
 
+procedure EmitKeyPressedRuntime;
+{ Check if a key is available on stdin using select with 0 timeout }
+{ Returns 1 in x0 if key available, 0 otherwise }
+begin
+  EmitLabel(rt_keypressed);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);  { 8 bytes for fd_set + 16 bytes for timeval + padding }
+
+  { Clear the fd_set at sp }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+  EmitNL;
+
+  { Set bit 0 in fd_set for stdin (fd 0) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+  EmitNL;
+
+  { Set timeval to 0,0 (no wait) at sp+16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(49); writechar(54); writechar(93);  { #16] }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
+  EmitNL;
+
+  { select(nfds=1, readfds=sp, writefds=NULL, exceptfds=NULL, timeout=sp+16) }
+  { x0 = 1 (nfds) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+
+  { x1 = sp (readfds) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  { x2 = NULL }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x3 = NULL }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x4 = sp + 16 (timeout) }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
+  EmitMovX16(33554525);
+  EmitSvc;
+
+  { select returns number of ready fds in x0, or -1 on error }
+  { If x0 > 0, key is available; convert to 0 or 1 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(103); writechar(116);  { gt }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitInitKeyboardRuntime;
+{ Set terminal to raw mode for immediate key reading }
+{ Uses ioctl TIOCGETA to get, then TIOCSETA to set with ICANON and ECHO cleared }
+begin
+  EmitLabel(rt_initkeyboard);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(80);  { Space for termios structure (72 bytes aligned to 80) }
+
+  { First get current terminal settings: ioctl(0, TIOCGETA, sp) }
+  { x0 = 0 (stdin) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x1 = TIOCGETA = 0x40487413 }
+  { movz x1, #0x7413 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(51);  { #0x7413 }
+  EmitNL;
+  { movk x1, #0x4048, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(52); writechar(56);  { #0x4048 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  { x2 = sp (pointer to termios buffer) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  { ioctl syscall: 0x2000000 + 54 = 33554486 }
+  EmitMovX16(33554486);
+  EmitSvc;
+
+  { Save original c_lflag (at offset 24) to x23 (callee-saved) for later restore }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
+  EmitNL;
+
+  { Clear ICANON (0x100 = 256) and ECHO (0x8) from c_lflag }
+  { Load current c_lflag into x10 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(120); writechar(50); writechar(51);  { x23 }
+  EmitNL;
+
+  { x11 = 0x108 (ICANON | ECHO) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
+  writechar(35); writechar(48); writechar(120); writechar(49); writechar(48); writechar(56);  { #0x108 }
+  EmitNL;
+
+  { bic x10, x10, x11 (clear bits) }
+  EmitIndent;
+  writechar(98); writechar(105); writechar(99); writechar(32);  { bic }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(120); writechar(49); writechar(49);  { x11 }
+  EmitNL;
+
+  { Store modified c_lflag back }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
+  EmitNL;
+
+  { Set VMIN (c_cc[16]) to 1 and VTIME (c_cc[17]) to 0 }
+  { c_cc starts at offset 32, so VMIN is at 32+16=48, VTIME at 32+17=49 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(49); writechar(48); writechar(44); writechar(32);  { w10, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(52); writechar(56); writechar(93);  { #48] }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+  writechar(119); writechar(49); writechar(48); writechar(44); writechar(32);  { w10, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(52); writechar(57); writechar(93);  { #49] }
+  EmitNL;
+
+  { Now set the modified settings: ioctl(0, TIOCSETA, sp) }
+  { x0 = 0 (stdin) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x1 = TIOCSETA = 0x80487414 }
+  { movz x1, #0x7414 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(52);  { #0x7414 }
+  EmitNL;
+  { movk x1, #0x8048, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(52); writechar(56);  { #0x8048 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  { x2 = sp }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  EmitMovX16(33554486);
+  EmitSvc;
+
+  EmitAddSP(80);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitDoneKeyboardRuntime;
+{ Restore terminal to normal (cooked) mode }
+begin
+  EmitLabel(rt_donekeyboard);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(80);
+
+  { Get current settings first }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x1 = TIOCGETA = 0x40487413 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(51);  { #0x7413 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(52); writechar(56);  { #0x4048 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  EmitMovX16(33554486);
+  EmitSvc;
+
+  { Restore original c_lflag from x23 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
+  EmitNL;
+
+  { Set the restored settings }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+
+  { x1 = TIOCSETA = 0x80487414 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(52);  { #0x7414 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(52); writechar(56);  { #0x8048 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(115); writechar(112);  { sp }
+  EmitNL;
+
+  EmitMovX16(33554486);
+  EmitSvc;
+
+  EmitAddSP(80);
+  EmitLdp;
+  EmitRet
+end;
+

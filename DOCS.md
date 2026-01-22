@@ -402,6 +402,14 @@ TuxPascal provides ANSI escape sequence-based terminal control for creating text
 | `ShowCursor` | Show the cursor |
 | `Sleep(ms)` | Pause for ms milliseconds |
 
+**Keyboard Input (for games):**
+
+| Procedure/Function | Description |
+|--------------------|-------------|
+| `InitKeyboard` | Set terminal to raw mode (immediate key response) |
+| `DoneKeyboard` | Restore terminal to normal mode |
+| `KeyPressed` | Returns true if a key is available (non-blocking) |
+
 **Color Values:**
 | Value | Color |
 |-------|-------|
@@ -508,6 +516,19 @@ See `examples/hanoi.pas` for a complete implementation featuring:
 ```bash
 cat examples/hanoi.pas | ./v2/tpcv2 > /tmp/hanoi.s && clang /tmp/hanoi.s -o /tmp/hanoi
 /tmp/hanoi
+```
+
+### Tetris
+
+A complete Tetris game (~33KB executable) with real-time keyboard input:
+- All 7 tetromino pieces with proper rotation
+- Arrow keys and WASD controls
+- Line clearing and scoring
+- Non-blocking keyboard input
+
+```bash
+cat examples/tetris.pas | ./v2/tpcv2 > /tmp/tetris.s && clang /tmp/tetris.s -o /tmp/tetris
+/tmp/tetris
 ```
 
 ---

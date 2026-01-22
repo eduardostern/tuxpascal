@@ -868,6 +868,9 @@ begin
   rt_hidecursor := NewLabel;
   rt_showcursor := NewLabel;
   rt_sleep := NewLabel;
+  rt_keypressed := NewLabel;
+  rt_initkeyboard := NewLabel;
+  rt_donekeyboard := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -903,6 +906,9 @@ begin
   EmitHideCursorRuntime;
   EmitShowCursorRuntime;
   EmitSleepRuntime;
+  EmitKeyPressedRuntime;
+  EmitInitKeyboardRuntime;
+  EmitDoneKeyboardRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);

@@ -196,6 +196,12 @@ var
   rt_hidecursor: integer; { hide cursor }
   rt_showcursor: integer; { show cursor }
   rt_sleep: integer;      { sleep for N milliseconds using nanosleep syscall }
+  rt_keypressed: integer; { check if key available (non-blocking) }
+  rt_initkeyboard: integer;  { set terminal to raw mode }
+  rt_donekeyboard: integer;  { restore terminal to cooked mode }
+
+  { Saved terminal settings for restore }
+  saved_termios: array[0..79] of integer;  { 80 bytes for termios struct }
 
   { String temp index (0-3) for copy/concat results }
   string_temp_idx: integer;
