@@ -110,16 +110,164 @@ begin
         end
       end
     end
+    else if tok_type = TOK_TEXT then
+    begin
+      { Text file type: 272 bytes (fd + mode + filename) }
+      NextToken;
+      for j := first_idx to idx do
+      begin
+        sym_type[j] := TYPE_TEXT;
+        sym_const_val[j] := TYPE_CHAR;  { element type is char }
+        sym_label[j] := 1;  { element size is 1 byte }
+        { Adjust offset: already allocated 8 bytes, need 264 more for 272 total }
+        if j = first_idx then
+        begin
+          local_offset := local_offset - 264;
+          sym_offset[j] := local_offset
+        end
+        else
+        begin
+          local_offset := local_offset - 272;
+          sym_offset[j] := local_offset
+        end
+      end
+    end
+    else if tok_type = TOK_FILE then
+    begin
+      { Typed file: file of T - 272 bytes (fd + mode + filename) }
+      NextToken;
+      Expect(TOK_OF);
+      { Parse element type }
+      if tok_type = TOK_INTEGER_TYPE then
+      begin
+        base_idx := TYPE_INTEGER;
+        arr_size := 8;
+        NextToken
+      end
+      else if tok_type = TOK_CHAR_TYPE then
+      begin
+        base_idx := TYPE_CHAR;
+        arr_size := 1;
+        NextToken
+      end
+      else if tok_type = TOK_BOOLEAN_TYPE then
+      begin
+        base_idx := TYPE_BOOLEAN;
+        arr_size := 1;
+        NextToken
+      end
+      else if tok_type = TOK_REAL_TYPE then
+      begin
+        base_idx := TYPE_REAL;
+        arr_size := 8;
+        NextToken
+      end
+      else if tok_type = TOK_IDENT then
+      begin
+        { Record type }
+        lo_bound := SymLookup;
+        if (lo_bound >= 0) and (sym_kind[lo_bound] = SYM_TYPEDEF) and (sym_type[lo_bound] = TYPE_RECORD) then
+        begin
+          base_idx := TYPE_RECORD;
+          arr_size := sym_label[lo_bound];  { record size }
+          file_rec_idx[file_count] := lo_bound;
+          NextToken
+        end
+        else
+          Error(14)
+      end
+      else
+        Error(9);
+      { Store file type info }
+      file_elem_type[file_count] := base_idx;
+      file_elem_size[file_count] := arr_size;
+      for j := first_idx to idx do
+      begin
+        sym_type[j] := TYPE_FILE;
+        sym_const_val[j] := file_count;  { index into file arrays }
+        sym_label[j] := arr_size;  { element size }
+        { Adjust offset for 272 bytes }
+        if j = first_idx then
+        begin
+          local_offset := local_offset - 264;
+          sym_offset[j] := local_offset
+        end
+        else
+        begin
+          local_offset := local_offset - 272;
+          sym_offset[j] := local_offset
+        end
+      end;
+      file_count := file_count + 1
+    end
     else if tok_type = TOK_CARET then
     begin
-      { Pointer type: ^BaseType }
+      { Pointer type: ^BaseType or ^^BaseType or ^array[lo..hi] of T }
       NextToken;
-      if tok_type = TOK_INTEGER_TYPE then
+      lo_bound := 1;  { reuse lo_bound for depth count }
+      while tok_type = TOK_CARET do
+      begin
+        lo_bound := lo_bound + 1;
+        NextToken
+      end;
+      { Check for pointer to array }
+      if tok_type = TOK_ARRAY then
+      begin
+        { ^array[lo..hi] of T }
+        NextToken;  { consume 'array' }
+        Expect(TOK_LBRACKET);
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        hi_bound := tok_int;  { reuse hi_bound temporarily for low }
+        NextToken;
+        Expect(TOK_DOTDOT);
+        if tok_type <> TOK_INTEGER then
+          Error(9);
+        arr_size := tok_int;  { high bound }
+        NextToken;
+        Expect(TOK_RBRACKET);
+        Expect(TOK_OF);
+        { Parse element type }
+        if tok_type = TOK_INTEGER_TYPE then
+          base_idx := TYPE_INTEGER
+        else if tok_type = TOK_CHAR_TYPE then
+          base_idx := TYPE_CHAR
+        else if tok_type = TOK_BOOLEAN_TYPE then
+          base_idx := TYPE_BOOLEAN
+        else if tok_type = TOK_REAL_TYPE then
+          base_idx := TYPE_REAL
+        else
+          base_idx := TYPE_INTEGER;  { default }
+        { Store in ptr_arr arrays }
+        ptr_arr_lo[ptr_arr_count] := hi_bound;
+        ptr_arr_hi[ptr_arr_count] := arr_size;
+        ptr_arr_elem[ptr_arr_count] := base_idx;
+        ptr_arr_rec[ptr_arr_count] := 0;
+        for j := first_idx to idx do
+        begin
+          sym_type[j] := TYPE_POINTER;
+          sym_const_val[j] := TYPE_ARRAY;  { immediate base is array }
+          sym_label[j] := ptr_arr_count;   { index into ptr_arr arrays }
+          ptr_depth[j] := lo_bound;
+          ptr_ultimate_type[j] := TYPE_ARRAY;
+          ptr_ultimate_rec[j] := 0
+        end;
+        ptr_arr_count := ptr_arr_count + 1;
+        NextToken
+      end
+      { Now parse ultimate base type }
+      else if tok_type = TOK_INTEGER_TYPE then
       begin
         for j := first_idx to idx do
         begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_INTEGER  { base type }
+          if lo_bound = 1 then
+            sym_const_val[j] := TYPE_INTEGER
+          else
+            sym_const_val[j] := TYPE_POINTER;  { immediate base is pointer }
+          ptr_depth[j] := lo_bound;
+          ptr_ultimate_type[j] := TYPE_INTEGER;
+          ptr_ultimate_rec[j] := 0
         end;
         NextToken
       end
@@ -128,7 +276,13 @@ begin
         for j := first_idx to idx do
         begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_CHAR
+          if lo_bound = 1 then
+            sym_const_val[j] := TYPE_CHAR
+          else
+            sym_const_val[j] := TYPE_POINTER;
+          ptr_depth[j] := lo_bound;
+          ptr_ultimate_type[j] := TYPE_CHAR;
+          ptr_ultimate_rec[j] := 0
         end;
         NextToken
       end
@@ -137,7 +291,13 @@ begin
         for j := first_idx to idx do
         begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_BOOLEAN
+          if lo_bound = 1 then
+            sym_const_val[j] := TYPE_BOOLEAN
+          else
+            sym_const_val[j] := TYPE_POINTER;
+          ptr_depth[j] := lo_bound;
+          ptr_ultimate_type[j] := TYPE_BOOLEAN;
+          ptr_ultimate_rec[j] := 0
         end;
         NextToken
       end
@@ -146,21 +306,33 @@ begin
         for j := first_idx to idx do
         begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_REAL
+          if lo_bound = 1 then
+            sym_const_val[j] := TYPE_REAL
+          else
+            sym_const_val[j] := TYPE_POINTER;
+          ptr_depth[j] := lo_bound;
+          ptr_ultimate_type[j] := TYPE_REAL;
+          ptr_ultimate_rec[j] := 0
         end;
         NextToken
       end
       else if tok_type = TOK_IDENT then
       begin
-        { Pointer to record type: ^RecordType }
+        { Pointer to record type: ^RecordType or ^^RecordType etc }
         arr_size := SymLookup;  { reuse arr_size as type_idx }
         if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
         begin
           for j := first_idx to idx do
           begin
             sym_type[j] := TYPE_POINTER;
-            sym_const_val[j] := TYPE_RECORD;
-            sym_label[j] := arr_size  { store record type index }
+            if lo_bound = 1 then
+              sym_const_val[j] := TYPE_RECORD
+            else
+              sym_const_val[j] := TYPE_POINTER;
+            sym_label[j] := arr_size;  { store record type index }
+            ptr_depth[j] := lo_bound;
+            ptr_ultimate_type[j] := TYPE_RECORD;
+            ptr_ultimate_rec[j] := arr_size
           end;
           NextToken
         end
@@ -220,7 +392,7 @@ end;
 procedure ParseTypeDeclarations;
 var
   type_idx, fld_start, fld_offset, fld_type: integer;
-  i, base_idx: integer;
+  i, base_idx, nested_idx, nested_size, first_fld: integer;
 begin
   NextToken;  { consume 'type' }
   while tok_type = TOK_IDENT do
@@ -239,47 +411,81 @@ begin
       { Parse fields until 'end' }
       while tok_type <> TOK_END do
       begin
-        if tok_type <> TOK_IDENT then
-          Error(11);
+        { Collect field names (may be comma-separated) }
+        first_fld := field_count;
+        repeat
+          if tok_type <> TOK_IDENT then
+            Error(11);
 
-        { Save field name }
-        base_idx := field_count * 32;
-        for i := 0 to tok_len - 1 do
-          field_name[base_idx + i] := tok_str[i];
-        field_name[base_idx + tok_len] := 0;
+          { Save field name }
+          base_idx := field_count * 32;
+          for i := 0 to tok_len - 1 do
+            field_name[base_idx + i] := tok_str[i];
+          field_name[base_idx + tok_len] := 0;
+          field_count := field_count + 1;
 
-        NextToken;
+          NextToken;
+          if tok_type = TOK_COMMA then
+            NextToken
+        until tok_type = TOK_COLON;
+
         Expect(TOK_COLON);
 
         { Parse field type }
+        nested_size := 8;  { default for basic types }
         if tok_type = TOK_INTEGER_TYPE then
         begin
           fld_type := TYPE_INTEGER;
+          nested_idx := 0;
           NextToken
         end
         else if tok_type = TOK_CHAR_TYPE then
         begin
           fld_type := TYPE_CHAR;
+          nested_idx := 0;
           NextToken
         end
         else if tok_type = TOK_BOOLEAN_TYPE then
         begin
           fld_type := TYPE_BOOLEAN;
+          nested_idx := 0;
           NextToken
         end
         else if tok_type = TOK_REAL_TYPE then
         begin
           fld_type := TYPE_REAL;
+          nested_idx := 0;
           NextToken
+        end
+        else if tok_type = TOK_IDENT then
+        begin
+          { Nested record type }
+          nested_idx := SymLookup;
+          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) and
+             (sym_type[nested_idx] = TYPE_RECORD) then
+          begin
+            fld_type := TYPE_RECORD;
+            nested_size := sym_label[nested_idx];
+            NextToken
+          end
+          else
+            Error(9)
         end
         else
           Error(9);
 
-        field_type[field_count] := fld_type;
-        field_offset[field_count] := fld_offset;
-        field_rec_idx[field_count] := type_idx;
-        field_count := field_count + 1;
-        fld_offset := fld_offset + 8;  { all fields are 8 bytes }
+        { Apply type to all collected field names }
+        for i := first_fld to field_count - 1 do
+        begin
+          field_type[i] := fld_type;
+          field_offset[i] := fld_offset;
+          field_rec_idx[i] := type_idx;
+          field_rec_type[i] := nested_idx;
+          if fld_type = TYPE_RECORD then
+            fld_offset := fld_offset + nested_size
+          else
+            fld_offset := fld_offset + 8
+        end;
 
         { Expect semicolon or end }
         if tok_type = TOK_SEMICOLON then
@@ -845,6 +1051,8 @@ begin
   rt_read_real := NewLabel;
   rt_read_string := NewLabel;
   rt_heap_init := NewLabel;
+  rt_alloc := NewLabel;
+  rt_free := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
   rt_str_concat := NewLabel;
@@ -871,6 +1079,15 @@ begin
   rt_keypressed := NewLabel;
   rt_initkeyboard := NewLabel;
   rt_donekeyboard := NewLabel;
+  rt_sin := NewLabel;
+  rt_cos := NewLabel;
+  rt_tan := NewLabel;
+  rt_exp := NewLabel;
+  rt_ln := NewLabel;
+  rt_random := NewLabel;
+  rt_arctan := NewLabel;
+  rt_arcsin := NewLabel;
+  rt_arccos := NewLabel;
 
   EmitPrintIntRuntime;
   EmitNewlineRuntime;
@@ -883,6 +1100,8 @@ begin
   EmitReadRealRuntime;
   EmitReadStringRuntime;
   EmitHeapInitRuntime;
+  EmitAllocRuntime;
+  EmitFreeRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
   EmitStrConcatRuntime;
@@ -909,6 +1128,15 @@ begin
   EmitKeyPressedRuntime;
   EmitInitKeyboardRuntime;
   EmitDoneKeyboardRuntime;
+  EmitSinRuntime;
+  EmitCosRuntime;
+  EmitTanRuntime;
+  EmitExpRuntime;
+  EmitLnRuntime;
+  EmitRandomRuntime;
+  EmitArctanRuntime;
+  EmitArcsinRuntime;
+  EmitArccosRuntime;
 
   { Main program entry }
   EmitLabel(main_lbl);
@@ -961,4 +1189,8 @@ begin
   field_count := 0;
   with_rec_idx := -1;
   with_rec_type := 0;
+  ptr_arr_count := 0;
+  file_count := 0;
+  rt_alloc := 0;
+  rt_free := 0;
 

@@ -256,7 +256,13 @@ begin
           tok_type := TOK_CASE;
       if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 105) then { wi }
         if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 104) then { th }
-          tok_type := TOK_WITH
+          tok_type := TOK_WITH;
+      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) then { te }
+        if (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) then { xt }
+          tok_type := TOK_TEXT;
+      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 105) then { fi }
+        if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 101) then { le }
+          tok_type := TOK_FILE
     end;
     if tok_len = 9 then
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }

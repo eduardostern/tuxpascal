@@ -1714,6 +1714,7 @@ procedure EmitHeapInitRuntime;
 begin
   { Initialize heap using mmap syscall }
   { Allocates 1MB of memory for heap, stores base in x21 }
+  { Initializes free list head in x22 pointing to entire block }
   EmitLabel(rt_heap_init);
   EmitStp;
   EmitMovFP;
@@ -1794,8 +1795,285 @@ begin
   writechar(120); writechar(48);  { x0 }
   EmitNL;
 
+  { Initialize free list: x22 = x21 (free list head points to heap base) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(120); writechar(50); writechar(49);  { x21 }
+  EmitNL;
+
+  { Store block size (1MB) at [x21]: first free block header }
+  { movz x1, #0; movk x1, #16, lsl #16 = 1048576 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  writechar(44); writechar(32);
+  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  { str x1, [x21] - store size }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(91); writechar(120); writechar(50); writechar(49); writechar(93);  { [x21] }
+  EmitNL;
+
+  { Store next=0 at [x21, #8]: no next free block }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(122); writechar(114); writechar(44); writechar(32);  { xzr, }
+  writechar(91); writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { [x21, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+
   EmitAddSP(16);
   EmitLdp;
+  EmitRet
+end;
+
+procedure EmitAllocRuntime;
+var
+  loop_lbl, found_lbl, split_lbl, no_split_lbl, update_head_lbl, done_lbl, oom_lbl: integer;
+begin
+  { Allocate memory from free list with block splitting }
+  { Input: x0 = requested size }
+  { Output: x0 = pointer to user data, or 0 if OOM }
+  loop_lbl := NewLabel;
+  found_lbl := NewLabel;
+  split_lbl := NewLabel;
+  no_split_lbl := NewLabel;
+  update_head_lbl := NewLabel;
+  done_lbl := NewLabel;
+  oom_lbl := NewLabel;
+
+  EmitLabel(rt_alloc);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+
+  { Add 16 for header and align to 16 bytes: x0 = (x0 + 31) & ~15 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(51); writechar(49);  { #31 }
+  EmitNL;
+  { and x0, x0, #-16 }
+  EmitIndent;
+  writechar(97); writechar(110); writechar(100); writechar(32);  { and }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(45); writechar(49); writechar(54);  { #-16 }
+  EmitNL;
+  { Save required size to x3 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { x1 = prev (0 initially), x2 = curr (x22 = free list head) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(50); writechar(50);  { x22 }
+  EmitNL;
+
+  { Loop: walk free list looking for big enough block }
+  EmitLabel(loop_lbl);
+  { cbz x2, oom - end of list }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(76); write(oom_lbl);
+  EmitNL;
+  { ldr x4, [x2] - x4 = block size }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
+  EmitNL;
+  { cmp x4, x3 - compare block size to required }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  { b.ge found }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(found_lbl);
+  EmitNL;
+  { Not big enough - move to next }
+  { mov x1, x2 - prev = curr }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(120); writechar(50);  { x2 }
+  EmitNL;
+  { ldr x2, [x2, #8] - curr = curr->next }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  EmitBranchLabel(loop_lbl);
+
+  { Found a big enough block - check if we can split it }
+  EmitLabel(found_lbl);
+  { x2 = block addr, x3 = required size, x4 = block size }
+  { ldr x5, [x2, #8] - x5 = found->next }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  { Check if block can be split: x4 - x3 >= 32 }
+  { sub x6, x4, x3 - x6 = remainder size }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  { cmp x6, #32 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  { b.lt no_split - if remainder < 32, don't split }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(no_split_lbl);
+  EmitNL;
+
+  { Split the block }
+  EmitLabel(split_lbl);
+  { x6 = remainder size, x7 = remainder block address = x2 + x3 }
+  { add x7, x2, x3 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(120); writechar(51);  { x3 }
+  EmitNL;
+  { str x6, [x7] - remainder->size = x6 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
+  writechar(91); writechar(120); writechar(55); writechar(93);  { [x7] }
+  EmitNL;
+  { str x5, [x7, #8] - remainder->next = found->next }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(91); writechar(120); writechar(55); writechar(44); writechar(32);  { [x7, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  { str x3, [x2] - found->size = required size }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
+  EmitNL;
+  { mov x5, x7 - use remainder as new "next" for unlinking }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(120); writechar(55);  { x7 }
+  EmitNL;
+
+  { Unlink found block from free list (and link remainder in its place) }
+  EmitLabel(no_split_lbl);
+  { cbz x1, update_head - if prev==0, update head }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(76); write(update_head_lbl);
+  EmitNL;
+  { str x5, [x1, #8] - prev->next = x5 (remainder or found->next) }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  EmitBranchLabel(done_lbl);
+
+  EmitLabel(update_head_lbl);
+  { mov x22, x5 - free list head = x5 (remainder or found->next) }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(120); writechar(53);  { x5 }
+  EmitNL;
+
+  EmitLabel(done_lbl);
+  { Mark as allocated: str xzr, [x2, #8] - next = 0 }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(122); writechar(114); writechar(44); writechar(32);  { xzr, }
+  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  { Return user pointer: add x0, x2, #16 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet;
+
+  { Out of memory }
+  EmitLabel(oom_lbl);
+  EmitMovX0(0);
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitFreeRuntime;
+begin
+  { Free memory back to free list }
+  { Input: x0 = pointer to user data }
+  EmitLabel(rt_free);
+  { Get block header: sub x0, x0, #16 }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  { Link into free list: str x22, [x0, #8] - block->next = free_head }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+  writechar(35); writechar(56); writechar(93);  { #8] }
+  EmitNL;
+  { Update free list head: mov x22, x0 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
   EmitRet
 end;
 
@@ -5165,6 +5443,1919 @@ begin
   EmitSvc;
 
   EmitAddSP(80);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitSinRuntime;
+begin
+  { sin(x) using Taylor series: x - x³/6 + x⁵/120 - x⁷/5040 + x⁹/362880 - x¹¹/39916800 }
+  { Input: d0 = x, Output: d0 = sin(x) }
+  EmitLabel(rt_sin);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  { Save x to [x29, #-16] }
+  EmitSturD0(-16);
+
+  { Compute x² and save to [x29, #-24] }
+  { fmul d1, d0, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { stur d1, [x29, #-24] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { result = x (d0 already has x) }
+  { Compute x³ = x² * x into d2 }
+  { fmul d2, d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { Term 2: -x³/6 }
+  EmitMovX0(6);
+  EmitScvtfD0X0;
+  { fdiv d3, d2, d0 - d3 = x³/6 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Load x into d0 }
+  EmitLdurD0(-16);
+  { fsub d0, d0, d3 - result = x - x³/6 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  { Save result }
+  EmitSturD0(-32);
+
+  { Term 3: +x⁵/120 - multiply d3 by x², divide by 20 }
+  { ldur d1, [x29, #-24] - reload x² }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { fmul d3, d3, d1 - d3 = x⁵/6 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(20);
+  EmitScvtfD0X0;
+  { fdiv d3, d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Load result and add }
+  EmitLdurD0(-32);
+  { fadd d0, d0, d3 }
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 4: -x⁷/5040 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(42);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 5: +x⁹/362880 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(72);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 6: -x¹¹/39916800 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(110);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitCosRuntime;
+begin
+  { cos(x) using Taylor series: 1 - x²/2 + x⁴/24 - x⁶/720 + x⁸/40320 - x¹⁰/3628800 }
+  { Input: d0 = x, Output: d0 = cos(x) }
+  EmitLabel(rt_cos);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  { Save x to [x29, #-16] }
+  EmitSturD0(-16);
+
+  { Compute x² and save to [x29, #-24] }
+  { fmul d1, d0, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { stur d1, [x29, #-24] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { Start with result = 1.0 }
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  { d3 = x² (current term numerator starts as x²) }
+  { fmov d3, d1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { Term 2: -x²/2 }
+  EmitPushD0;
+  EmitMovX0(2);
+  EmitScvtfD0X0;
+  { fdiv d3, d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitPopD0;
+  { fsub d0, d0, d3 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 3: +x⁴/24 }
+  { ldur d1, [x29, #-24] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  { fmul d3, d3, d1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(12);  { 24/2 = 12 }
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 4: -x⁶/720 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(30);  { 720/24 = 30 }
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 5: +x⁸/40320 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(56);  { 40320/720 = 56 }
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-32);
+
+  { Term 6: -x¹⁰/3628800 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitMovX0(90);  { 3628800/40320 = 90 }
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-32);
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitTanRuntime;
+begin
+  { tan(x) = sin(x) / cos(x) }
+  { Input: d0 = x, Output: d0 = tan(x) }
+  EmitLabel(rt_tan);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Save x }
+  EmitSturD0(-16);
+
+  { Call sin(x) }
+  EmitBL(rt_sin);
+  { Save sin result }
+  EmitSturD0(-24);
+
+  { Load x again }
+  EmitLdurD0(-16);
+  { Call cos(x) }
+  EmitBL(rt_cos);
+
+  { d0 = cos(x), load sin(x) to d1 }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
+  EmitNL;
+
+  { fdiv d0, d1, d0 - tan = sin/cos }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitExpRuntime;
+var
+  pos_lbl, neg_lbl, scale_lbl, scale_done_lbl, done_lbl: integer;
+begin
+  { exp(x) using range reduction + Taylor series }
+  { Input: d0 = x, Output: d0 = exp(x) }
+  { Range reduction: exp(x) = 2^n * exp(r) where n = round(x/ln(2)), r = x - n*ln(2) }
+  EmitLabel(rt_exp);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(64);
+
+  { Save x to [x29, #-16] }
+  EmitSturD0(-16);
+  { [x29, #-24] = n (integer), [x29, #-32] = r (reduced x), [x29, #-40] = result }
+
+  { Load 1/ln(2) = 1.4426950408889634 into d1 }
+  { IEEE 754: 0x3FF71547652B82FE }
+  { movz x0, #0x82FE }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(56); writechar(50);  { #0x82 }
+  writechar(70); writechar(69);  { FE }
+  EmitNL;
+  { movk x0, #0x652B, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(54); writechar(53);  { #0x65 }
+  writechar(50); writechar(66);  { 2B }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  { movk x0, #0x7154, lsl #32 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(49);  { #0x71 }
+  writechar(53); writechar(52);  { 54 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  { movk x0, #0x3FF7, lsl #48 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
+  writechar(70); writechar(55);  { F7 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d1, x0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { d0 = x, d1 = 1/ln(2) }
+  { d0 = x / ln(2) = x * (1/ln(2)) }
+  EmitLdurD0(-16);
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { n = round(x/ln(2)) using fcvtas (round to nearest) }
+  { fcvtas x0, d0 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(118); writechar(116); writechar(97);  { fcvta }
+  writechar(115); writechar(32);  { s }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitSturX0(-24);
+
+  { Load ln(2) into d1 }
+  { IEEE 754: 0x3FE62E42FEFA39EF }
+  { movz x1, #0x39EF }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(57);  { #0x39 }
+  writechar(69); writechar(70);  { EF }
+  EmitNL;
+  { movk x1, #0xFEFA, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(70); writechar(69);  { #0xFE }
+  writechar(70); writechar(65);  { FA }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  { movk x1, #0x62E4, lsl #32 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(54); writechar(50);  { #0x62 }
+  writechar(69); writechar(52);  { E4 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  { movk x1, #0x3FE6, lsl #48 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
+  writechar(69); writechar(54);  { E6 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d1, x1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+
+  { r = x - n * ln(2) }
+  { scvtf d0, x0 - convert n to float }
+  EmitScvtfD0X0;
+  { fmul d0, d0, d1 - d0 = n * ln(2) }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { fmov d2, d0 - save n*ln(2) in d2 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { d0 = x }
+  EmitLdurD0(-16);
+  { fsub d0, d0, d2 - r = x - n*ln(2) }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+  { Save r to [x29, #-32] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+
+  { Now compute exp(r) using Taylor series }
+  { r is small (|r| < ln(2)/2 ≈ 0.35), so series converges fast }
+  { exp(r) = 1 + r + r²/2 + r³/6 + r⁴/24 + r⁵/120 + r⁶/720 + r⁷/5040 + r⁸/40320 }
+  { d3 = current term, d0 = r }
+  { fmov d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { d0 = 1.0 }
+  EmitPushD0;
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  EmitPopD1;
+  { fadd d0, d0, d1 - result = 1 + r }
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 3: r²/2 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  { fmul d3, d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(2);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 4: r³/6 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(3);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 5: r⁴/24 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(4);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 6: r⁵/120 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(5);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 7: r⁶/720 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(6);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 8: r⁷/5040 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(7);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Term 9: r⁸/40320 }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(8);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+
+  { d0 = exp(r), now multiply by 2^n }
+  { Store exp(r) in [x29, #-48] temporarily }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+
+  { Load n }
+  EmitLdurX0(-24);
+  { If n = 0, skip scaling }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  done_lbl := NewLabel;
+  pos_lbl := NewLabel;
+  scale_lbl := NewLabel;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { If n > 0, multiply by 2 repeatedly }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
+  writechar(76); write(pos_lbl);
+  EmitNL;
+  { n < 0, divide by 2 repeatedly }
+  { neg x0, x0 }
+  EmitIndent;
+  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitSturX0(-56);
+  { Load 0.5 into d1 }
+  { IEEE 754 for 0.5 = 0x3FE0000000000000 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
+  writechar(69); writechar(48);  { E0 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d1, x1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+  EmitBranchLabel(scale_lbl);
+
+  EmitLabel(pos_lbl);
+  EmitSturX0(-56);
+  { Load 2.0 into d1 }
+  EmitMovX0(2);
+  EmitScvtfD0X0;
+  { fmov d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  EmitLabel(scale_lbl);
+  { d1 = scale factor (2.0 or 0.5), [x29, #-56] = count, [x29, #-48] = result }
+  { Load result }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+
+  EmitLdurX0(-56);
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { fmul d0, d0, d1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { Store result }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+  { Decrement count }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-56);
+  EmitBranchLabel(scale_lbl);
+
+  EmitLabel(done_lbl);
+  { Load final result }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
+  EmitNL;
+
+  EmitAddSP(64);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitLnRuntime;
+var
+  loop_lbl, done_lbl, reduce_lbl, reduce_up_lbl, iter_lbl, iter_done_lbl: integer;
+begin
+  { ln(x) using range reduction + Newton-Raphson }
+  { Input: d0 = x, Output: d0 = ln(x) }
+  { Range reduction: x = 2^n * m where 1 <= m < 2, so ln(x) = n*ln(2) + ln(m) }
+  EmitLabel(rt_ln);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(64);
+
+  { Save original x to [x29, #-16] }
+  EmitSturD0(-16);
+  { [x29, #-24] = count n (signed), [x29, #-32] = reduced x, [x29, #-40] = y estimate }
+  { [x29, #-48] = iteration counter, [x29, #-56] = exp(y) temp }
+
+  { Initialize count = 0 }
+  EmitMovX0(0);
+  EmitSturX0(-24);
+
+  { Load x into d0 }
+  EmitLdurD0(-16);
+  { fmov d3, d0 - d3 = working copy of x }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { Load 2.0 into d1 and 1.0 into d2 for comparisons }
+  EmitMovX0(2);
+  EmitScvtfD0X0;
+  { fmov d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  { fmov d2, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { d1 = 2.0, d2 = 1.0, d3 = x }
+
+  { Reduce while d3 >= 2: d3 = d3 / 2, count++ }
+  reduce_lbl := NewLabel;
+  reduce_up_lbl := NewLabel;
+  done_lbl := NewLabel;
+  EmitLabel(reduce_lbl);
+  { fcmp d3, d1 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { b.lt reduce_up_lbl - if d3 < 2, check if < 1 }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
+  writechar(76); write(reduce_up_lbl);
+  EmitNL;
+  { d3 >= 2: divide by 2 }
+  { fdiv d3, d3, d1 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { count++ }
+  EmitLdurX0(-24);
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-24);
+  EmitBranchLabel(reduce_lbl);
+
+  { Check if d3 < 1: multiply by 2, count-- }
+  EmitLabel(reduce_up_lbl);
+  { fcmp d3, d2 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+  { b.ge done_lbl - if d3 >= 1, we're in [1, 2) }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+  writechar(76); write(done_lbl);
+  EmitNL;
+  { d3 < 1: multiply by 2 }
+  { fmul d3, d3, d1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { count-- }
+  EmitLdurX0(-24);
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-24);
+  EmitBranchLabel(reduce_up_lbl);
+
+  EmitLabel(done_lbl);
+  { Now d3 is in [1, 2), count is in [x29, #-24] }
+  { Save reduced x to [x29, #-32] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+
+  { Initial guess: y = d3 - 1 (will be in [0, 1)) }
+  { fsub d0, d3, d2 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Iterate 15 times for convergence }
+  EmitMovX0(15);
+  EmitSturX0(-48);
+
+  iter_lbl := NewLabel;
+  iter_done_lbl := NewLabel;
+  EmitLabel(iter_lbl);
+
+  { Check counter }
+  EmitLdurX0(-48);
+  { cmp x0, #0 }
+  EmitIndent;
+  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48);  { #0 }
+  EmitNL;
+  { b.eq iter_done }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(iter_done_lbl);
+  EmitNL;
+
+  { Decrement counter }
+  EmitIndent;
+  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(49);  { #1 }
+  EmitNL;
+  EmitSturX0(-48);
+
+  { Load y }
+  EmitLdurD0(-40);
+  { Calculate exp(y) }
+  EmitBL(rt_exp);
+  { Save exp(y) to [x29, #-56] }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(53); writechar(54); writechar(93);  { #-56] }
+  EmitNL;
+
+  { d0 = reduced x, d1 = exp(y) }
+  { ldur d0, [x29, #-32] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
+  EmitNL;
+  { ldur d1, [x29, #-56] }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(53); writechar(54); writechar(93);  { #-56] }
+  EmitNL;
+
+  { d2 = x - exp(y) }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { d3 = x + exp(y) }
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { d2 = d2 / d3 = (x - exp(y))/(x + exp(y)) }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(51);  { d3 }
+  EmitNL;
+
+  { d2 = 2 * d2 }
+  EmitMovX0(2);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { y = y + d2 }
+  EmitLdurD0(-40);
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+  EmitSturD0(-40);
+
+  { Loop }
+  EmitBranchLabel(iter_lbl);
+
+  EmitLabel(iter_done_lbl);
+  { d0 = ln(reduced_x), now add n * ln(2) }
+  { ln(2) = 0.693147180559945 }
+  { IEEE 754: 0x3FE62E42FEFA39EF }
+  EmitLdurD0(-40);
+  { Save ln(reduced_x) }
+  EmitPushD0;
+
+  { Load ln(2) into d1 }
+  { movz x0, #0x39EF }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(57);  { #0x39 }
+  writechar(69); writechar(70);  { EF }
+  EmitNL;
+  { movk x0, #0xFEFA, lsl #16 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(70); writechar(69);  { #0xFE }
+  writechar(70); writechar(65);  { FA }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  { movk x0, #0x62E4, lsl #32 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(54); writechar(50);  { #0x62 }
+  writechar(69); writechar(52);  { E4 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  { movk x0, #0x3FE6, lsl #48 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
+  writechar(69); writechar(54);  { E6 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d1, x0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  { Load count into d0, convert to float }
+  EmitLdurX0(-24);
+  { scvtf d0, x0 }
+  EmitScvtfD0X0;
+
+  { d0 = count * ln(2) }
+  { fmul d0, d0, d1 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { d0 = count*ln(2) + ln(reduced_x) }
+  EmitPopD1;
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  EmitAddSP(64);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitRandomRuntime;
+begin
+  { random - return random 64-bit integer in x0 using LCG PRNG }
+  { Uses x27 as seed (preserved across calls) }
+  { LCG: seed = seed * 6364136223846793005 + 1442695040888963407 }
+  { Output: x0 = random integer }
+  EmitLabel(rt_random);
+  EmitStp;
+  EmitMovFP;
+
+  { Load seed from x27 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(50); writechar(55);  { x27 }
+  EmitNL;
+
+  { If seed is 0, initialize with a default value }
+  { cbnz x0, Lxxx }
+  EmitIndent;
+  writechar(99); writechar(98); writechar(110); writechar(122); writechar(32);  { cbnz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(76); write(label_count);
+  EmitNL;
+  { Initialize seed to 0x5DEECE66D }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(69); writechar(54); writechar(54); writechar(68);  { #0xE66D }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(69); writechar(67); writechar(69); writechar(53);  { #0xECE5 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(68); writechar(69);  { #0xDE }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(53);  { #0x5 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+
+  EmitLabel(label_count);
+  label_count := label_count + 1;
+
+  { Load multiplier 6364136223846793005 = 0x5851F42D4C957F2D into x1 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(70); writechar(50); writechar(68);  { #0x7F2D }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(52); writechar(67); writechar(57); writechar(53);  { #0x4C95 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(70); writechar(52); writechar(50); writechar(68);  { #0xF42D }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(53); writechar(56); writechar(53); writechar(49);  { #0x5851 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+
+  { mul x0, x0, x1 }
+  EmitIndent;
+  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+
+  { Load increment 1442695040888963407 = 0x14057B7EF767814F into x1 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(56); writechar(49); writechar(52); writechar(70);  { #0x814F }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(54); writechar(55); writechar(55);  { #0x7677 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(55); writechar(66); writechar(55); writechar(69);  { #0x7B7E }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+  writechar(35); writechar(48); writechar(120); writechar(49); writechar(52); writechar(48); writechar(53);  { #0x1405 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+
+  { add x0, x0, x1 }
+  EmitIndent;
+  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(120); writechar(49);  { x1 }
+  EmitNL;
+
+  { Store new seed in x27 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+  writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitArctanRuntime;
+var
+  use_identity_lbl, neg_lbl, done_lbl, compute_lbl: integer;
+begin
+  { arctan(x) using Taylor series for |x| <= 1 }
+  { For |x| > 1: arctan(x) = pi/2 - arctan(1/x) if x > 0 }
+  {              arctan(x) = -pi/2 - arctan(1/x) if x < 0 }
+  { Input: d0 = x, Output: d0 = arctan(x) }
+  EmitLabel(rt_arctan);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(48);
+
+  { Save x to [x29, #-16] }
+  EmitSturD0(-16);
+
+  { Check if |x| > 1 }
+  { fabs d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Load 1.0 into d2 }
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  { fmov d2, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { fcmp d1, d2 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(50);  { d2 }
+  EmitNL;
+
+  use_identity_lbl := NewLabel;
+  compute_lbl := NewLabel;
+  done_lbl := NewLabel;
+
+  { b.le compute - if |x| <= 1, use direct Taylor series }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(108); writechar(101); writechar(32);  { b.le }
+  writechar(76); write(compute_lbl);
+  EmitNL;
+
+  { |x| > 1: use identity arctan(x) = sign(x)*pi/2 - arctan(1/x) }
+  { Compute 1/x }
+  EmitLdurD0(-16);  { x }
+  { fdiv d0, d2, d0 - d0 = 1/x (d2 still has 1.0) }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Save 1/x to [x29, #-24] }
+  EmitSturD0(-24);
+  { Now compute arctan(1/x) recursively - but we're already in arctan! }
+  { Let's just use Taylor series on 1/x since |1/x| < 1 }
+  EmitBranchLabel(compute_lbl);
+
+  EmitLabel(compute_lbl);
+  { Taylor series: arctan(x) = x - x³/3 + x⁵/5 - x⁷/7 + x⁹/9 }
+  { Use d0=x, d3=current term, d4=x², d5=result }
+  EmitLdurD0(-16);  { x }
+
+  { Check if we used identity (|x| > 1), then use 1/x instead }
+  { Actually, let's simplify - compute arctan using the argument already in d0 }
+  { If we came from the identity path, d0 has 1/x }
+  { For now, just compute Taylor series on whatever is in d0 }
+
+  { Save x to d5 as running result }
+  { fmov d5, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { d4 = x² }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(52); writechar(44); writechar(32);  { d4, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { d3 = x (current power) }
+  { fmov d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { Term 2: -x³/3 }
+  { d3 = d3 * d4 = x³ }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(52);  { d4 }
+  EmitNL;
+  EmitMovX0(3);
+  EmitScvtfD0X0;
+  { fdiv d6, d3, d0 }
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { d5 = d5 - d6 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(54);  { d6 }
+  EmitNL;
+
+  { Term 3: +x⁵/5 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(52);  { d4 }
+  EmitNL;
+  EmitMovX0(5);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(54);  { d6 }
+  EmitNL;
+
+  { Term 4: -x⁷/7 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(52);  { d4 }
+  EmitNL;
+  EmitMovX0(7);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(54);  { d6 }
+  EmitNL;
+
+  { Term 5: +x⁹/9 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(52);  { d4 }
+  EmitNL;
+  EmitMovX0(9);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(54);  { d6 }
+  EmitNL;
+
+  { Term 6: -x¹¹/11 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(52);  { d4 }
+  EmitNL;
+  EmitMovX0(11);
+  EmitScvtfD0X0;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
+  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
+  writechar(100); writechar(54);  { d6 }
+  EmitNL;
+
+  { Result in d5, move to d0 }
+  { fmov d0, d5 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(53);  { d5 }
+  EmitNL;
+
+  EmitAddSP(48);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitArcsinRuntime;
+var
+  pos_one_lbl, neg_one_lbl, normal_lbl, done_lbl: integer;
+begin
+  { arcsin(x) = arctan(x / sqrt(1 - x²)) }
+  { Special cases: arcsin(1) = pi/2, arcsin(-1) = -pi/2 }
+  { Input: d0 = x, Output: d0 = arcsin(x) }
+  EmitLabel(rt_arcsin);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(32);
+
+  { Save x to [x29, #-16] }
+  EmitSturD0(-16);
+
+  pos_one_lbl := NewLabel;
+  neg_one_lbl := NewLabel;
+  normal_lbl := NewLabel;
+  done_lbl := NewLabel;
+
+  { Check for x = 1 or x = -1 }
+  { Load 1.0 into d1 }
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  { fmov d1, d0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Load x back }
+  EmitLdurD0(-16);
+  { fcmp d0, d1 - compare x with 1.0 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { b.eq pos_one_lbl }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(pos_one_lbl);
+  EmitNL;
+  { fneg d1, d1 - d1 = -1.0 }
+  EmitIndent;
+  writechar(102); writechar(110); writechar(101); writechar(103); writechar(32);  { fneg }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { fcmp d0, d1 - compare x with -1.0 }
+  EmitIndent;
+  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+  { b.eq neg_one_lbl }
+  EmitIndent;
+  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
+  writechar(76); write(neg_one_lbl);
+  EmitNL;
+  { Fall through to normal case }
+  EmitBranchLabel(normal_lbl);
+
+  { x = 1: return pi/2 }
+  EmitLabel(pos_one_lbl);
+  { Load pi/2 = 1.5707963267948966 }
+  { IEEE 754: 0x3FF921FB54442D18 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68);  { #0x2D }
+  writechar(49); writechar(56);  { 18 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52);  { #0x54 }
+  writechar(52); writechar(52);  { 44 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49);  { #0x21 }
+  writechar(70); writechar(66);  { FB }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
+  writechar(70); writechar(57);  { F9 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d0, x0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitBranchLabel(done_lbl);
+
+  { x = -1: return -pi/2 }
+  EmitLabel(neg_one_lbl);
+  { Load -pi/2 = -1.5707963267948966 }
+  { IEEE 754: 0xBFF921FB54442D18 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68);  { #0x2D }
+  writechar(49); writechar(56);  { 18 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52);  { #0x54 }
+  writechar(52); writechar(52);  { 44 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49);  { #0x21 }
+  writechar(70); writechar(66);  { FB }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(66); writechar(70);  { #0xBF }
+  writechar(70); writechar(57);  { F9 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  { fmov d0, x0 }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(120); writechar(48);  { x0 }
+  EmitNL;
+  EmitBranchLabel(done_lbl);
+
+  EmitLabel(normal_lbl);
+  { Normal case: arcsin(x) = arctan(x / sqrt(1 - x²)) }
+  EmitLdurD0(-16);
+  { Compute 1 - x² }
+  { d1 = x² }
+  EmitIndent;
+  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Load 1.0 }
+  EmitMovX0(1);
+  EmitScvtfD0X0;
+  { d0 = 1 - x² }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  { d0 = sqrt(1 - x²) }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(113); writechar(114); writechar(116); writechar(32);  { fsqrt }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { d0 = x / sqrt(1 - x²) }
+  EmitIndent;
+  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
+  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
+  EmitNL;
+  EmitIndent;
+  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+
+  { d0 = arctan(x / sqrt(1 - x²)) }
+  EmitBL(rt_arctan);
+
+  EmitLabel(done_lbl);
+  EmitAddSP(32);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitArccosRuntime;
+begin
+  { arccos(x) = pi/2 - arcsin(x) }
+  { Input: d0 = x, Output: d0 = arccos(x) }
+  EmitLabel(rt_arccos);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+
+  { Compute arcsin(x) }
+  EmitBL(rt_arcsin);
+  { Save arcsin(x) }
+  EmitSturD0(-16);
+
+  { Load pi/2 = 1.5707963267948966 }
+  { IEEE 754: 0x3FF921FB54442D18 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(70); writechar(57);  { #0x3FF9 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitFmovD0X0;
+
+  { d0 = pi/2 - arcsin(x) }
+  EmitLdurD0(-16);
+  EmitIndent;
+  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+  writechar(100); writechar(48);  { d0 }
+  EmitNL;
+  { Reload pi/2 }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(49); writechar(54);  { #16 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(51); writechar(50);  { #32 }
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(70); writechar(57);  { #0x3FF9 }
+  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+  writechar(35); writechar(52); writechar(56);  { #48 }
+  EmitNL;
+  EmitFmovD0X0;
+  { fsub d0, d0, d1 }
+  EmitIndent;
+  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+  writechar(100); writechar(49);  { d1 }
+  EmitNL;
+
+  EmitAddSP(16);
   EmitLdp;
   EmitRet
 end;

@@ -113,7 +113,7 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Supported Pascal Features
 
-**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `record`
+**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested), `text` (files)
 
 **Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`
 
@@ -122,6 +122,8 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 **Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`, `@` (address-of), `^` (dereference), pointer arithmetic
 
 **Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt`
+
+**File I/O:** `assign`, `reset`, `rewrite`, `close`, `eof`, `seek`, `filepos`, `filesize`
 
 **String Functions:** `length`, `copy`, `concat`, `+` (concatenation), `pos`, `delete`, `insert`, `str`, `val`, `trim`, `ltrim`, `rtrim`
 
@@ -133,9 +135,11 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Not Yet Implemented
 
-- Pointers to arrays
-- Pointers to pointers
-- Nested records (record fields that are themselves records)
-- Memory deallocation (`dispose` is a no-op; uses bump allocator)
+- Sets (`set of`)
+- Enumerated types
+- Subrange types
+- Variant records
+- Units/modules (`unit`, `uses`)
+- Math functions (`sqrt`, `sin`, `cos`, etc.)
 
-Note: `read`/`readln`/`new`/`dispose` are implemented in the Pascal compiler only, not in the bootstrap.
+Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.

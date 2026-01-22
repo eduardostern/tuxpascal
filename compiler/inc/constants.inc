@@ -73,6 +73,8 @@ const
   TOK_TYPE_KW = 137;    { type keyword }
   TOK_CASE = 138;    { case keyword }
   TOK_WITH = 139;    { with keyword }
+  TOK_TEXT = 140;    { text file type }
+  TOK_FILE = 141;    { file keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -92,6 +94,8 @@ const
   TYPE_REAL = 6;
   TYPE_POINTER = 7;
   TYPE_RECORD = 8;
+  TYPE_FILE = 9;      { file of T - typed file }
+  TYPE_TEXT = 10;     { text file }
 
 var
   { Source input }
@@ -122,7 +126,22 @@ var
   field_type: array[0..199] of integer;    { type of each field }
   field_offset: array[0..199] of integer;  { offset within record }
   field_rec_idx: array[0..199] of integer; { which record type this field belongs to }
+  field_rec_type: array[0..199] of integer; { for TYPE_RECORD fields, the nested record type index }
   field_count: integer;                    { total fields defined }
+
+  { Pointer metadata for multi-level pointers and pointer-to-array }
+  ptr_depth: array[0..499] of integer;        { pointer indirection depth (1=^T, 2=^^T) }
+  ptr_ultimate_type: array[0..499] of integer; { ultimate base type after all derefs }
+  ptr_ultimate_rec: array[0..499] of integer;  { if ultimate base is record, the type index }
+  ptr_arr_lo: array[0..99] of integer;     { low bound for pointer-to-array }
+  ptr_arr_hi: array[0..99] of integer;     { high bound for pointer-to-array }
+  ptr_arr_elem: array[0..99] of integer;   { element type for pointer-to-array }
+  ptr_arr_rec: array[0..99] of integer;    { if element is record, the type index }
+  ptr_arr_count: integer;                  { count of pointer-to-array types }
+
+  { Runtime labels for allocator }
+  rt_alloc: integer;
+  rt_free: integer;
 
   { Scope tracking }
   scope_level: integer;
@@ -200,9 +219,31 @@ var
   rt_initkeyboard: integer;  { set terminal to raw mode }
   rt_donekeyboard: integer;  { restore terminal to cooked mode }
 
+  { Runtime labels for math functions }
+  rt_sin: integer;     { sin(x) - Taylor series }
+  rt_cos: integer;     { cos(x) - Taylor series }
+  rt_tan: integer;     { tan(x) = sin/cos }
+  rt_exp: integer;     { exp(x) - Taylor series }
+  rt_ln: integer;      { ln(x) - Newton iteration }
+  rt_random: integer;  { random - returns random integer }
+  rt_arctan: integer;  { arctan(x) - Taylor series }
+  rt_arcsin: integer;  { arcsin(x) - derived from arctan }
+  rt_arccos: integer;  { arccos(x) - pi/2 - arcsin }
+
   { Saved terminal settings for restore }
   saved_termios: array[0..79] of integer;  { 80 bytes for termios struct }
 
   { String temp index (0-3) for copy/concat results }
   string_temp_idx: integer;
+
+  { File I/O metadata - element type and size for typed files }
+  file_elem_type: array[0..99] of integer;  { element type for file of T }
+  file_elem_size: array[0..99] of integer;  { element size in bytes }
+  file_rec_idx: array[0..99] of integer;    { if element is record, type index }
+  file_count: integer;                      { count of file types defined }
+
+  { File variable structure (at runtime, 272 bytes per file var):
+    offset 0: fd (8 bytes) - file descriptor, -1 if not open
+    offset 8: mode (8 bytes) - 0=closed, 1=read, 2=write, 3=append
+    offset 16: filename (256 bytes) - null-terminated string }
 

@@ -23,7 +23,7 @@ end;
 
 procedure ParseFactor;
 var
-  idx, arg_count, i, lbl1: integer;
+  idx, arg_count, i, lbl1, lbl2: integer;
   var_flags, var_arg_idx: integer;
 begin
   if tok_type = TOK_INTEGER then
@@ -304,6 +304,493 @@ begin
       EmitNL;
       expr_type := TYPE_INTEGER
     end
+    { sqrt = 115,113,114,116 }
+    else if TokIs8(115, 113, 114, 116, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Convert to real if integer }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { fsqrt d0, d0 }
+      EmitIndent;
+      writechar(102); writechar(115); writechar(113); writechar(114); writechar(116); writechar(32);  { fsqrt }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_REAL
+    end
+    { round = 114,111,117,110,100 }
+    else if (tok_len = 5) and (tok_str[0] = 114) and (tok_str[1] = 111) and
+            (tok_str[2] = 117) and (tok_str[3] = 110) and (tok_str[4] = 100) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Convert to real if integer }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { fcvtas x0, d0 - round to nearest with ties to away }
+      EmitIndent;
+      writechar(102); writechar(99); writechar(118); writechar(116); writechar(97); writechar(115); writechar(32);  { fcvtas }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { trunc = 116,114,117,110,99 }
+    else if (tok_len = 5) and (tok_str[0] = 116) and (tok_str[1] = 114) and
+            (tok_str[2] = 117) and (tok_str[3] = 110) and (tok_str[4] = 99) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Convert to real if integer }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { fcvtzs x0, d0 - truncate toward zero }
+      EmitIndent;
+      writechar(102); writechar(99); writechar(118); writechar(116); writechar(122); writechar(115); writechar(32);  { fcvtzs }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { sin = 115,105,110 }
+    else if TokIs8(115, 105, 110, 0, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_sin);
+      expr_type := TYPE_REAL
+    end
+    { cos = 99,111,115 }
+    else if TokIs8(99, 111, 115, 0, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_cos);
+      expr_type := TYPE_REAL
+    end
+    { tan = 116,97,110 }
+    else if TokIs8(116, 97, 110, 0, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_tan);
+      expr_type := TYPE_REAL
+    end
+    { exp = 101,120,112 }
+    else if TokIs8(101, 120, 112, 0, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_exp);
+      expr_type := TYPE_REAL
+    end
+    { ln = 108,110 }
+    else if (tok_len = 2) and (tok_str[0] = 108) and (tok_str[1] = 110) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_ln);
+      expr_type := TYPE_REAL
+    end
+    { random = 114,97,110,100,111,109 }
+    else if (tok_len = 6) and (tok_str[0] = 114) and (tok_str[1] = 97) and
+            (tok_str[2] = 110) and (tok_str[3] = 100) and (tok_str[4] = 111) and
+            (tok_str[5] = 109) then
+    begin
+      NextToken;
+      if tok_type = TOK_LPAREN then
+      begin
+        { random(n) - returns 0..n-1 }
+        NextToken;
+        if tok_type <> TOK_RPAREN then
+        begin
+          ParseExpression;
+          EmitPushX0;
+          EmitBL(rt_random);
+          EmitPopX1;
+          { x0 mod x1 using udiv and msub }
+          EmitIndent;
+          writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
+          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(49);  { x1 }
+          EmitNL;
+          EmitIndent;
+          writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
+          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(120); writechar(48);  { x0 }
+          EmitNL
+        end
+        else
+        begin
+          { random() with no arg - return real 0.0..1.0 }
+          EmitBL(rt_random);
+          { Convert to real and divide by 2^64 }
+          EmitScvtfD0X0;
+          { Load 2^63 as divisor (since signed, use 2^63) }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+          writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(48); writechar(48);  { #0x8000 }
+          writechar(44); writechar(32);
+          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+          writechar(35); writechar(52); writechar(56);  { #48 }
+          EmitNL;
+          EmitIndent;
+          writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+          writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+          writechar(120); writechar(49);  { x1 }
+          EmitNL;
+          EmitIndent;
+          writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+          writechar(100); writechar(49);  { d1 }
+          EmitNL;
+          { Make positive by using fabs }
+          EmitIndent;
+          writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
+          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+          writechar(100); writechar(48);  { d0 }
+          EmitNL;
+          expr_type := TYPE_REAL
+        end;
+        Expect(TOK_RPAREN)
+      end
+      else
+      begin
+        { random with no parens - return real 0.0..1.0 }
+        EmitBL(rt_random);
+        EmitScvtfD0X0;
+        EmitIndent;
+        writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+        writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(48); writechar(48);  { #0x8000 }
+        writechar(44); writechar(32);
+        writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+        writechar(35); writechar(52); writechar(56);  { #48 }
+        EmitNL;
+        EmitIndent;
+        writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
+        writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+        writechar(120); writechar(49);  { x1 }
+        EmitNL;
+        EmitIndent;
+        writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+        writechar(100); writechar(49);  { d1 }
+        EmitNL;
+        EmitIndent;
+        writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
+        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+        writechar(100); writechar(48);  { d0 }
+        EmitNL;
+        expr_type := TYPE_REAL
+      end;
+      if expr_type <> TYPE_REAL then
+        expr_type := TYPE_INTEGER
+    end
+    { pi = 112,105 - returns 3.14159265358979 }
+    else if (tok_len = 2) and (tok_str[0] = 112) and (tok_str[1] = 105) then
+    begin
+      NextToken;
+      { Load pi = 3.14159265358979323846 into d0 }
+      { IEEE 754 double: 0x400921FB54442D18 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(51); writechar(50);  { #32 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(48); writechar(57);  { #0x4009 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(52); writechar(56);  { #48 }
+      EmitNL;
+      EmitFmovD0X0;
+      expr_type := TYPE_REAL
+    end
+    { frac = 102,114,97,99 - fractional part }
+    else if TokIs8(102, 114, 97, 99, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { frac(x) = x - trunc(x) }
+      { Save x to stack }
+      EmitPushD0;
+      { Truncate to integer }
+      EmitFcvtzsX0D0;
+      { Convert back to float }
+      EmitScvtfD0X0;
+      { Pop original, now d1 = trunc(x) }
+      EmitIndent;
+      writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
+      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      EmitPopD0;
+      { d0 = x - trunc(x) }
+      EmitIndent;
+      writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(49);  { d1 }
+      EmitNL;
+      expr_type := TYPE_REAL
+    end
+    { int = 105,110,116 - integer part as real (different from trunc) }
+    else if TokIs8(105, 110, 116, 0, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { int(x) = trunc(x) as float }
+      { frintz d0, d0 - round toward zero (truncate) }
+      EmitIndent;
+      writechar(102); writechar(114); writechar(105); writechar(110); writechar(116); writechar(122); writechar(32);  { frintz }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_REAL
+    end
+    { arctan = 97,114,99,116,97,110 }
+    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
+            (tok_str[2] = 99) and (tok_str[3] = 116) and (tok_str[4] = 97) and
+            (tok_str[5] = 110) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_arctan);
+      expr_type := TYPE_REAL
+    end
+    { arcsin = 97,114,99,115,105,110 }
+    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
+            (tok_str[2] = 99) and (tok_str[3] = 115) and (tok_str[4] = 105) and
+            (tok_str[5] = 110) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_arcsin);
+      expr_type := TYPE_REAL
+    end
+    { arccos = 97,114,99,99,111,115 }
+    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
+            (tok_str[2] = 99) and (tok_str[3] = 99) and (tok_str[4] = 111) and
+            (tok_str[5] = 115) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitBL(rt_arccos);
+      expr_type := TYPE_REAL
+    end
+    { log10 = 108,111,103,49,48 }
+    else if (tok_len = 5) and (tok_str[0] = 108) and (tok_str[1] = 111) and
+            (tok_str[2] = 103) and (tok_str[3] = 49) and (tok_str[4] = 48) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { log10(x) = ln(x) / ln(10) }
+      EmitBL(rt_ln);
+      EmitPushD0;
+      { Load ln(10) = 2.302585... into d0 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(54); writechar(51); writechar(52); writechar(65);  { #0x634A }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(57); writechar(66); writechar(70); writechar(69);  { #0x9BFE }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(54); writechar(54); writechar(68); writechar(51);  { #0x66D3 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(51); writechar(50);  { #32 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(48); writechar(50);  { #0x4002 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(52); writechar(56);  { #48 }
+      EmitNL;
+      EmitFmovD0X0;
+      EmitPopD1;
+      { d0 = ln(x) / ln(10) }
+      EmitIndent;
+      writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_REAL
+    end
+    { log2 = 108,111,103,50 }
+    else if TokIs8(108, 111, 103, 50, 0, 0, 0, 0) = 1 then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { log2(x) = ln(x) / ln(2) }
+      EmitBL(rt_ln);
+      EmitPushD0;
+      { Load ln(2) = 0.693147... into d0 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(51); writechar(57); writechar(69); writechar(70);  { #0x39EF }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(70); writechar(69); writechar(70); writechar(65);  { #0xFEFA }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(69); writechar(52); writechar(50);  { #0x2E42 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(51); writechar(50);  { #32 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(69); writechar(54);  { #0x3FE6 }
+      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
+      writechar(35); writechar(52); writechar(56);  { #48 }
+      EmitNL;
+      EmitFmovD0X0;
+      EmitPopD1;
+      { d0 = ln(x) / ln(2) }
+      EmitIndent;
+      writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
+      writechar(100); writechar(48);  { d0 }
+      EmitNL;
+      expr_type := TYPE_REAL
+    end
+    { power = 112,111,119,101,114 }
+    else if (tok_len = 5) and (tok_str[0] = 112) and (tok_str[1] = 111) and
+            (tok_str[2] = 119) and (tok_str[3] = 101) and (tok_str[4] = 114) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;  { base }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      EmitPushD0;
+      Expect(TOK_COMMA);
+      ParseExpression;  { exponent }
+      if expr_type <> TYPE_REAL then
+        EmitScvtfD0X0;
+      { d0 = exp, stack has base }
+      { power(b, e) = exp(e * ln(b)) }
+      { Move exp to d1, get base to d0, save exp on stack }
+      EmitPushD0;       { stack = [exp, base] }
+      EmitPopD1;        { d1 = exp, stack = [base] }
+      EmitPopD0;        { d0 = base, stack = [] }
+      { Push d1 (exp) to stack - str d1, [sp, #-16]! }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
+      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+      writechar(35); writechar(45); writechar(49); writechar(54);     { #-16 }
+      writechar(93); writechar(33);  { ]! }
+      EmitNL;
+      { d0 = base, stack = [exp] }
+      EmitBL(rt_ln);    { d0 = ln(base), stack = [exp] }
+      EmitPopD1;        { d1 = exp, stack = [] }
+      { fmul d0, d0, d1 - d0 = ln(base) * exp }
+      EmitIndent;
+      writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+      writechar(100); writechar(49);  { d1 }
+      EmitNL;
+      EmitBL(rt_exp);   { d0 = exp(ln(base) * exp) = base^exp }
+      Expect(TOK_RPAREN);
+      expr_type := TYPE_REAL
+    end
     { succ = 115,117,99,99 }
     else if TokIs8(115, 117, 99, 99, 0, 0, 0, 0) = 1 then
     begin
@@ -449,6 +936,341 @@ begin
       else
         Error(9);
       Expect(TOK_RPAREN);
+      expr_type := TYPE_INTEGER
+    end
+    { eof = 101,111,102 }
+    else if (tok_len = 3) and (tok_str[0] = 101) and (tok_str[1] = 111) and
+            (tok_str[2] = 102) then
+    begin
+      { eof(f) - check if at end of file }
+      { Uses lseek to compare current position with file size }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Get file fd and save for later }
+      EmitVarAddr(idx, scope_level);
+      { ldr x0, [x0] - load fd }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Save fd to x23 (callee-saved) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { lseek(fd, 0, SEEK_CUR=1) to get current position }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 = SEEK_CUR }
+      EmitNL;
+      { lseek syscall: 0x20000C7 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { x0 = current position, save to x24 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { lseek(fd, 0, SEEK_END=2) to get file size }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(51);  { x23 = fd }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(50);  { #2 = SEEK_END }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { x0 = file size, x24 = current position }
+      { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
+      writechar(120); writechar(48);  { x0 = save file_size }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(51);  { x23 = fd }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(50); writechar(52);  { x24 = current_pos }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(48);  { #0 = SEEK_SET }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Compare: x24 = current_pos, x25 = file_size }
+      { cmp x24, x25 }
+      EmitIndent;
+      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+      writechar(120); writechar(50); writechar(53);  { x25 }
+      EmitNL;
+      { cset x0, ge - x0 = 1 if current_pos >= file_size }
+      EmitIndent;
+      writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(103); writechar(101);  { ge }
+      EmitNL;
+      expr_type := TYPE_BOOLEAN
+    end
+    { filepos = 102,105,108,101,112,111,115 }
+    else if (tok_len = 7) and (tok_str[0] = 102) and (tok_str[1] = 105) and
+            (tok_str[2] = 108) and (tok_str[3] = 101) and (tok_str[4] = 112) and
+            (tok_str[5] = 111) and (tok_str[6] = 115) then
+    begin
+      { filepos(f) - get current position in file }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Get file fd }
+      EmitVarAddr(idx, scope_level);
+      { ldr x0, [x0] - load fd }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { lseek(fd, 0, SEEK_CUR=1) to get current position }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 = SEEK_CUR }
+      EmitNL;
+      { lseek syscall: 0x20000C7 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { x0 = current position }
+      expr_type := TYPE_INTEGER
+    end
+    { filesize = 102,105,108,101,115,105,122,101 }
+    else if (tok_len = 8) and (tok_str[0] = 102) and (tok_str[1] = 105) and
+            (tok_str[2] = 108) and (tok_str[3] = 101) and (tok_str[4] = 115) and
+            (tok_str[5] = 105) and (tok_str[6] = 122) and (tok_str[7] = 101) then
+    begin
+      { filesize(f) - get file size }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Get file fd and save for later }
+      EmitVarAddr(idx, scope_level);
+      { ldr x0, [x0] - load fd }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Save fd to x23 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { lseek(fd, 0, SEEK_CUR=1) to get current position (to restore later) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 = SEEK_CUR }
+      EmitNL;
+      { lseek syscall: 0x20000C7 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { x0 = current position, save to x24 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { lseek(fd, 0, SEEK_END=2) to get file size }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(51);  { x23 = fd }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(50);  { #2 = SEEK_END }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { x0 = file size, save to x25 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(51);  { x23 = fd }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(50); writechar(52);  { x24 = current_pos }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(48);  { #0 = SEEK_SET }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Move file size to x0 as return value }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(53);  { x25 }
+      EmitNL;
       expr_type := TYPE_INTEGER
     end
     { copy = 99,111,112,121 }
@@ -975,7 +1797,7 @@ begin
         end
         else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
         begin
-          { Record field access: rec.field }
+          { Record field access: rec.field or rec.field.subfield... }
           NextToken;  { consume '.' }
           if tok_type <> TOK_IDENT then
             Error(11);
@@ -1008,7 +1830,32 @@ begin
             write(sym_offset[idx] + field_offset[arg_count]);
             EmitNL
           end;
-          { Load from computed address }
+          NextToken;
+          { Handle nested record fields: x0 has address, check for more dots }
+          while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
+          begin
+            NextToken;  { consume '.' }
+            if tok_type <> TOK_IDENT then
+              Error(11);
+            { Find sub-field in the nested record type }
+            lbl1 := arg_count;  { save current field index }
+            arg_count := FindField(field_rec_type[lbl1]);
+            if arg_count < 0 then
+              Error(15);
+            { Add sub-field offset to x0 }
+            if field_offset[arg_count] > 0 then
+            begin
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(35);
+              write(field_offset[arg_count]);
+              EmitNL
+            end;
+            NextToken
+          end;
+          { Load from final computed address }
           if field_type[arg_count] = TYPE_REAL then
           begin
             EmitIndent;
@@ -1018,6 +1865,11 @@ begin
             EmitNL;
             expr_type := TYPE_REAL
           end
+          else if field_type[arg_count] = TYPE_RECORD then
+          begin
+            { Accessing a nested record as a whole - keep address in x0 }
+            expr_type := TYPE_RECORD
+          end
           else
           begin
             EmitIndent;
@@ -1026,8 +1878,7 @@ begin
             writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
             EmitNL;
             expr_type := field_type[arg_count]
-          end;
-          NextToken
+          end
         end
         else
         begin
@@ -1105,15 +1956,47 @@ begin
         { Check for pointer dereference }
         if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
         begin
-          NextToken;
-          if sym_const_val[idx] = TYPE_RECORD then
+          { Count consecutive ^ tokens }
+          lbl1 := 0;  { deref count }
+          while tok_type = TOK_CARET do
           begin
-            { Pointer to record - x0 has the address, check for field access }
+            lbl1 := lbl1 + 1;
+            NextToken
+          end;
+          { lbl2 = remaining depth after derefs }
+          lbl2 := ptr_depth[idx] - lbl1;
+          { Emit dereference operations }
+          { For pointer-to-array, don't emit final deref - array base is the pointer value }
+          { For pointer-to-record with field access, don't emit final deref - record base is the pointer value }
+          if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_ARRAY) then
+            arg_count := lbl1 - 1
+          else if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
+            arg_count := lbl1 - 1
+          else
+            arg_count := lbl1;
+          for i := 1 to arg_count do
+          begin
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end;
+          { Determine result type }
+          if lbl2 > 0 then
+          begin
+            { Still have pointer levels remaining }
+            expr_type := TYPE_POINTER;
+            ptr_base_type := TYPE_POINTER
+          end
+          else if ptr_ultimate_type[idx] = TYPE_RECORD then
+          begin
+            { Reached record - check for field access }
             if tok_type = TOK_DOT then
             begin
               NextToken;  { consume '.' }
               { Find field in the record type }
-              arg_count := FindField(sym_label[idx]);  { sym_label has record type index }
+              arg_count := FindField(ptr_ultimate_rec[idx]);
               if arg_count < 0 then
                 Error(11);  { unknown field }
               NextToken;  { consume field name }
@@ -1128,8 +2011,95 @@ begin
                 write(field_offset[arg_count]);
                 EmitNL
               end;
+              { Handle nested record fields }
+              while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
+              begin
+                NextToken;  { consume '.' }
+                if tok_type <> TOK_IDENT then
+                  Error(11);
+                var_arg_idx := arg_count;  { save current field index }
+                arg_count := FindField(field_rec_type[var_arg_idx]);
+                if arg_count < 0 then
+                  Error(15);
+                if field_offset[arg_count] > 0 then
+                begin
+                  EmitIndent;
+                  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                  writechar(35);
+                  write(field_offset[arg_count]);
+                  EmitNL
+                end;
+                NextToken
+              end;
               { Load field value }
               if field_type[arg_count] = TYPE_REAL then
+              begin
+                EmitIndent;
+                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+                writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+                EmitNL;
+                expr_type := TYPE_REAL
+              end
+              else if field_type[arg_count] = TYPE_RECORD then
+                expr_type := TYPE_RECORD
+              else
+              begin
+                EmitIndent;
+                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+                EmitNL;
+                expr_type := field_type[arg_count]
+              end
+            end
+            else
+            begin
+              { Just p^ without field access - address in x0 }
+              expr_type := TYPE_RECORD
+            end
+          end
+          else if ptr_ultimate_type[idx] = TYPE_ARRAY then
+          begin
+            { Pointer to array - check for indexing pa^[i] }
+            if tok_type = TOK_LBRACKET then
+            begin
+              NextToken;  { consume '[' }
+              EmitPushX0;  { save array base address }
+              ParseExpression;  { index in x0 }
+              Expect(TOK_RBRACKET);
+              { x0 = index, stack has base address }
+              { Subtract low bound }
+              arg_count := sym_label[idx];  { ptr_arr index }
+              EmitPushX0;
+              EmitMovX0(ptr_arr_lo[arg_count]);
+              EmitPopX1;
+              { x0 = x1 - x0 = index - low_bound }
+              EmitIndent;
+              writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+              writechar(120); writechar(48);  { x0 }
+              EmitNL;
+              { Multiply by 8 using lsl #3 }
+              EmitIndent;
+              writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(35); writechar(51);  { #3 }
+              EmitNL;
+              { Add to base: x1 = base + offset }
+              EmitPopX1;  { x1 = base address }
+              EmitIndent;
+              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+              writechar(120); writechar(48);  { x0 }
+              EmitNL;
+              { Load element value }
+              if ptr_arr_elem[arg_count] = TYPE_REAL then
               begin
                 EmitIndent;
                 writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
@@ -1145,34 +2115,19 @@ begin
                 writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
                 writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
                 EmitNL;
-                expr_type := field_type[arg_count]
+                expr_type := ptr_arr_elem[arg_count]
               end
             end
             else
-            begin
-              { Just p^ without field access - not meaningful for records }
-              expr_type := TYPE_RECORD
-            end
+              expr_type := TYPE_ARRAY  { Just pa^ without indexing }
           end
-          else if sym_const_val[idx] = TYPE_REAL then
+          else if ptr_ultimate_type[idx] = TYPE_REAL then
           begin
-            { ldr d0, [x0] }
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
             expr_type := TYPE_REAL
           end
           else
           begin
-            { ldr x0, [x0] }
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
-            expr_type := sym_const_val[idx]
+            expr_type := ptr_ultimate_type[idx]
           end
         end
       end
@@ -2021,14 +2976,42 @@ begin
   end
   else if tok_type = TOK_READ then
   begin
-    { read(var) - reads an integer or real into a variable }
+    { read([f,] var) - reads an integer or real into a variable }
     NextToken;
     Expect(TOK_LPAREN);
+    lbl1 := 0;  { flag: 1 if reading from file }
     if tok_type <> TOK_IDENT then
       Error(6);
     idx := SymLookup;
     if idx < 0 then
       Error(3);
+    { Check if first arg is a file variable }
+    if (sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT) then
+    begin
+      { File variable - save x19 and load file's fd }
+      lbl1 := 1;
+      NextToken;
+      { Push x19 to save it }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+      EmitNL;
+      { Load file's fd into x19 }
+      EmitVarAddr(idx, scope_level);
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      Expect(TOK_COMMA);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3)
+    end;
     NextToken;
     if sym_type[idx] = TYPE_REAL then
     begin
@@ -2050,12 +3033,23 @@ begin
       else
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
     end;
+    { Restore x19 if we saved it }
+    if lbl1 = 1 then
+    begin
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL
+    end;
     Expect(TOK_RPAREN)
   end
   else if tok_type = TOK_READLN then
   begin
-    { readln(var) or readln - reads integer/real and skips to end of line }
+    { readln([f,] var) or readln([f]) - reads integer/real/string and skips to end of line }
     NextToken;
+    lbl1 := 0;  { flag: 1 if reading from file }
     if tok_type = TOK_LPAREN then
     begin
       NextToken;
@@ -2066,39 +3060,114 @@ begin
         idx := SymLookup;
         if idx < 0 then
           Error(3);
-        NextToken;
-        if sym_type[idx] = TYPE_REAL then
+        { Check if first arg is a file variable }
+        if (sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT) then
         begin
-          { Call read_real runtime - result in d0 }
-          EmitBL(rt_read_real);
-          { Store result in variable }
-          if sym_level[idx] = scope_level then
-            EmitSturD0(sym_offset[idx])
-          else
-            EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-        end
-        else if sym_type[idx] = TYPE_STRING then
-        begin
-          { Load string variable address into x0 }
+          { File variable - save x19 and load file's fd }
+          lbl1 := 1;
+          NextToken;
+          { Push x19 to save it }
+          EmitIndent;
+          writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+          writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+          writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+          writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+          EmitNL;
+          { Load file's fd into x19 }
           EmitVarAddr(idx, scope_level);
-          { Call read_string runtime }
-          EmitBL(rt_read_string)
-        end
-        else
-        begin
-          { Call read_int runtime }
-          EmitBL(rt_read_int);
-          { Store result in variable }
-          if sym_level[idx] = scope_level then
-            EmitSturX0(sym_offset[idx])
+          EmitIndent;
+          writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+          writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+          writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+          EmitNL;
+          { Check for comma (more args) or just skip to rparen }
+          if tok_type = TOK_COMMA then
+          begin
+            NextToken;
+            if tok_type <> TOK_IDENT then
+              Error(6);
+            idx := SymLookup;
+            if idx < 0 then
+              Error(3)
+          end
           else
-            EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          begin
+            { Just file arg, no variable to read into - skip to rparen }
+            Expect(TOK_RPAREN);
+            { Skip to end of line }
+            EmitBL(rt_skip_line);
+            { Restore x19 }
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+            writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+            writechar(35); writechar(49); writechar(54);  { #16 }
+            EmitNL
+          end
+        end;
+        { Only process variable if we have one }
+        if tok_type = TOK_IDENT then
+        begin
+          idx := SymLookup;
+          if idx < 0 then
+            Error(3);
+          lbl2 := sym_type[idx];  { save type for skip_line decision }
+          NextToken;
+          if sym_type[idx] = TYPE_REAL then
+          begin
+            { Call read_real runtime - result in d0 }
+            EmitBL(rt_read_real);
+            { Store result in variable }
+            if sym_level[idx] = scope_level then
+              EmitSturD0(sym_offset[idx])
+            else
+              EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          end
+          else if sym_type[idx] = TYPE_STRING then
+          begin
+            { Load string variable address into x0 }
+            EmitVarAddr(idx, scope_level);
+            { Call read_string runtime - already consumes newline }
+            EmitBL(rt_read_string)
+          end
+          else
+          begin
+            { Call read_int runtime }
+            EmitBL(rt_read_int);
+            { Store result in variable }
+            if sym_level[idx] = scope_level then
+              EmitSturX0(sym_offset[idx])
+            else
+              EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+          end;
+          Expect(TOK_RPAREN);
+          { Skip to end of line only for integer/real (read_string already consumed newline) }
+          if lbl2 <> TYPE_STRING then
+            EmitBL(rt_skip_line);
+          { Restore x19 if we saved it }
+          if lbl1 = 1 then
+          begin
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+            writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+            writechar(35); writechar(49); writechar(54);  { #16 }
+            EmitNL
+          end
         end
-      end;
-      Expect(TOK_RPAREN)
-    end;
-    { Skip to end of line }
-    EmitBL(rt_skip_line)
+      end
+      else
+      begin
+        { readln() with no args }
+        Expect(TOK_RPAREN);
+        EmitBL(rt_skip_line)
+      end
+    end
+    else
+    begin
+      { readln with no parens }
+      EmitBL(rt_skip_line)
+    end
   end
   else if tok_type = TOK_WITH then
   begin
@@ -2135,115 +3204,199 @@ begin
     begin
       { writeln }
       NextToken;
+      lbl1 := 0;  { flag: 1 if writing to file }
       if tok_type = TOK_LPAREN then
       begin
         NextToken;
         if tok_type <> TOK_RPAREN then
         begin
-          repeat
-            if tok_type = TOK_STRING then
+          { Check if first arg is a file variable }
+          if tok_type = TOK_IDENT then
+          begin
+            idx := SymLookup;
+            if (idx >= 0) and ((sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT)) then
             begin
-              { Print string literal character by character }
-              idx := 0;
-              while idx < tok_len do
-              begin
-                EmitMovX0(tok_str[idx]);
-                EmitBL(rt_print_char);
-                idx := idx + 1
-              end;
-              NextToken
+              { File variable - save x20 and load file's fd }
+              lbl1 := 1;
+              NextToken;
+              { Push x20 to save it }
+              EmitIndent;
+              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+              writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+              writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+              EmitNL;
+              { Load file's fd into x20 }
+              EmitVarAddr(idx, scope_level);
+              EmitIndent;
+              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+              EmitNL;
+              if tok_type = TOK_COMMA then
+                NextToken
             end
-            else if tok_type = TOK_IDENT then
+          end;
+          if (lbl1 = 0) or (tok_type <> TOK_RPAREN) then
+          begin
+            while tok_type <> TOK_RPAREN do
             begin
-              { Check if it's a string variable }
-              idx := SymLookup;
-              if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+              if tok_type = TOK_STRING then
               begin
-                { String variable - compute address and call print_string }
-                NextToken;
-                EmitVarAddr(idx, scope_level);
-                EmitBL(rt_print_string)
+                { Print string literal character by character }
+                idx := 0;
+                while idx < tok_len do
+                begin
+                  EmitMovX0(tok_str[idx]);
+                  EmitBL(rt_print_char);
+                  idx := idx + 1
+                end;
+                NextToken
+              end
+              else if tok_type = TOK_IDENT then
+              begin
+                { Check if it's a string variable }
+                idx := SymLookup;
+                if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+                begin
+                  { String variable - compute address and call print_string }
+                  NextToken;
+                  EmitVarAddr(idx, scope_level);
+                  EmitBL(rt_print_string)
+                end
+                else
+                begin
+                  { Not a string - parse as expression and print based on type }
+                  ParseExpression;
+                  if expr_type = TYPE_REAL then
+                    EmitBL(rt_print_real)
+                  else
+                    EmitBL(rt_print_int)
+                end
               end
               else
               begin
-                { Not a string - parse as expression and print based on type }
                 ParseExpression;
                 if expr_type = TYPE_REAL then
                   EmitBL(rt_print_real)
                 else
                   EmitBL(rt_print_int)
-              end
+              end;
+              if tok_type = TOK_COMMA then NextToken
             end
-            else
-            begin
-              ParseExpression;
-              if expr_type = TYPE_REAL then
-                EmitBL(rt_print_real)
-              else
-                EmitBL(rt_print_int)
-            end
-          until tok_type <> TOK_COMMA;
-          if tok_type = TOK_COMMA then NextToken
+          end
         end;
         Expect(TOK_RPAREN)
       end;
-      EmitBL(rt_newline)
+      EmitBL(rt_newline);
+      { Restore x20 if we saved it }
+      if lbl1 = 1 then
+      begin
+        EmitIndent;
+        writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+        writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+        writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+        writechar(35); writechar(49); writechar(54);  { #16 }
+        EmitNL
+      end
     end
     else if TokIs8(119, 114, 105, 116, 101, 0, 0, 0) = 1 then
     begin
       { write }
       NextToken;
+      lbl1 := 0;  { flag: 1 if writing to file }
       if tok_type = TOK_LPAREN then
       begin
         NextToken;
         if tok_type <> TOK_RPAREN then
         begin
-          repeat
-            if tok_type = TOK_STRING then
+          { Check if first arg is a file variable }
+          if tok_type = TOK_IDENT then
+          begin
+            idx := SymLookup;
+            if (idx >= 0) and ((sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT)) then
             begin
-              { Print string literal character by character }
-              idx := 0;
-              while idx < tok_len do
-              begin
-                EmitMovX0(tok_str[idx]);
-                EmitBL(rt_print_char);
-                idx := idx + 1
-              end;
-              NextToken
+              { File variable - save x20 and load file's fd }
+              lbl1 := 1;
+              NextToken;
+              { Push x20 to save it }
+              EmitIndent;
+              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+              writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+              writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+              EmitNL;
+              { Load file's fd into x20 }
+              EmitVarAddr(idx, scope_level);
+              EmitIndent;
+              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+              EmitNL;
+              if tok_type = TOK_COMMA then
+                NextToken
             end
-            else if tok_type = TOK_IDENT then
+          end;
+          if (lbl1 = 0) or (tok_type <> TOK_RPAREN) then
+          begin
+            while tok_type <> TOK_RPAREN do
             begin
-              { Check if it's a string variable }
-              idx := SymLookup;
-              if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+              if tok_type = TOK_STRING then
               begin
-                { String variable - compute address and call print_string }
-                NextToken;
-                EmitVarAddr(idx, scope_level);
-                EmitBL(rt_print_string)
+                { Print string literal character by character }
+                idx := 0;
+                while idx < tok_len do
+                begin
+                  EmitMovX0(tok_str[idx]);
+                  EmitBL(rt_print_char);
+                  idx := idx + 1
+                end;
+                NextToken
+              end
+              else if tok_type = TOK_IDENT then
+              begin
+                { Check if it's a string variable }
+                idx := SymLookup;
+                if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
+                begin
+                  { String variable - compute address and call print_string }
+                  NextToken;
+                  EmitVarAddr(idx, scope_level);
+                  EmitBL(rt_print_string)
+                end
+                else
+                begin
+                  { Not a string - parse as expression and print based on type }
+                  ParseExpression;
+                  if expr_type = TYPE_REAL then
+                    EmitBL(rt_print_real)
+                  else
+                    EmitBL(rt_print_int)
+                end
               end
               else
               begin
-                { Not a string - parse as expression and print based on type }
                 ParseExpression;
                 if expr_type = TYPE_REAL then
                   EmitBL(rt_print_real)
                 else
                   EmitBL(rt_print_int)
-              end
+              end;
+              if tok_type = TOK_COMMA then NextToken
             end
-            else
-            begin
-              ParseExpression;
-              if expr_type = TYPE_REAL then
-                EmitBL(rt_print_real)
-              else
-                EmitBL(rt_print_int)
-            end
-          until tok_type <> TOK_COMMA;
-          if tok_type = TOK_COMMA then NextToken
+          end
         end;
         Expect(TOK_RPAREN)
+      end;
+      { Restore x20 if we saved it }
+      if lbl1 = 1 then
+      begin
+        EmitIndent;
+        writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+        writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+        writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+        writechar(35); writechar(49); writechar(54);  { #16 }
+        EmitNL
       end
     end
     else if TokIs8(104, 97, 108, 116, 0, 0, 0, 0) = 1 then
@@ -2263,6 +3416,49 @@ begin
         EmitMovX0(0);
       EmitMovX16(33554433);  { 0x2000001 = exit }
       EmitSvc
+    end
+    { randomize = 114,97,110,100,111,109,105,122,101 }
+    else if (tok_len = 9) and (tok_str[0] = 114) and (tok_str[1] = 97) and
+            (tok_str[2] = 110) and (tok_str[3] = 100) and (tok_str[4] = 111) and
+            (tok_str[5] = 109) and (tok_str[6] = 105) and (tok_str[7] = 122) and
+            (tok_str[8] = 101) then
+    begin
+      { randomize - seed the PRNG using stack pointer XOR with a constant }
+      NextToken;
+      if tok_type = TOK_LPAREN then
+      begin
+        NextToken;
+        if tok_type <> TOK_RPAREN then
+        begin
+          { randomize(seed) - use provided seed }
+          ParseExpression;
+          { mov x27, x0 }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
+          writechar(120); writechar(48);  { x0 }
+          EmitNL
+        end
+        else
+        begin
+          { randomize() - use sp as seed }
+          EmitIndent;
+          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+          writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
+          writechar(115); writechar(112);  { sp }
+          EmitNL
+        end;
+        Expect(TOK_RPAREN)
+      end
+      else
+      begin
+        { randomize with no parens - use sp as seed }
+        EmitIndent;
+        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+        writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
+        writechar(115); writechar(112);  { sp }
+        EmitNL
+      end
     end
     { inc = 105,110,99 }
     else if TokIs8(105, 110, 99, 0, 0, 0, 0, 0) = 1 then
@@ -2379,25 +3575,19 @@ begin
       { Determine allocation size based on base type }
       if sym_const_val[idx] = TYPE_RECORD then
         lbl1 := sym_label[sym_label[idx]]  { record size from type definition }
+      else if sym_const_val[idx] = TYPE_ARRAY then
+      begin
+        { Pointer to array: calculate size from bounds }
+        arg_count := sym_label[idx];  { ptr_arr index }
+        lbl1 := (ptr_arr_hi[arg_count] - ptr_arr_lo[arg_count] + 1) * 8
+      end
       else
         lbl1 := 8;  { basic types are 8 bytes }
       { Align to 8 bytes }
       lbl1 := ((lbl1 + 7) div 8) * 8;
-      { Allocate: get current heap pointer (x21), bump by size }
-      { mov x0, x21 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(49);  { x21 }
-      EmitNL;
-      { add x21, x21, #size }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(35);
-      write(lbl1);
-      EmitNL;
+      { Allocate via rt_alloc: put size in x0, call rt_alloc }
+      EmitMovX0(lbl1);
+      EmitBL(rt_alloc);
       { Store address in pointer variable }
       if sym_level[idx] < scope_level then
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
@@ -2408,7 +3598,7 @@ begin
             (tok_str[2] = 115) and (tok_str[3] = 112) and (tok_str[4] = 111) and
             (tok_str[5] = 115) and (tok_str[6] = 101) then
     begin
-      { dispose(p) - free memory (no-op for bump allocator) }
+      { dispose(p) - free memory via free list allocator }
       NextToken;
       Expect(TOK_LPAREN);
       if tok_type <> TOK_IDENT then
@@ -2419,8 +3609,405 @@ begin
       if sym_type[idx] <> TYPE_POINTER then
         Error(14);  { expected pointer type }
       NextToken;
+      Expect(TOK_RPAREN);
+      { Load pointer value into x0 }
+      if sym_level[idx] < scope_level then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      else
+        EmitLdurX0(sym_offset[idx]);
+      { Call rt_free to return memory to free list }
+      EmitBL(rt_free);
+      { Set pointer to nil for safety }
+      EmitMovX0(0);
+      if sym_level[idx] < scope_level then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      else
+        EmitSturX0(sym_offset[idx])
+    end
+    { assign = 97,115,115,105,103,110 }
+    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 115) and
+            (tok_str[2] = 115) and (tok_str[3] = 105) and (tok_str[4] = 103) and
+            (tok_str[5] = 110) then
+    begin
+      { assign(f, filename) - associate file variable with filename }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_COMMA);
+      { Get address of file variable }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;  { save file var address }
+      { Parse filename (string expression) }
+      ParseExpression;
+      { x0 = source string address, stack = file var address }
+      { Copy filename to file var offset 16 }
+      EmitPopX1;  { x1 = file var address }
+      { add x1, x1, #16 - point to filename area }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { swap x0 and x1 for str_copy (dest in x0, src in x1) }
+      { x0 = src string, x1 = dest (file var + 16) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(49);  { x1 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(50);  { x2 }
+      EmitNL;
+      { Now x0 = dest, x1 = src. Save dest before call. }
+      EmitPushX0;
+      EmitBL(rt_str_copy);
+      EmitPopX0;  { restore dest address }
+      { Add null terminator for C string compatibility }
+      { ldrb w1, [x0] - load length }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+      writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { add x1, x1, #1 - position after last char }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { strb wzr, [x0, x1] - store null byte }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+      writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
+      writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
+      writechar(120); writechar(49); writechar(93);  { x1] }
+      EmitNL;
+      { Initialize fd to -1 (not open) }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;
+      EmitMovX0(-1);
+      EmitPopX1;
+      { str x0, [x1] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+      EmitNL;
       Expect(TOK_RPAREN)
-      { No-op for bump allocator - could set pointer to nil for safety }
+    end
+    { reset = 114,101,115,101,116 }
+    else if (tok_len = 5) and (tok_str[0] = 114) and (tok_str[1] = 101) and
+            (tok_str[2] = 115) and (tok_str[3] = 101) and (tok_str[4] = 116) then
+    begin
+      { reset(f) - open file for reading }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Get filename address (offset 16) and convert to C string }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;  { save file var base }
+      { add x0, x0, #16 - point to filename }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { Convert Pascal string to C string: skip length byte }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(53);  { #5 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Store fd in file variable (offset 0) }
+      EmitPopX1;  { x1 = file var base }
+      { str x0, [x1] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+      EmitNL;
+      { Store mode=1 (read) at offset 8 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { str x0, [x1, #8] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+      writechar(35); writechar(56); writechar(93);  { #8] }
+      EmitNL
+    end
+    { rewrite = 114,101,119,114,105,116,101 }
+    else if (tok_len = 7) and (tok_str[0] = 114) and (tok_str[1] = 101) and
+            (tok_str[2] = 119) and (tok_str[3] = 114) and (tok_str[4] = 105) and
+            (tok_str[5] = 116) and (tok_str[6] = 101) then
+    begin
+      { rewrite(f) - open/create file for writing }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Get filename address (offset 16) and convert to C string }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;  { save file var base }
+      { add x0, x0, #16 - point to filename }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { Convert Pascal string to C string: skip length byte }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420) }
+      { mov x1, #1537 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);  { #1537 }
+      EmitNL;
+      { mov x2, #420 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(52); writechar(50); writechar(48);  { #420 }
+      EmitNL;
+      { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(53);  { #5 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Store fd in file variable (offset 0) }
+      EmitPopX1;  { x1 = file var base }
+      { str x0, [x1] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+      EmitNL;
+      { Store mode=2 (write) at offset 8 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(50);  { #2 }
+      EmitNL;
+      { str x0, [x1, #8] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+      writechar(35); writechar(56); writechar(93);  { #8] }
+      EmitNL
+    end
+    { close = 99,108,111,115,101 }
+    else if (tok_len = 5) and (tok_str[0] = 99) and (tok_str[1] = 108) and
+            (tok_str[2] = 111) and (tok_str[3] = 115) and (tok_str[4] = 101) then
+    begin
+      { close(f) - close file }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Load fd from file variable }
+      EmitVarAddr(idx, scope_level);
+      { ldr x0, [x0] - load fd }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { close syscall: x0=fd }
+      { movz x16, #6; movk x16, #0x200, lsl #16 = 0x2000006 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(54);  { #6 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Set fd to -1 to mark as closed }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;
+      EmitMovX0(-1);
+      EmitPopX1;
+      { str x0, [x1] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+      EmitNL;
+      { Set mode to 0 (closed) at offset 8 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      { str x0, [x1, #8] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
+      writechar(35); writechar(56); writechar(93);  { #8] }
+      EmitNL
+    end
+    { seek = 115,101,101,107 }
+    else if (tok_len = 4) and (tok_str[0] = 115) and (tok_str[1] = 101) and
+            (tok_str[2] = 101) and (tok_str[3] = 107) then
+    begin
+      { seek(f, pos) - move to position in file }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_COMMA);
+      { Get file fd and save to x23 }
+      EmitVarAddr(idx, scope_level);
+      { ldr x0, [x0] - load fd }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Save fd to x23 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { Parse position expression }
+      ParseExpression;
+      { x0 = position, x23 = fd }
+      { mov x1, x0 (position to x1) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { mov x0, x23 (fd to x0) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(51);  { x23 }
+      EmitNL;
+      { mov x2, #0 (SEEK_SET) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(48);  { #0 = SEEK_SET }
+      EmitNL;
+      { lseek syscall: 0x20000C7 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      Expect(TOK_RPAREN)
     end
     { delete = 100,101,108,101,116,101 }
     else if (tok_len = 6) and (tok_str[0] = 100) and (tok_str[1] = 101) and
@@ -3105,7 +4692,7 @@ begin
         end
         else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
         begin
-          { Record field assignment: rec.field := value }
+          { Record field assignment: rec.field := value or rec.field.subfield := value }
           NextToken;  { consume '.' }
           if tok_type <> TOK_IDENT then
             Error(11);
@@ -3113,11 +4700,26 @@ begin
           arg_count := FindField(sym_const_val[idx]);  { reuse arg_count for field_idx }
           if arg_count < 0 then
             Error(15);  { undefined field }
+          { Accumulate total offset for nested fields }
+          lbl1 := field_offset[arg_count];  { total offset from base }
           NextToken;
+          { Handle nested record fields }
+          while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
+          begin
+            NextToken;  { consume '.' }
+            if tok_type <> TOK_IDENT then
+              Error(11);
+            lbl2 := arg_count;  { save current field index }
+            arg_count := FindField(field_rec_type[lbl2]);
+            if arg_count < 0 then
+              Error(15);
+            lbl1 := lbl1 + field_offset[arg_count];  { accumulate offset }
+            NextToken
+          end;
           Expect(TOK_ASSIGN);
           ParseExpression;  { value in x0 or d0 }
 
-          { Compute field address: base + field_offset }
+          { Compute field address: base + total_offset }
           if field_type[arg_count] = TYPE_REAL then
           begin
             { Value is in d0, need to store to field }
@@ -3133,7 +4735,7 @@ begin
               writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
               writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
               writechar(35);
-              write(sym_offset[idx] + field_offset[arg_count]);
+              write(sym_offset[idx] + lbl1);
               EmitNL
             end
             else
@@ -3143,7 +4745,7 @@ begin
               writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
               writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
               writechar(35);
-              write(sym_offset[idx] + field_offset[arg_count]);
+              write(sym_offset[idx] + lbl1);
               EmitNL
             end;
             EmitPopD0;
@@ -3167,7 +4769,7 @@ begin
               writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
               writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
               writechar(35);
-              write(sym_offset[idx] + field_offset[arg_count]);
+              write(sym_offset[idx] + lbl1);
               EmitNL
             end
             else
@@ -3177,7 +4779,7 @@ begin
               writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
               writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
               writechar(35);
-              write(sym_offset[idx] + field_offset[arg_count]);
+              write(sym_offset[idx] + lbl1);
               EmitNL
             end;
             EmitPopX0;
@@ -3191,20 +4793,37 @@ begin
         end
         else if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
         begin
-          { Pointer dereference assignment: p^ := value or p^.field := value }
-          NextToken;  { consume ^ }
-          { Load pointer value (address) }
+          { Pointer dereference assignment: p^ := value or pp^^ := value or p^.field := value }
+          { Count consecutive ^ tokens }
+          lbl1 := 0;  { deref count }
+          while tok_type = TOK_CARET do
+          begin
+            lbl1 := lbl1 + 1;
+            NextToken
+          end;
+          { Load pointer value }
           if sym_level[idx] < scope_level then
             EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
           else
             EmitLdurX0(sym_offset[idx]);
-
-          if (sym_const_val[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
+          { Dereference (count-1) times to get target address }
+          for i := 1 to lbl1 - 1 do
           begin
-            { Pointer to record field assignment: p^.field := value }
+            EmitIndent;
+            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+            EmitNL
+          end;
+          { lbl2 = remaining pointer depth after all derefs }
+          lbl2 := ptr_depth[idx] - lbl1;
+
+          if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
+          begin
+            { Pointer to record field assignment: p^.field := value or p^.field.subfield := value }
             NextToken;  { consume '.' }
             { Find field in the record type }
-            arg_count := FindField(sym_label[idx]);  { sym_label has record type index }
+            arg_count := FindField(ptr_ultimate_rec[idx]);
             if arg_count < 0 then
               Error(11);  { unknown field }
             NextToken;  { consume field name }
@@ -3218,6 +4837,28 @@ begin
               writechar(35);
               write(field_offset[arg_count]);
               EmitNL
+            end;
+            { Handle nested record fields }
+            while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
+            begin
+              NextToken;  { consume '.' }
+              if tok_type <> TOK_IDENT then
+                Error(11);
+              var_arg_idx := arg_count;  { save current field index }
+              arg_count := FindField(field_rec_type[var_arg_idx]);
+              if arg_count < 0 then
+                Error(15);
+              if field_offset[arg_count] > 0 then
+              begin
+                EmitIndent;
+                writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+                writechar(35);
+                write(field_offset[arg_count]);
+                EmitNL
+              end;
+              NextToken
             end;
             EmitPushX0;  { save field address }
             Expect(TOK_ASSIGN);
@@ -3245,13 +4886,72 @@ begin
               EmitNL
             end
           end
+          else if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
+          begin
+            { Pointer to array element assignment: pa^[i] := value }
+            NextToken;  { consume '[' }
+            EmitPushX0;  { save array base address }
+            ParseExpression;  { index in x0 }
+            Expect(TOK_RBRACKET);
+            { x0 = index, stack has base address }
+            { Subtract low bound }
+            arg_count := sym_label[idx];  { ptr_arr index }
+            EmitPushX0;
+            EmitMovX0(ptr_arr_lo[arg_count]);
+            EmitPopX1;
+            { x0 = x1 - x0 = index - low_bound }
+            EmitIndent;
+            writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+            writechar(120); writechar(48);  { x0 }
+            EmitNL;
+            { Multiply by 8 using lsl #3 }
+            EmitIndent;
+            writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+            writechar(35); writechar(51);  { #3 }
+            EmitNL;
+            { Add to base: x0 = base + offset }
+            EmitPopX1;  { x1 = base address }
+            EmitIndent;
+            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+            writechar(120); writechar(48);  { x0 }
+            EmitNL;
+            { x8 now has element address }
+            Expect(TOK_ASSIGN);
+            ParseExpression;  { value to store }
+            { Store value }
+            if ptr_arr_elem[arg_count] = TYPE_REAL then
+            begin
+              if expr_type <> TYPE_REAL then
+                EmitScvtfD0X0;
+              EmitIndent;
+              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
+              writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+              EmitNL
+            end
+            else
+            begin
+              EmitIndent;
+              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+              writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
+              EmitNL
+            end
+          end
           else
           begin
-            { Simple pointer dereference assignment: p^ := value }
+            { Simple pointer dereference assignment: p^ := value or pp^^ := value }
             EmitPushX0;  { save address }
             Expect(TOK_ASSIGN);
             ParseExpression;  { value to store }
-            if sym_const_val[idx] = TYPE_REAL then
+            { Determine target type }
+            if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_REAL) then
             begin
               { Value in d0, need to store through pointer }
               if expr_type <> TYPE_REAL then
