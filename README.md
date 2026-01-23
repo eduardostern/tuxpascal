@@ -32,10 +32,10 @@ Remember when compilers came on floppy disks? When Turbo Pascal's blue IDE was t
 No frameworks. No package managers. No 500MB of node_modules. Just you, your code, and a compiler that turns Pascal into native ARM64 executables faster than you can say "BEGIN...END."
 
 ```pascal
-program HelloNewWorld;
-begin
-  writeln('The 80s called. They want their elegance back.')
-end.
+Program HelloNewWorld;
+Begin
+  WriteLn('The 80s called. They want their elegance back.')
+End.
 ```
 
 ```bash
@@ -71,18 +71,18 @@ TuxPascal is:
 Write code like it's 1983. We support the classics:
 
 ```pascal
-program Classics;
-var
-  i: integer;
-  name: string;
-begin
-  write('What is your name? ');
-  readln(name);
-  for i := 1 to 3 do
-    writeln('Hello, ', name, '!');
-  writeln('Press any key to continue...');
-  readchar
-end.
+Program Classics;
+Var
+  i: Integer;
+  name: String;
+Begin
+  Write('What is your name? ');
+  ReadLn(name);
+  For i := 1 To 3 Do
+    WriteLn('Hello, ', name, '!');
+  WriteLn('Press any key to continue...');
+  ReadChar
+End.
 ```
 
 ### Modern Extensions
@@ -102,18 +102,18 @@ But we didn't stop in 1983:
 Remember writing games in your high school computer lab?
 
 ```pascal
-program RetroGame;
-begin
+Program RetroGame;
+Begin
   ClrScr;
   HideCursor;
   TextColor(14);  { Yellow, obviously }
   GotoXY(30, 12);
-  write('*** GAME OVER ***');
+  Write('*** GAME OVER ***');
   TextColor(7);
   GotoXY(25, 14);
-  write('Insert coin to continue');
+  Write('Insert coin to continue');
   ShowCursor
-end.
+End.
 ```
 
 All your favorites are here: `ClrScr`, `GotoXY`, `TextColor`, `TextBackground`, `KeyPressed`, `ReadKey`...
@@ -186,20 +186,20 @@ tpc examples/hanoi.pas && ./examples/hanoi
 ```
 
 ```pascal
-program TowersOfHanoi;
-const
+Program TowersOfHanoi;
+Const
   NumDisks = 5;
   AnimDelay = 50;
-var
-  towers: array[1..3, 1..10] of integer;
-begin
+Var
+  towers: Array[1..3, 1..10] Of Integer;
+Begin
   ClrScr;
   HideCursor;
   TextColor(11);
   GotoXY(28, 1);
-  writeln('TOWERS OF HANOI');
+  WriteLn('TOWERS OF HANOI');
   { Watch the disks dance across your terminal }
-end.
+End.
 ```
 
 ### Tetris
@@ -210,24 +210,24 @@ tpc examples/tetris.pas && ./examples/tetris
 ```
 
 ```pascal
-program Tetris;
-begin
+Program Tetris;
+Begin
   ClrScr;
   HideCursor;
   InitKeyboard;  { Raw mode for real-time input }
 
-  while not GameOver do
-  begin
-    if KeyPressed then
+  While Not GameOver Do
+  Begin
+    If KeyPressed Then
       HandleInput(ReadChar);
     UpdateGame;
     DrawBoard;
     Sleep(50)
-  end;
+  End;
 
   DoneKeyboard;
   ShowCursor
-end.
+End.
 ```
 
 **Controls:** Arrow keys or WASD, Space to drop, Q to quit.
@@ -270,78 +270,78 @@ The Pascal compiler produces smaller binaries than the C bootstrap! Why? The C c
 ### Types
 
 ```pascal
-var
-  i: integer;           { 64-bit signed }
-  c: char;              { 8-bit character }
-  b: boolean;           { true/false }
-  s: string;            { 255-char max }
-  r: real;              { IEEE 754 double }
-  a: array[1..10] of integer;
-  p: ^integer;          { Pointer }
-  pp: ^^integer;        { Pointer to pointer }
-  f: text;              { Text file }
+Var
+  i: Integer;           { 64-bit signed }
+  c: Char;              { 8-bit character }
+  b: Boolean;           { True/False }
+  s: String;            { 255-char max }
+  r: Real;              { IEEE 754 double }
+  a: Array[1..10] Of Integer;
+  p: ^Integer;          { Pointer }
+  pp: ^^Integer;        { Pointer to pointer }
+  f: Text;              { Text file }
 ```
 
 ### Records
 
 ```pascal
-type
-  TPoint = record
-    x, y: integer
-  end;
+Type
+  TPoint = Record
+    x, y: Integer
+  End;
 
-  TShape = record
+  TShape = Record
     origin: TPoint;     { Nested record }
-    case kind: integer of
-      1: (radius: integer);           { Circle }
-      2: (width, height: integer)     { Rectangle }
-  end;
+    Case kind: Integer Of
+      1: (radius: Integer);           { Circle }
+      2: (width, height: Integer)     { Rectangle }
+  End;
 ```
 
 ### Units
 
 ```pascal
-unit MathUtils;
+Unit MathUtils;
 
-interface
-  function Factorial(n: integer): integer;
-  function Fibonacci(n: integer): integer;
+Interface
+  Function Factorial(n: Integer): Integer;
+  Function Fibonacci(n: Integer): Integer;
 
-implementation
+Implementation
 
-function Factorial(n: integer): integer;
-begin
-  if n <= 1 then
+Function Factorial(n: Integer): Integer;
+Begin
+  If n <= 1 Then
     Factorial := 1
-  else
+  Else
     Factorial := n * Factorial(n - 1)
-end;
+End;
 
-function Fibonacci(n: integer): integer;
-begin
-  if n <= 2 then
+Function Fibonacci(n: Integer): Integer;
+Begin
+  If n <= 2 Then
     Fibonacci := 1
-  else
+  Else
     Fibonacci := Fibonacci(n-1) + Fibonacci(n-2)
-end;
+End;
 
-begin
+Begin
   { Unit initialization }
-  writeln('MathUtils loaded')
-end.
+  WriteLn('MathUtils loaded')
+End.
 ```
 
 ### Built-in Functions
 
 | Category | Functions |
 |----------|-----------|
-| **I/O** | `write`, `writeln`, `read`, `readln`, `readchar`, `writechar` |
-| **Strings** | `length`, `copy`, `concat`, `pos`, `delete`, `insert`, `str`, `val`, `trim` |
-| **Math** | `sin`, `cos`, `tan`, `arctan`, `sqrt`, `sqr`, `exp`, `ln`, `abs`, `round`, `trunc` |
-| **Utility** | `ord`, `chr`, `succ`, `pred`, `inc`, `dec`, `odd`, `upcase`, `lowercase` |
-| **Memory** | `new`, `dispose`, `sizeof` |
-| **System** | `halt`, `paramcount`, `paramstr`, `random`, `randomize` |
-| **Files** | `assign`, `reset`, `rewrite`, `close`, `eof`, `seek`, `filepos`, `filesize` |
+| **I/O** | `Write`, `WriteLn`, `Read`, `ReadLn`, `ReadChar`, `WriteChar` |
+| **Strings** | `Length`, `Copy`, `Concat`, `Pos`, `Delete`, `Insert`, `Str`, `Val`, `Trim` |
+| **Math** | `Sin`, `Cos`, `Tan`, `ArcTan`, `Sqrt`, `Sqr`, `Exp`, `Ln`, `Abs`, `Round`, `Trunc` |
+| **Utility** | `Ord`, `Chr`, `Succ`, `Pred`, `Inc`, `Dec`, `Odd`, `UpCase`, `LowerCase` |
+| **Memory** | `New`, `Dispose`, `SizeOf` |
+| **System** | `Halt`, `ParamCount`, `ParamStr`, `Random`, `Randomize` |
+| **Files** | `Assign`, `Reset`, `Rewrite`, `Close`, `Eof`, `Seek`, `FilePos`, `FileSize` |
 | **Screen** | `ClrScr`, `GotoXY`, `ClrEol`, `TextColor`, `TextBackground`, `HideCursor`, `ShowCursor` |
 | **Keyboard** | `KeyPressed`, `InitKeyboard`, `DoneKeyboard`, `Sleep` |
 
