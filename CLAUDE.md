@@ -113,7 +113,7 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Supported Pascal Features
 
-**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested), `text` (files), `set of` (64-bit bitmask), enumerated types `(val1, val2, ...)`, subrange types `lo..hi`
+**Types:** `integer`, `char`, `boolean`, `string`, `array`, `real`, `^type` (pointers), `^^type` (pointers to pointers), `^array[lo..hi] of T` (pointers to arrays), `record` (including nested and variant), `text` (files), `set of` (64-bit bitmask), enumerated types `(val1, val2, ...)`, subrange types `lo..hi`
 
 **Statements:** `:=`, `if`/`then`/`else`, `while`/`do`, `repeat`/`until`, `for`/`to`/`downto`, `case`/`of`, `with`/`do`, `begin`/`end`, `break`, `continue`, `exit`
 
@@ -137,7 +137,6 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 ## Not Yet Implemented
 
-- Variant records
 - Units/modules (`unit`, `uses`)
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.

@@ -505,8 +505,8 @@ begin
       fld_offset := 0;
       sym_const_val[type_idx] := fld_start;  { first field index }
 
-      { Parse fields until 'end' }
-      while tok_type <> TOK_END do
+      { Parse fields until 'end' or 'case' (variant part) }
+      while (tok_type <> TOK_END) and (tok_type <> TOK_CASE) do
       begin
         { Collect field names (may be comma-separated) }
         first_fld := field_count;
@@ -597,6 +597,151 @@ begin
         { Expect semicolon or end }
         if tok_type = TOK_SEMICOLON then
           NextToken
+      end;
+
+      { Check for variant part }
+      if tok_type = TOK_CASE then
+      begin
+        NextToken;  { consume 'case' }
+
+        { Check for tag field: "case tag: type of" vs "case type of" }
+        if tok_type = TOK_IDENT then
+        begin
+          { Could be "tag: type" or just "type" - peek ahead }
+          { Save identifier for potential tag field }
+          base_idx := field_count * 32;
+          for i := 0 to tok_len - 1 do
+            field_name[base_idx + i] := tok_str[i];
+          field_name[base_idx + tok_len] := 0;
+
+          NextToken;
+          if tok_type = TOK_COLON then
+          begin
+            { It's a tag field }
+            field_count := field_count + 1;
+            NextToken;
+            { Parse tag type }
+            if tok_type = TOK_INTEGER_TYPE then
+              fld_type := TYPE_INTEGER
+            else if tok_type = TOK_CHAR_TYPE then
+              fld_type := TYPE_CHAR
+            else if tok_type = TOK_BOOLEAN_TYPE then
+              fld_type := TYPE_BOOLEAN
+            else
+              fld_type := TYPE_INTEGER;  { default }
+            NextToken;
+
+            { Record tag field }
+            field_type[field_count - 1] := fld_type;
+            field_offset[field_count - 1] := fld_offset;
+            field_rec_idx[field_count - 1] := type_idx;
+            field_rec_type[field_count - 1] := 0;
+            fld_offset := fld_offset + 8
+          end
+          { else: identifier was the type name, already consumed }
+        end
+        else
+          NextToken;  { consume type keyword }
+
+        Expect(TOK_OF);
+
+        { variant_start marks where all variants begin }
+        nested_idx := fld_offset;  { reuse as variant_start }
+        nested_size := 0;          { reuse as max_variant_size }
+
+        { Parse variant alternatives }
+        while tok_type <> TOK_END do
+        begin
+          { Skip constant label(s) }
+          while (tok_type <> TOK_COLON) and (tok_type <> TOK_END) do
+            NextToken;
+
+          if tok_type = TOK_COLON then
+          begin
+          NextToken;  { consume ':' }
+          Expect(TOK_LPAREN);
+
+          { Parse fields in this variant - all start at variant_start }
+          fld_offset := nested_idx;  { reset to variant start }
+
+          while tok_type <> TOK_RPAREN do
+          begin
+            { Collect field names }
+            first_fld := field_count;
+            repeat
+              if tok_type <> TOK_IDENT then
+                Error(11);
+              base_idx := field_count * 32;
+              for i := 0 to tok_len - 1 do
+                field_name[base_idx + i] := tok_str[i];
+              field_name[base_idx + tok_len] := 0;
+              field_count := field_count + 1;
+              NextToken;
+              if tok_type = TOK_COMMA then
+                NextToken
+            until tok_type = TOK_COLON;
+
+            Expect(TOK_COLON);
+
+            { Parse field type }
+            lo_val := 8;  { reuse as field_size }
+            if tok_type = TOK_INTEGER_TYPE then
+              fld_type := TYPE_INTEGER
+            else if tok_type = TOK_CHAR_TYPE then
+              fld_type := TYPE_CHAR
+            else if tok_type = TOK_BOOLEAN_TYPE then
+              fld_type := TYPE_BOOLEAN
+            else if tok_type = TOK_REAL_TYPE then
+              fld_type := TYPE_REAL
+            else if tok_type = TOK_IDENT then
+            begin
+              hi_val := SymLookup;  { reuse as lookup result }
+              if (hi_val >= 0) and (sym_kind[hi_val] = SYM_TYPEDEF) then
+              begin
+                if sym_type[hi_val] = TYPE_RECORD then
+                begin
+                  fld_type := TYPE_RECORD;
+                  lo_val := sym_label[hi_val]
+                end
+                else
+                  fld_type := sym_type[hi_val]
+              end
+              else
+                fld_type := TYPE_INTEGER
+            end
+            else
+              fld_type := TYPE_INTEGER;
+            NextToken;
+
+            { Record fields }
+            for i := first_fld to field_count - 1 do
+            begin
+              field_type[i] := fld_type;
+              field_offset[i] := fld_offset;
+              field_rec_idx[i] := type_idx;
+              if fld_type = TYPE_RECORD then
+                field_rec_type[i] := hi_val
+              else
+                field_rec_type[i] := 0;
+              fld_offset := fld_offset + lo_val
+            end;
+
+            if tok_type = TOK_SEMICOLON then
+              NextToken
+          end;
+
+          NextToken;  { consume ')' }
+
+          { Track max variant size }
+          if (fld_offset - nested_idx) > nested_size then
+            nested_size := fld_offset - nested_idx;
+
+          if tok_type = TOK_SEMICOLON then
+            NextToken
+          end  { end if tok_type = TOK_COLON }
+        end;
+
+        fld_offset := nested_idx + nested_size  { final size }
       end;
 
       NextToken;  { consume 'end' }
