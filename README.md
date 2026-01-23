@@ -282,6 +282,8 @@ Var
   f: Text;              { Text file }
 ```
 
+**Turbo Pascal type aliases:** `Byte`, `Word`, `LongInt`, `Int64`, `ShortInt`, `LongWord`, `Cardinal` → Integer; `Single`, `Double`, `Extended` → Real
+
 ### Records
 
 ```pascal
@@ -339,7 +341,8 @@ End.
 | **Strings** | `Length`, `Copy`, `Concat`, `Pos`, `Delete`, `Insert`, `Str`, `Val`, `Trim` |
 | **Math** | `Sin`, `Cos`, `Tan`, `ArcTan`, `Sqrt`, `Sqr`, `Exp`, `Ln`, `Abs`, `Round`, `Trunc` |
 | **Utility** | `Ord`, `Chr`, `Succ`, `Pred`, `Inc`, `Dec`, `Odd`, `UpCase`, `LowerCase` |
-| **Memory** | `New`, `Dispose`, `SizeOf` |
+| **Memory** | `New`, `Dispose`, `GetMem`, `FreeMem`, `FillChar`, `Move`, `SizeOf` |
+| **Byte/Word** | `Hi`, `Lo`, `Swap`, `Assigned` |
 | **System** | `Halt`, `ParamCount`, `ParamStr`, `Random`, `Randomize` |
 | **Files** | `Assign`, `Reset`, `Rewrite`, `Close`, `Eof`, `Seek`, `FilePos`, `FileSize` |
 | **Screen** | `ClrScr`, `GotoXY`, `ClrEol`, `TextColor`, `TextBackground`, `HideCursor`, `ShowCursor` |

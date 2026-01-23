@@ -979,6 +979,58 @@ Begin
   EmitRet
 End;
 
+Procedure EmitFillCharRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { FillChar: fill memory With a byte value }
+  { Input: x0 = destination address, x1 = count, x2 = value (byte) }
+  EmitLabel(rt_fillchar);
+  { Check If count <= 0, return immediately }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  WriteLn('    cmp x1, #0');
+  Write('    b.le L'); WriteLn(done_lbl);
+  { Loop: fill bytes }
+  EmitLabel(loop_lbl);
+  { Store byte: strb w2, [x0], #1 - post-increment }
+  WriteLn('    strb w2, [x0], #1');
+  { Decrement count }
+  WriteLn('    sub x1, x1, #1');
+  { Loop If count > 0 }
+  WriteLn('    cmp x1, #0');
+  Write('    b.gt L'); WriteLn(loop_lbl);
+  EmitLabel(done_lbl);
+  EmitRet
+End;
+
+Procedure EmitMoveRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { Move: copy memory from source To destination }
+  { Input: x0 = source address, x1 = destination address, x2 = count }
+  EmitLabel(rt_move);
+  { Check If count <= 0, return immediately }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  WriteLn('    cmp x2, #0');
+  Write('    b.le L'); WriteLn(done_lbl);
+  { Loop: copy bytes }
+  EmitLabel(loop_lbl);
+  { Load byte from source: ldrb w3, [x0], #1 - post-increment }
+  WriteLn('    ldrb w3, [x0], #1');
+  { Store byte To dest: strb w3, [x1], #1 - post-increment }
+  WriteLn('    strb w3, [x1], #1');
+  { Decrement count }
+  WriteLn('    sub x2, x2, #1');
+  { Loop If count > 0 }
+  WriteLn('    cmp x2, #0');
+  Write('    b.gt L'); WriteLn(loop_lbl);
+  EmitLabel(done_lbl);
+  EmitRet
+End;
+
 Procedure EmitStrCopyRuntime;
 Var
   loop_lbl, done_lbl: Integer;

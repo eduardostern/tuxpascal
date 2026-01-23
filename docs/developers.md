@@ -258,10 +258,10 @@ The runtime provides built-in procedures emitted inline:
 - **I/O**: Print integers, strings, characters; read input
 - **String operations**: Length, copy, concatenate
 - **Math**: Trigonometry, sqrt, random
-- **Memory**: Heap allocation (simple bump allocator)
+- **Memory**: Heap allocation, FillChar, Move
 - **Screen**: ANSI escape sequences for cursor/color control
 
-Each runtime routine is assigned a label (`rt_print_int`, `rt_readln`, etc.) and emitted at program start.
+Each runtime routine is assigned a label (`rt_print_int`, `rt_readln`, `rt_fillchar`, `rt_move`, etc.) and emitted at program start.
 
 ## Adding New Features
 

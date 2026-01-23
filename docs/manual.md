@@ -109,6 +109,25 @@ End.
 | `String` | Character string | 256 bytes (length byte + 255 chars) |
 | `Real` | Floating point | 64 bits (IEEE 754 double) |
 
+#### Turbo Pascal Type Aliases
+
+For compatibility with Turbo Pascal code, the following type aliases are supported:
+
+| Alias | Maps To | Notes |
+|-------|---------|-------|
+| `Byte` | `Char` | 8-bit unsigned |
+| `Word` | `Integer` | Treated as 64-bit |
+| `LongInt` | `Integer` | Treated as 64-bit |
+| `Int64` | `Integer` | Native 64-bit |
+| `ShortInt` | `Integer` | Treated as 64-bit |
+| `LongWord` | `Integer` | Treated as 64-bit |
+| `Cardinal` | `Integer` | Treated as 64-bit |
+| `Single` | `Real` | Treated as 64-bit IEEE |
+| `Double` | `Real` | Native 64-bit IEEE |
+| `Extended` | `Real` | Treated as 64-bit IEEE |
+
+Note: On ARM64, all integer types are 64-bit internally. The aliases are provided for source compatibility with Turbo Pascal code.
+
 #### Arrays
 
 ```pascal
@@ -566,9 +585,13 @@ Dec(count, 5);       { count := count - 5 }
 
 | Procedure/Function | Description |
 |--------------------|-------------|
-| `New(p)` | Allocate memory |
-| `Dispose(p)` | Free memory |
+| `New(p)` | Allocate memory for typed pointer |
+| `Dispose(p)` | Free memory allocated by New |
+| `GetMem(p, size)` | Allocate size bytes of memory |
+| `FreeMem(p)` | Free memory allocated by GetMem |
 | `SizeOf(type)` | Size in bytes |
+| `FillChar(var, count, value)` | Fill memory with byte value |
+| `Move(src, dest, count)` | Copy count bytes from src to dest |
 
 ```pascal
 Type
@@ -580,13 +603,54 @@ Type
 
 Var
   p: PNode;
+  buffer: Array[0..99] Of Integer;
 
 Begin
+  { Typed allocation }
   New(p);
   p^.value := 42;
   p^.next := Nil;
-  Dispose(p)
+  Dispose(p);
+
+  { Untyped allocation }
+  GetMem(p, 100);
+  FreeMem(p);
+
+  { Memory operations }
+  FillChar(buffer, SizeOf(buffer), 0);  { Zero the buffer }
 End.
+```
+
+#### Byte/Word Functions
+
+| Function | Description |
+|----------|-------------|
+| `Hi(x)` | High byte of word (bits 8-15) |
+| `Lo(x)` | Low byte of word (bits 0-7) |
+| `Swap(x)` | Swap high and low bytes |
+
+```pascal
+Var
+  w: Integer;
+Begin
+  w := $1234;
+  WriteLn(Hi(w));    { 18 = $12 }
+  WriteLn(Lo(w));    { 52 = $34 }
+  WriteLn(Swap(w));  { $3412 = 13330 }
+End.
+```
+
+#### Pointer Functions
+
+| Function | Description |
+|----------|-------------|
+| `Assigned(p)` | Returns True if pointer is not Nil |
+
+```pascal
+If Assigned(myPointer) Then
+  WriteLn('Pointer is valid')
+Else
+  WriteLn('Pointer is Nil');
 ```
 
 #### System Functions

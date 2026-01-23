@@ -158,6 +158,8 @@ Var
   { Runtime labels For allocator }
   rt_alloc: Integer;
   rt_free: Integer;
+  rt_fillchar: Integer;
+  rt_move: Integer;
 
   { Scope tracking }
   scope_level: Integer;
@@ -1000,7 +1002,12 @@ Begin
       If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 97) Then { fa }
         If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 115) Then { ls }
           If ToLower(tok_str[4]) = 101 Then { e }
-            tok_type := TOK_FALSE
+            tok_type := TOK_FALSE;
+      { Int64 = 105,110,116,54,52 - alias for Integer }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { in }
+        If (ToLower(tok_str[2]) = 116) And (tok_str[3] = 54) Then { t6 }
+          If tok_str[4] = 52 Then { 4 }
+            tok_type := TOK_INTEGER_TYPE
     End;
     If tok_len = 6 Then
     Begin
@@ -1023,7 +1030,17 @@ Begin
       If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
         If (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 111) Then { co }
           If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 100) Then { rd }
-            tok_type := TOK_RECORD
+            tok_type := TOK_RECORD;
+      { Double = 100,111,117,98,108,101 - alias for Real }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { do }
+        If (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 98) Then { ub }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 101) Then { le }
+            tok_type := TOK_REAL_TYPE;
+      { Single = 115,105,110,103,108,101 - alias for Real }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 105) Then { si }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 101) Then { le }
+            tok_type := TOK_REAL_TYPE
     End;
     If tok_len = 7 Then
     Begin
@@ -1041,13 +1058,27 @@ Begin
         If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 119) Then { rw }
           If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 114) Then { ar }
             If ToLower(tok_str[6]) = 100 Then { d }
-              tok_type := TOK_FORWARD
+              tok_type := TOK_FORWARD;
+      { LongInt = 108,111,110,103,105,110,116 - alias for Integer }
+      If (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) Then { lo }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
+            If ToLower(tok_str[6]) = 116 Then { t }
+              tok_type := TOK_INTEGER_TYPE
     End;
     If tok_len = 4 Then
     Begin
       If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 104) Then { ch }
         If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 114) Then { ar }
           tok_type := TOK_CHAR_TYPE;
+      { Byte = 98,121,116,101 - alias for Char (8-bit) }
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 121) Then { by }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          tok_type := TOK_CHAR_TYPE;
+      { Word = 119,111,114,100 - alias for Integer (treated as same size) }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 111) Then { wo }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
+          tok_type := TOK_INTEGER_TYPE;
       If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
         If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
           tok_type := TOK_READ;
@@ -1093,11 +1124,37 @@ Begin
                 tok_type := TOK_INTERFACE
     End;
     If tok_len = 8 Then
+    Begin
       If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 117) Then { fu }
         If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 99) Then { nc }
           If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
             If (ToLower(tok_str[6]) = 111) And (ToLower(tok_str[7]) = 110) Then { on }
               tok_type := TOK_FUNCTION;
+      { ShortInt = 115,104,111,114,116,105,110,116 - alias for Integer }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 104) Then { sh }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 114) Then { or }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
+            If (ToLower(tok_str[6]) = 110) And (ToLower(tok_str[7]) = 116) Then { nt }
+              tok_type := TOK_INTEGER_TYPE;
+      { Extended = 101,120,116,101,110,100,101,100 - alias for Real }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 120) Then { ex }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 110) And (ToLower(tok_str[5]) = 100) Then { nd }
+            If (ToLower(tok_str[6]) = 101) And (ToLower(tok_str[7]) = 100) Then { ed }
+              tok_type := TOK_REAL_TYPE;
+      { LongWord = 108,111,110,103,119,111,114,100 - alias for Integer }
+      If (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) Then { lo }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 119) And (ToLower(tok_str[5]) = 111) Then { wo }
+            If (ToLower(tok_str[6]) = 114) And (ToLower(tok_str[7]) = 100) Then { rd }
+              tok_type := TOK_INTEGER_TYPE;
+      { Cardinal = 99,97,114,100,105,110,97,108 - alias for Integer }
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 97) Then { ca }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
+          If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
+              tok_type := TOK_INTEGER_TYPE
+    End;
     { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
     If tok_len = 14 Then
       If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 109) Then { im }
@@ -2960,6 +3017,58 @@ Begin
   WriteLn('    str x22, [x0, #8]');
   { Update free list head: mov x22, x0 }
   WriteLn('    mov x22, x0');
+  EmitRet
+End;
+
+Procedure EmitFillCharRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { FillChar: fill memory With a byte value }
+  { Input: x0 = destination address, x1 = count, x2 = value (byte) }
+  EmitLabel(rt_fillchar);
+  { Check If count <= 0, return immediately }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  WriteLn('    cmp x1, #0');
+  Write('    b.le L'); WriteLn(done_lbl);
+  { Loop: fill bytes }
+  EmitLabel(loop_lbl);
+  { Store byte: strb w2, [x0], #1 - post-increment }
+  WriteLn('    strb w2, [x0], #1');
+  { Decrement count }
+  WriteLn('    sub x1, x1, #1');
+  { Loop If count > 0 }
+  WriteLn('    cmp x1, #0');
+  Write('    b.gt L'); WriteLn(loop_lbl);
+  EmitLabel(done_lbl);
+  EmitRet
+End;
+
+Procedure EmitMoveRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { Move: copy memory from source To destination }
+  { Input: x0 = source address, x1 = destination address, x2 = count }
+  EmitLabel(rt_move);
+  { Check If count <= 0, return immediately }
+  loop_lbl := NewLabel;
+  done_lbl := NewLabel;
+  WriteLn('    cmp x2, #0');
+  Write('    b.le L'); WriteLn(done_lbl);
+  { Loop: copy bytes }
+  EmitLabel(loop_lbl);
+  { Load byte from source: ldrb w3, [x0], #1 - post-increment }
+  WriteLn('    ldrb w3, [x0], #1');
+  { Store byte To dest: strb w3, [x1], #1 - post-increment }
+  WriteLn('    strb w3, [x1], #1');
+  { Decrement count }
+  WriteLn('    sub x2, x2, #1');
+  { Loop If count > 0 }
+  WriteLn('    cmp x2, #0');
+  Write('    b.gt L'); WriteLn(loop_lbl);
+  EmitLabel(done_lbl);
   EmitRet
 End;
 
@@ -5967,6 +6076,58 @@ Begin
       { Ord() is identity For integers/chars }
       expr_type := TYPE_INTEGER
     End
+    { Hi = 104,105 - high byte of word (only if not a variable) }
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 104) And (ToLower(tok_str[1]) = 105)
+            And (SymLookup < 0) Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Hi(x) = (x >> 8) AND 255 }
+      WriteLn('    lsr x0, x0, #8');
+      WriteLn('    and x0, x0, #255');
+      expr_type := TYPE_INTEGER
+    End
+    { Lo = 108,111 - low byte of word (only if not a variable) }
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111)
+            And (SymLookup < 0) Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Lo(x) = x AND 255 }
+      WriteLn('    and x0, x0, #255');
+      expr_type := TYPE_INTEGER
+    End
+    { Swap = 115,119,97,112 - swap bytes of word }
+    Else If TokIs8(115, 119, 97, 112, 0, 0, 0, 0) = 1 Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Swap(x) = ((x AND 255) << 8) OR ((x >> 8) AND 255) }
+      WriteLn('    and x1, x0, #255');
+      WriteLn('    lsl x1, x1, #8');
+      WriteLn('    lsr x0, x0, #8');
+      WriteLn('    and x0, x0, #255');
+      WriteLn('    orr x0, x0, x1');
+      expr_type := TYPE_INTEGER
+    End
+    { Assigned = 97,115,115,105,103,110,101,100 - test pointer not nil }
+    Else If TokIs8(97, 115, 115, 105, 103, 110, 101, 100) = 1 Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Assigned(p) = p <> nil, return 1 if not nil, 0 if nil }
+      WriteLn('    cmp x0, #0');
+      WriteLn('    cset x0, ne');
+      expr_type := TYPE_INTEGER
+    End
     { Chr = 99,104,114 }
     Else If TokIs8(99, 104, 114, 0, 0, 0, 0, 0) = 1 Then
     Begin
@@ -8647,6 +8808,67 @@ Begin
       Else
         EmitSturX0(sym_offset[idx])
     End
+    { GetMem = 103,101,116,109,101,109 - allocate memory with size }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 103) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 109) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 109) Then
+    Begin
+      { GetMem(p, size) - allocate size bytes, store address in p }
+      NextToken;
+      Expect(TOK_LPAREN);
+      If tok_type <> TOK_IDENT Then
+        Error(6);  { expected identifier }
+      idx := SymLookup;
+      If idx < 0 Then
+        Error(3);  { undefined identifier }
+      NextToken;
+      Expect(TOK_COMMA);
+      ParseExpression;  { size in x0 }
+      Expect(TOK_RPAREN);
+      { Align to 8 bytes }
+      WriteLn('    add x0, x0, #7');
+      WriteLn('    and x0, x0, #-8');
+      { Allocate via rt_alloc: size in x0, returns address in x0 }
+      EmitBL(rt_alloc);
+      { Store address in pointer variable }
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx])
+    End
+    { FreeMem = 102,114,101,101,109,101,109 - alias for Dispose }
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 109) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 109) Then
+    Begin
+      { FreeMem(p) - same as Dispose }
+      NextToken;
+      Expect(TOK_LPAREN);
+      If tok_type <> TOK_IDENT Then
+        Error(6);  { expected identifier }
+      idx := SymLookup;
+      If idx < 0 Then
+        Error(3);  { undefined identifier }
+      NextToken;
+      { Optional size parameter - ignore it }
+      If tok_type = TOK_COMMA Then
+      Begin
+        NextToken;
+        ParseExpression  { ignore size }
+      End;
+      Expect(TOK_RPAREN);
+      { Load pointer value into x0 }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
+      EmitBL(rt_free);
+      EmitMovX0(0);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx])
+    End
     Else If (tok_len = 7) And (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 105) And
             (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 112) And (ToLower(tok_str[4]) = 111) And
             (ToLower(tok_str[5]) = 115) And (ToLower(tok_str[6]) = 101) Then
@@ -8676,6 +8898,73 @@ Begin
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
       Else
         EmitSturX0(sym_offset[idx])
+    End
+    { FillChar = 102,105,108,108,99,104,97,114 - fill memory with byte }
+    Else If TokIs8(102, 105, 108, 108, 99, 104, 97, 114) = 1 Then
+    Begin
+      { FillChar(var x; count: Word; value: Byte) }
+      NextToken;
+      Expect(TOK_LPAREN);
+      { Get address of variable }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save address }
+      Expect(TOK_COMMA);
+      ParseExpression;  { count }
+      EmitPushX0;  { save count }
+      Expect(TOK_COMMA);
+      ParseExpression;  { value }
+      { x0 = value, stack has count, address }
+      WriteLn('    mov x2, x0');    { x2 = value }
+      EmitPopX1;                    { x1 = count }
+      EmitPopX0;                    { x0 = address }
+      EmitBL(rt_fillchar);
+      Expect(TOK_RPAREN)
+    End
+    { Move = 109,111,118,101 - copy memory }
+    Else If TokIs8(109, 111, 118, 101, 0, 0, 0, 0) = 1 Then
+    Begin
+      { Move(const source; var dest; count: Integer) }
+      NextToken;
+      Expect(TOK_LPAREN);
+      { Get address of source }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save source address }
+      Expect(TOK_COMMA);
+      { Get address of dest }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save dest address }
+      Expect(TOK_COMMA);
+      ParseExpression;  { count }
+      { x0 = count, stack has dest, source }
+      WriteLn('    mov x2, x0');    { x2 = count }
+      EmitPopX1;                    { x1 = dest }
+      EmitPopX0;                    { x0 = source }
+      EmitBL(rt_move);
+      Expect(TOK_RPAREN)
     End
     { assign = 97,115,115,105,103,110 }
     Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 115) And
@@ -11970,6 +12259,8 @@ Begin
   rt_heap_init := NewLabel;
   rt_alloc := NewLabel;
   rt_free := NewLabel;
+  rt_fillchar := NewLabel;
+  rt_move := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
   rt_str_concat := NewLabel;
@@ -12021,6 +12312,8 @@ Begin
   EmitHeapInitRuntime;
   EmitAllocRuntime;
   EmitFreeRuntime;
+  EmitFillCharRuntime;
+  EmitMoveRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
   EmitStrConcatRuntime;
@@ -12186,6 +12479,8 @@ Begin
   rt_heap_init := NewLabel;
   rt_alloc := NewLabel;
   rt_free := NewLabel;
+  rt_fillchar := NewLabel;
+  rt_move := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
   rt_str_concat := NewLabel;
@@ -12237,6 +12532,8 @@ Begin
   EmitHeapInitRuntime;
   EmitAllocRuntime;
   EmitFreeRuntime;
+  EmitFillCharRuntime;
+  EmitMoveRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
   EmitStrConcatRuntime;

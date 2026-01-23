@@ -123,7 +123,7 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 **Operators:** `+`, `-`, `*`, `/`, `div`, `mod`, `=`, `<>`, `<`, `>`, `<=`, `>=`, `and` (short-circuit), `or` (short-circuit), `not`, `@` (address-of), `^` (dereference), pointer arithmetic, `in` (set membership), set operators (`+` union, `-` difference, `*` intersection)
 
-**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `nil`, `halt`, `sizeof`, `paramcount`, `paramstr`
+**Built-ins:** `write`, `writeln`, `read`, `readln`, `readchar`, `writechar`, `new`, `dispose`, `getmem`, `freemem`, `fillchar`, `move`, `nil`, `halt`, `sizeof`, `paramcount`, `paramstr`
 
 **File I/O:** `assign`, `reset`, `rewrite`, `close`, `eof`, `seek`, `filepos`, `filesize`
 
@@ -131,7 +131,9 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 **Math Functions:** `sin`, `cos`, `tan`, `arctan`, `arcsin`, `arccos`, `sqrt`, `sqr`, `exp`, `ln`, `log10`, `log2`, `power`, `abs`, `round`, `trunc`, `frac`, `int`, `pi`, `random`, `randomize`
 
-**Utility Functions:** `odd`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`
+**Utility Functions:** `odd`, `succ`, `pred`, `inc`, `dec`, `upcase`, `lowercase`, `ord`, `chr`, `hi`, `lo`, `swap`, `assigned`
+
+**Type Aliases:** `byte`, `word`, `longint`, `int64`, `shortint`, `longword`, `cardinal` (all map to Integer); `single`, `double`, `extended` (all map to Real)
 
 **Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
 

@@ -152,6 +152,8 @@ Var
   { Runtime labels For allocator }
   rt_alloc: Integer;
   rt_free: Integer;
+  rt_fillchar: Integer;
+  rt_move: Integer;
 
   { Scope tracking }
   scope_level: Integer;

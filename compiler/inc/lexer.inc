@@ -494,7 +494,12 @@ Begin
       If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 97) Then { fa }
         If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 115) Then { ls }
           If ToLower(tok_str[4]) = 101 Then { e }
-            tok_type := TOK_FALSE
+            tok_type := TOK_FALSE;
+      { Int64 = 105,110,116,54,52 - alias for Integer }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { in }
+        If (ToLower(tok_str[2]) = 116) And (tok_str[3] = 54) Then { t6 }
+          If tok_str[4] = 52 Then { 4 }
+            tok_type := TOK_INTEGER_TYPE
     End;
     If tok_len = 6 Then
     Begin
@@ -517,7 +522,17 @@ Begin
       If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
         If (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 111) Then { co }
           If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 100) Then { rd }
-            tok_type := TOK_RECORD
+            tok_type := TOK_RECORD;
+      { Double = 100,111,117,98,108,101 - alias for Real }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { do }
+        If (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 98) Then { ub }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 101) Then { le }
+            tok_type := TOK_REAL_TYPE;
+      { Single = 115,105,110,103,108,101 - alias for Real }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 105) Then { si }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 101) Then { le }
+            tok_type := TOK_REAL_TYPE
     End;
     If tok_len = 7 Then
     Begin
@@ -535,13 +550,27 @@ Begin
         If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 119) Then { rw }
           If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 114) Then { ar }
             If ToLower(tok_str[6]) = 100 Then { d }
-              tok_type := TOK_FORWARD
+              tok_type := TOK_FORWARD;
+      { LongInt = 108,111,110,103,105,110,116 - alias for Integer }
+      If (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) Then { lo }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
+            If ToLower(tok_str[6]) = 116 Then { t }
+              tok_type := TOK_INTEGER_TYPE
     End;
     If tok_len = 4 Then
     Begin
       If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 104) Then { ch }
         If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 114) Then { ar }
           tok_type := TOK_CHAR_TYPE;
+      { Byte = 98,121,116,101 - alias for Char (8-bit) }
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 121) Then { by }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          tok_type := TOK_CHAR_TYPE;
+      { Word = 119,111,114,100 - alias for Integer (treated as same size) }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 111) Then { wo }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
+          tok_type := TOK_INTEGER_TYPE;
       If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
         If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
           tok_type := TOK_READ;
@@ -587,11 +616,37 @@ Begin
                 tok_type := TOK_INTERFACE
     End;
     If tok_len = 8 Then
+    Begin
       If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 117) Then { fu }
         If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 99) Then { nc }
           If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
             If (ToLower(tok_str[6]) = 111) And (ToLower(tok_str[7]) = 110) Then { on }
               tok_type := TOK_FUNCTION;
+      { ShortInt = 115,104,111,114,116,105,110,116 - alias for Integer }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 104) Then { sh }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 114) Then { or }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
+            If (ToLower(tok_str[6]) = 110) And (ToLower(tok_str[7]) = 116) Then { nt }
+              tok_type := TOK_INTEGER_TYPE;
+      { Extended = 101,120,116,101,110,100,101,100 - alias for Real }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 120) Then { ex }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 110) And (ToLower(tok_str[5]) = 100) Then { nd }
+            If (ToLower(tok_str[6]) = 101) And (ToLower(tok_str[7]) = 100) Then { ed }
+              tok_type := TOK_REAL_TYPE;
+      { LongWord = 108,111,110,103,119,111,114,100 - alias for Integer }
+      If (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) Then { lo }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) Then { ng }
+          If (ToLower(tok_str[4]) = 119) And (ToLower(tok_str[5]) = 111) Then { wo }
+            If (ToLower(tok_str[6]) = 114) And (ToLower(tok_str[7]) = 100) Then { rd }
+              tok_type := TOK_INTEGER_TYPE;
+      { Cardinal = 99,97,114,100,105,110,97,108 - alias for Integer }
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 97) Then { ca }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
+          If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
+              tok_type := TOK_INTEGER_TYPE
+    End;
     { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
     If tok_len = 14 Then
       If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 109) Then { im }

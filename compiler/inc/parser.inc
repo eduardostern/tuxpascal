@@ -381,6 +381,58 @@ Begin
       { Ord() is identity For integers/chars }
       expr_type := TYPE_INTEGER
     End
+    { Hi = 104,105 - high byte of word (only if not a variable) }
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 104) And (ToLower(tok_str[1]) = 105)
+            And (SymLookup < 0) Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Hi(x) = (x >> 8) AND 255 }
+      WriteLn('    lsr x0, x0, #8');
+      WriteLn('    and x0, x0, #255');
+      expr_type := TYPE_INTEGER
+    End
+    { Lo = 108,111 - low byte of word (only if not a variable) }
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111)
+            And (SymLookup < 0) Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Lo(x) = x AND 255 }
+      WriteLn('    and x0, x0, #255');
+      expr_type := TYPE_INTEGER
+    End
+    { Swap = 115,119,97,112 - swap bytes of word }
+    Else If TokIs8(115, 119, 97, 112, 0, 0, 0, 0) = 1 Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Swap(x) = ((x AND 255) << 8) OR ((x >> 8) AND 255) }
+      WriteLn('    and x1, x0, #255');
+      WriteLn('    lsl x1, x1, #8');
+      WriteLn('    lsr x0, x0, #8');
+      WriteLn('    and x0, x0, #255');
+      WriteLn('    orr x0, x0, x1');
+      expr_type := TYPE_INTEGER
+    End
+    { Assigned = 97,115,115,105,103,110,101,100 - test pointer not nil }
+    Else If TokIs8(97, 115, 115, 105, 103, 110, 101, 100) = 1 Then
+    Begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { Assigned(p) = p <> nil, return 1 if not nil, 0 if nil }
+      WriteLn('    cmp x0, #0');
+      WriteLn('    cset x0, ne');
+      expr_type := TYPE_INTEGER
+    End
     { Chr = 99,104,114 }
     Else If TokIs8(99, 104, 114, 0, 0, 0, 0, 0) = 1 Then
     Begin
@@ -3061,6 +3113,67 @@ Begin
       Else
         EmitSturX0(sym_offset[idx])
     End
+    { GetMem = 103,101,116,109,101,109 - allocate memory with size }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 103) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 109) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 109) Then
+    Begin
+      { GetMem(p, size) - allocate size bytes, store address in p }
+      NextToken;
+      Expect(TOK_LPAREN);
+      If tok_type <> TOK_IDENT Then
+        Error(6);  { expected identifier }
+      idx := SymLookup;
+      If idx < 0 Then
+        Error(3);  { undefined identifier }
+      NextToken;
+      Expect(TOK_COMMA);
+      ParseExpression;  { size in x0 }
+      Expect(TOK_RPAREN);
+      { Align to 8 bytes }
+      WriteLn('    add x0, x0, #7');
+      WriteLn('    and x0, x0, #-8');
+      { Allocate via rt_alloc: size in x0, returns address in x0 }
+      EmitBL(rt_alloc);
+      { Store address in pointer variable }
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx])
+    End
+    { FreeMem = 102,114,101,101,109,101,109 - alias for Dispose }
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 109) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 109) Then
+    Begin
+      { FreeMem(p) - same as Dispose }
+      NextToken;
+      Expect(TOK_LPAREN);
+      If tok_type <> TOK_IDENT Then
+        Error(6);  { expected identifier }
+      idx := SymLookup;
+      If idx < 0 Then
+        Error(3);  { undefined identifier }
+      NextToken;
+      { Optional size parameter - ignore it }
+      If tok_type = TOK_COMMA Then
+      Begin
+        NextToken;
+        ParseExpression  { ignore size }
+      End;
+      Expect(TOK_RPAREN);
+      { Load pointer value into x0 }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
+      EmitBL(rt_free);
+      EmitMovX0(0);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx])
+    End
     Else If (tok_len = 7) And (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 105) And
             (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 112) And (ToLower(tok_str[4]) = 111) And
             (ToLower(tok_str[5]) = 115) And (ToLower(tok_str[6]) = 101) Then
@@ -3090,6 +3203,73 @@ Begin
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
       Else
         EmitSturX0(sym_offset[idx])
+    End
+    { FillChar = 102,105,108,108,99,104,97,114 - fill memory with byte }
+    Else If TokIs8(102, 105, 108, 108, 99, 104, 97, 114) = 1 Then
+    Begin
+      { FillChar(var x; count: Word; value: Byte) }
+      NextToken;
+      Expect(TOK_LPAREN);
+      { Get address of variable }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save address }
+      Expect(TOK_COMMA);
+      ParseExpression;  { count }
+      EmitPushX0;  { save count }
+      Expect(TOK_COMMA);
+      ParseExpression;  { value }
+      { x0 = value, stack has count, address }
+      WriteLn('    mov x2, x0');    { x2 = value }
+      EmitPopX1;                    { x1 = count }
+      EmitPopX0;                    { x0 = address }
+      EmitBL(rt_fillchar);
+      Expect(TOK_RPAREN)
+    End
+    { Move = 109,111,118,101 - copy memory }
+    Else If TokIs8(109, 111, 118, 101, 0, 0, 0, 0) = 1 Then
+    Begin
+      { Move(const source; var dest; count: Integer) }
+      NextToken;
+      Expect(TOK_LPAREN);
+      { Get address of source }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save source address }
+      Expect(TOK_COMMA);
+      { Get address of dest }
+      If tok_type = TOK_IDENT Then
+      Begin
+        idx := SymLookup;
+        If idx < 0 Then Error(3);
+        EmitVarAddr(idx, scope_level)
+      End
+      Else
+        Error(6);
+      NextToken;
+      EmitPushX0;  { save dest address }
+      Expect(TOK_COMMA);
+      ParseExpression;  { count }
+      { x0 = count, stack has dest, source }
+      WriteLn('    mov x2, x0');    { x2 = count }
+      EmitPopX1;                    { x1 = dest }
+      EmitPopX0;                    { x0 = source }
+      EmitBL(rt_move);
+      Expect(TOK_RPAREN)
     End
     { assign = 97,115,115,105,103,110 }
     Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 115) And

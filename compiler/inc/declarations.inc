@@ -1956,6 +1956,8 @@ Begin
   rt_heap_init := NewLabel;
   rt_alloc := NewLabel;
   rt_free := NewLabel;
+  rt_fillchar := NewLabel;
+  rt_move := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
   rt_str_concat := NewLabel;
@@ -2007,6 +2009,8 @@ Begin
   EmitHeapInitRuntime;
   EmitAllocRuntime;
   EmitFreeRuntime;
+  EmitFillCharRuntime;
+  EmitMoveRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
   EmitStrConcatRuntime;
@@ -2172,6 +2176,8 @@ Begin
   rt_heap_init := NewLabel;
   rt_alloc := NewLabel;
   rt_free := NewLabel;
+  rt_fillchar := NewLabel;
+  rt_move := NewLabel;
   rt_str_copy := NewLabel;
   rt_str_compare := NewLabel;
   rt_str_concat := NewLabel;
@@ -2223,6 +2229,8 @@ Begin
   EmitHeapInitRuntime;
   EmitAllocRuntime;
   EmitFreeRuntime;
+  EmitFillCharRuntime;
+  EmitMoveRuntime;
   EmitStrCopyRuntime;
   EmitStrCompareRuntime;
   EmitStrConcatRuntime;
