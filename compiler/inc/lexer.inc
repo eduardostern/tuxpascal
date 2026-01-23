@@ -1,744 +1,744 @@
 { ----- Lexer ----- }
 
-{ Check if current include file is at EOF }
-function IncludeEof: integer;
-begin
+{ Check If current include file is at EOF }
+Function IncludeEof: Integer;
+Begin
   IncludeEof := 0;
-  if include_depth = 1 then
-  begin if eof(include_file0) then IncludeEof := 1 end
-  else if include_depth = 2 then
-  begin if eof(include_file1) then IncludeEof := 1 end
-  else if include_depth = 3 then
-  begin if eof(include_file2) then IncludeEof := 1 end
-  else if include_depth = 4 then
-  begin if eof(include_file3) then IncludeEof := 1 end
-  else if include_depth = 5 then
-  begin if eof(include_file4) then IncludeEof := 1 end
-  else if include_depth = 6 then
-  begin if eof(include_file5) then IncludeEof := 1 end
-  else if include_depth = 7 then
-  begin if eof(include_file6) then IncludeEof := 1 end
-  else if include_depth = 8 then
-  begin if eof(include_file7) then IncludeEof := 1 end
-end;
+  If include_depth = 1 Then
+  Begin If eof(include_file0) Then IncludeEof := 1 End
+  Else If include_depth = 2 Then
+  Begin If eof(include_file1) Then IncludeEof := 1 End
+  Else If include_depth = 3 Then
+  Begin If eof(include_file2) Then IncludeEof := 1 End
+  Else If include_depth = 4 Then
+  Begin If eof(include_file3) Then IncludeEof := 1 End
+  Else If include_depth = 5 Then
+  Begin If eof(include_file4) Then IncludeEof := 1 End
+  Else If include_depth = 6 Then
+  Begin If eof(include_file5) Then IncludeEof := 1 End
+  Else If include_depth = 7 Then
+  Begin If eof(include_file6) Then IncludeEof := 1 End
+  Else If include_depth = 8 Then
+  Begin If eof(include_file7) Then IncludeEof := 1 End
+End;
 
 { Read a character from current include file }
-function IncludeRead: integer;
-var
-  c: integer;
-begin
+Function IncludeRead: Integer;
+Var
+  c: Integer;
+Begin
   c := -1;
-  if include_depth = 1 then
-    read(include_file0, c)
-  else if include_depth = 2 then
-    read(include_file1, c)
-  else if include_depth = 3 then
-    read(include_file2, c)
-  else if include_depth = 4 then
-    read(include_file3, c)
-  else if include_depth = 5 then
-    read(include_file4, c)
-  else if include_depth = 6 then
-    read(include_file5, c)
-  else if include_depth = 7 then
-    read(include_file6, c)
-  else if include_depth = 8 then
-    read(include_file7, c);
+  If include_depth = 1 Then
+    Read(include_file0, c)
+  Else If include_depth = 2 Then
+    Read(include_file1, c)
+  Else If include_depth = 3 Then
+    Read(include_file2, c)
+  Else If include_depth = 4 Then
+    Read(include_file3, c)
+  Else If include_depth = 5 Then
+    Read(include_file4, c)
+  Else If include_depth = 6 Then
+    Read(include_file5, c)
+  Else If include_depth = 7 Then
+    Read(include_file6, c)
+  Else If include_depth = 8 Then
+    Read(include_file7, c);
   IncludeRead := c
-end;
+End;
 
 { Close current include file }
-procedure IncludeClose;
-begin
-  if include_depth = 1 then
+Procedure IncludeClose;
+Begin
+  If include_depth = 1 Then
     close(include_file0)
-  else if include_depth = 2 then
+  Else If include_depth = 2 Then
     close(include_file1)
-  else if include_depth = 3 then
+  Else If include_depth = 3 Then
     close(include_file2)
-  else if include_depth = 4 then
+  Else If include_depth = 4 Then
     close(include_file3)
-  else if include_depth = 5 then
+  Else If include_depth = 5 Then
     close(include_file4)
-  else if include_depth = 6 then
+  Else If include_depth = 6 Then
     close(include_file5)
-  else if include_depth = 7 then
+  Else If include_depth = 7 Then
     close(include_file6)
-  else if include_depth = 8 then
+  Else If include_depth = 8 Then
     close(include_file7)
-end;
+End;
 
-{ Read a single character from stdin or current include file }
-function ReadCurrentChar: integer;
-begin
-  if include_depth = 0 then
-    ReadCurrentChar := readchar
-  else
-  begin
-    if IncludeEof = 1 then
+{ Read a single character from stdin Or current include file }
+Function ReadCurrentChar: Integer;
+Begin
+  If include_depth = 0 Then
+    ReadCurrentChar := ReadChar
+  Else
+  Begin
+    If IncludeEof = 1 Then
       ReadCurrentChar := -1
-    else
+    Else
       ReadCurrentChar := IncludeRead
-  end
-end;
+  End
+End;
 
-{ Pop back to parent include file }
-procedure PopIncludeFile;
-begin
-  if include_depth > 0 then
-  begin
+{ Pop back To parent include file }
+Procedure PopIncludeFile;
+Begin
+  If include_depth > 0 Then
+  Begin
     IncludeClose;
     include_depth := include_depth - 1;
     { Restore parent file state }
-    if include_depth > 0 then
-    begin
+    If include_depth > 0 Then
+    Begin
       line_num := include_line[include_depth - 1];
       col_num := include_col[include_depth - 1];
       ch := include_ch[include_depth - 1];
       pushback_ch := include_pushback[include_depth - 1]
-    end
-  end
-end;
+    End
+  End
+End;
 
-procedure NextChar;
-var
-  c: integer;
-begin
-  if pushback_ch >= 0 then
-  begin
+Procedure NextChar;
+Var
+  c: Integer;
+Begin
+  If pushback_ch >= 0 Then
+  Begin
     ch := pushback_ch;
     pushback_ch := -1
-  end
-  else
-  begin
+  End
+  Else
+  Begin
     c := ReadCurrentChar;
-    { If EOF in include file, pop back to parent }
-    while (c = -1) and (include_depth > 0) do
-    begin
+    { If EOF In include file, pop back To parent }
+    While (c = -1) And (include_depth > 0) Do
+    Begin
       PopIncludeFile;
-      if include_depth = 0 then
-        c := readchar
-      else
+      If include_depth = 0 Then
+        c := ReadChar
+      Else
         c := ReadCurrentChar
-    end;
+    End;
     ch := c;
-    if ch = 10 then
-    begin
+    If ch = 10 Then
+    Begin
       line_num := line_num + 1;
       col_num := 0
-    end
-    else
+    End
+    Else
       col_num := col_num + 1
-  end
-end;
+  End
+End;
 
 { Open include file using filename from tok_str at given position }
-procedure IncludeOpenFromTokStr(start, len: integer);
-begin
-  if include_depth = 1 then
-  begin assigntokstr(include_file0, start, len); reset(include_file0) end
-  else if include_depth = 2 then
-  begin assigntokstr(include_file1, start, len); reset(include_file1) end
-  else if include_depth = 3 then
-  begin assigntokstr(include_file2, start, len); reset(include_file2) end
-  else if include_depth = 4 then
-  begin assigntokstr(include_file3, start, len); reset(include_file3) end
-  else if include_depth = 5 then
-  begin assigntokstr(include_file4, start, len); reset(include_file4) end
-  else if include_depth = 6 then
-  begin assigntokstr(include_file5, start, len); reset(include_file5) end
-  else if include_depth = 7 then
-  begin assigntokstr(include_file6, start, len); reset(include_file6) end
-  else if include_depth = 8 then
-  begin assigntokstr(include_file7, start, len); reset(include_file7) end
-end;
+Procedure IncludeOpenFromTokStr(start, len: Integer);
+Begin
+  If include_depth = 1 Then
+  Begin assigntokstr(include_file0, start, len); reset(include_file0) End
+  Else If include_depth = 2 Then
+  Begin assigntokstr(include_file1, start, len); reset(include_file1) End
+  Else If include_depth = 3 Then
+  Begin assigntokstr(include_file2, start, len); reset(include_file2) End
+  Else If include_depth = 4 Then
+  Begin assigntokstr(include_file3, start, len); reset(include_file3) End
+  Else If include_depth = 5 Then
+  Begin assigntokstr(include_file4, start, len); reset(include_file4) End
+  Else If include_depth = 6 Then
+  Begin assigntokstr(include_file5, start, len); reset(include_file5) End
+  Else If include_depth = 7 Then
+  Begin assigntokstr(include_file6, start, len); reset(include_file6) End
+  Else If include_depth = 8 Then
+  Begin assigntokstr(include_file7, start, len); reset(include_file7) End
+End;
 
-{ Push a new include file onto the stack }
-procedure PushIncludeFile(path_start, path_len: integer);
-var
-  i: integer;
-begin
-  if include_depth >= 8 then
+{ Push a New include file onto the stack }
+Procedure PushIncludeFile(path_start, path_len: Integer);
+Var
+  i: Integer;
+Begin
+  If include_depth >= 8 Then
     Error(17)  { include nesting too deep - Error halts }
-  else
-  begin
+  Else
+  Begin
     { Save current state }
-    if include_depth > 0 then
-    begin
+    If include_depth > 0 Then
+    Begin
       include_line[include_depth - 1] := line_num;
       include_col[include_depth - 1] := col_num;
       include_ch[include_depth - 1] := ch;
       include_pushback[include_depth - 1] := pushback_ch
-    end;
+    End;
 
     { Open include file }
     include_depth := include_depth + 1;
     IncludeOpenFromTokStr(path_start, path_len);
 
-    { Store path for reference (include_depth is already incremented) }
-    for i := 0 to path_len - 1 do
+    { Store path For reference (include_depth is already incremented) }
+    For i := 0 To path_len - 1 Do
       include_path[(include_depth - 1) * 256 + i] := tok_str[path_start + i];
     include_path[(include_depth - 1) * 256 + path_len] := 0;
 
     line_num := 1;
     col_num := 0;
     pushback_ch := -1;
-    { Read first character from new file }
+    { Read first character from New file }
     ch := ReadCurrentChar
-  end
-end;
+  End
+End;
 
-{ Parse and process include directive: dollar-I or dollar-INCLUDE }
-procedure ParseIncludeDirective;
-var
-  i: integer;
-begin
-  { Skip whitespace after I or INCLUDE }
-  while (ch = 32) or (ch = 9) do
+{ Parse And process include directive: dollar-I Or dollar-INCLUDE }
+Procedure ParseIncludeDirective;
+Var
+  i: Integer;
+Begin
+  { Skip whitespace after I Or INCLUDE }
+  While (ch = 32) Or (ch = 9) Do
     NextChar;
 
-  { Read filename until closing brace or whitespace }
+  { Read filename Until closing brace Or whitespace }
   i := 0;
-  while (ch <> 125) and (ch <> 32) and (ch <> 9) and (ch <> -1) and (i < 255) do
-  begin
+  While (ch <> 125) And (ch <> 32) And (ch <> 9) And (ch <> -1) And (i < 255) Do
+  Begin
     tok_str[i] := ch;
     i := i + 1;
     NextChar
-  end;
+  End;
   tok_str[i] := 0;
 
-  { Skip to end of directive }
-  while (ch <> 125) and (ch <> -1) do
+  { Skip To End Of directive }
+  While (ch <> 125) And (ch <> -1) Do
     NextChar;
-  if ch = 125 then
+  If ch = 125 Then
     NextChar;
 
   { Process include }
-  if i > 0 then
+  If i > 0 Then
     PushIncludeFile(0, i)
-end;
+End;
 
-procedure SkipWhitespace;
-var
-  directive_char: integer;
-begin
-  while (ch = 32) or (ch = 9) or (ch = 10) or (ch = 13) do
+Procedure SkipWhitespace;
+Var
+  directive_char: Integer;
+Begin
+  While (ch = 32) Or (ch = 9) Or (ch = 10) Or (ch = 13) Do
     NextChar;
-  { Skip comments and process directives }
-  if ch = 123 then  { '{' }
-  begin
+  { Skip comments And process directives }
+  If ch = 123 Then  { '{' }
+  Begin
     NextChar;
-    { Check for compiler directive }
-    if ch = 36 then  { '$' }
-    begin
+    { Check For compiler directive }
+    If ch = 36 Then  { '$' }
+    Begin
       NextChar;
       directive_char := ToLower(ch);
-      if directive_char = 105 then  { 'i' }
-      begin
+      If directive_char = 105 Then  { 'i' }
+      Begin
         NextChar;
-        { Check for 'include' or just whitespace after 'i' }
-        if (ch = 32) or (ch = 9) or (ch = 125) then
-        begin
+        { Check For 'include' Or just whitespace after 'i' }
+        If (ch = 32) Or (ch = 9) Or (ch = 125) Then
+        Begin
           { Short form: dollar-I filename }
           ParseIncludeDirective;
           SkipWhitespace
-        end
-        else if ToLower(ch) = 110 then  { 'n' - could be 'include' }
-        begin
-          { Check for 'nclude' }
+        End
+        Else If ToLower(ch) = 110 Then  { 'n' - could be 'include' }
+        Begin
+          { Check For 'nclude' }
           NextChar;
-          if ToLower(ch) = 99 then  { 'c' }
-          begin
+          If ToLower(ch) = 99 Then  { 'c' }
+          Begin
             NextChar;
-            if ToLower(ch) = 108 then  { 'l' }
-            begin
+            If ToLower(ch) = 108 Then  { 'l' }
+            Begin
               NextChar;
-              if ToLower(ch) = 117 then  { 'u' }
-              begin
+              If ToLower(ch) = 117 Then  { 'u' }
+              Begin
                 NextChar;
-                if ToLower(ch) = 100 then  { 'd' }
-                begin
+                If ToLower(ch) = 100 Then  { 'd' }
+                Begin
                   NextChar;
-                  if ToLower(ch) = 101 then  { 'e' }
-                  begin
+                  If ToLower(ch) = 101 Then  { 'e' }
+                  Begin
                     NextChar;
                     { Full form: dollar-INCLUDE filename }
                     ParseIncludeDirective;
                     SkipWhitespace
-                  end
-                  else
-                  begin
-                    { Unknown directive, skip to end }
-                    while (ch <> 125) and (ch <> -1) do NextChar;
-                    if ch = 125 then NextChar;
+                  End
+                  Else
+                  Begin
+                    { Unknown directive, skip To End }
+                    While (ch <> 125) And (ch <> -1) Do NextChar;
+                    If ch = 125 Then NextChar;
                     SkipWhitespace
-                  end
-                end
-                else
-                begin
-                  while (ch <> 125) and (ch <> -1) do NextChar;
-                  if ch = 125 then NextChar;
+                  End
+                End
+                Else
+                Begin
+                  While (ch <> 125) And (ch <> -1) Do NextChar;
+                  If ch = 125 Then NextChar;
                   SkipWhitespace
-                end
-              end
-              else
-              begin
-                while (ch <> 125) and (ch <> -1) do NextChar;
-                if ch = 125 then NextChar;
+                End
+              End
+              Else
+              Begin
+                While (ch <> 125) And (ch <> -1) Do NextChar;
+                If ch = 125 Then NextChar;
                 SkipWhitespace
-              end
-            end
-            else
-            begin
-              while (ch <> 125) and (ch <> -1) do NextChar;
-              if ch = 125 then NextChar;
+              End
+            End
+            Else
+            Begin
+              While (ch <> 125) And (ch <> -1) Do NextChar;
+              If ch = 125 Then NextChar;
               SkipWhitespace
-            end
-          end
-          else
-          begin
-            while (ch <> 125) and (ch <> -1) do NextChar;
-            if ch = 125 then NextChar;
+            End
+          End
+          Else
+          Begin
+            While (ch <> 125) And (ch <> -1) Do NextChar;
+            If ch = 125 Then NextChar;
             SkipWhitespace
-          end
-        end
-        else
-        begin
-          { Unknown directive starting with 'i', skip }
-          while (ch <> 125) and (ch <> -1) do NextChar;
-          if ch = 125 then NextChar;
+          End
+        End
+        Else
+        Begin
+          { Unknown directive starting With 'i', skip }
+          While (ch <> 125) And (ch <> -1) Do NextChar;
+          If ch = 125 Then NextChar;
           SkipWhitespace
-        end
-      end
-      else
-      begin
+        End
+      End
+      Else
+      Begin
         { Unknown directive, skip as comment }
-        while (ch <> 125) and (ch <> -1) do NextChar;
-        if ch = 125 then NextChar;
+        While (ch <> 125) And (ch <> -1) Do NextChar;
+        If ch = 125 Then NextChar;
         SkipWhitespace
-      end
-    end
-    else
-    begin
+      End
+    End
+    Else
+    Begin
       { Regular comment }
-      while (ch <> 125) and (ch <> -1) do
+      While (ch <> 125) And (ch <> -1) Do
         NextChar;
-      if ch = 125 then
+      If ch = 125 Then
         NextChar;
       SkipWhitespace
-    end
-  end
-end;
+    End
+  End
+End;
 
-procedure NextToken;
-var
-  i: integer;
-begin
+Procedure NextToken;
+Var
+  i: Integer;
+Begin
   SkipWhitespace;
 
-  if ch = -1 then
-  begin
+  If ch = -1 Then
+  Begin
     tok_type := TOK_EOF;
     tok_len := 0
-  end
-  else if IsDigit(ch) = 1 then
-  begin
+  End
+  Else If IsDigit(ch) = 1 Then
+  Begin
     tok_type := TOK_INTEGER;
     tok_int := 0;
-    while IsDigit(ch) = 1 do
-    begin
+    While IsDigit(ch) = 1 Do
+    Begin
       tok_int := tok_int * 10 + (ch - 48);
       NextChar
-    end;
-    { Check for decimal point (but not ..) }
-    if ch = 46 then  { '.' }
-    begin
+    End;
+    { Check For decimal point (but Not ..) }
+    If ch = 46 Then  { '.' }
+    Begin
       NextChar;
-      if IsDigit(ch) = 1 then
-      begin
+      If IsDigit(ch) = 1 Then
+      Begin
         { This is a float literal }
         tok_type := TOK_FLOAT_LITERAL;
         tok_float_int := tok_int;
         tok_float_frac := 0;
         tok_float_neg := 0;
-        { Parse fractional digits (up to 6 digits of precision) }
+        { Parse fractional digits (up To 6 digits Of precision) }
         i := 0;
-        while (IsDigit(ch) = 1) and (i < 6) do
-        begin
+        While (IsDigit(ch) = 1) And (i < 6) Do
+        Begin
           tok_float_frac := tok_float_frac * 10 + (ch - 48);
           i := i + 1;
           NextChar
-        end;
-        { Scale frac to 6 digits }
-        while i < 6 do
-        begin
+        End;
+        { Scale frac To 6 digits }
+        While i < 6 Do
+        Begin
           tok_float_frac := tok_float_frac * 10;
           i := i + 1
-        end;
+        End;
         { Skip any remaining fractional digits }
-        while IsDigit(ch) = 1 do
+        While IsDigit(ch) = 1 Do
           NextChar
-      end
-      else
-      begin
-        { It was just an integer followed by '.', push back current char }
-        { and set pushback to '.' so next NextToken gets DOT or DOTDOT }
+      End
+      Else
+      Begin
+        { It was just an Integer followed by '.', push back current Char }
+        { And Set pushback To '.' so next NextToken gets DOT Or DOTDOT }
         pushback_ch := ch;
         ch := 46  { Put '.' back as current so the DOT handling code gets it }
-      end
-    end
-  end
-  else if IsAlpha(ch) = 1 then
-  begin
+      End
+    End
+  End
+  Else If IsAlpha(ch) = 1 Then
+  Begin
     tok_type := TOK_IDENT;
     tok_len := 0;
-    while (IsAlpha(ch) = 1) or (IsDigit(ch) = 1) do
-    begin
-      if tok_len < 255 then
-      begin
+    While (IsAlpha(ch) = 1) Or (IsDigit(ch) = 1) Do
+    Begin
+      If tok_len < 255 Then
+      Begin
         tok_str[tok_len] := ch;
         tok_len := tok_len + 1
-      end;
+      End;
       NextChar
-    end;
+    End;
     tok_str[tok_len] := 0;
 
-    { Check for keywords }
+    { Check For keywords }
     { This is simplified - would need proper keyword table }
-    if tok_len = 7 then
-      if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 103) then { og }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 97) then { ra }
-            if ToLower(tok_str[6]) = 109 then { m }
+    If tok_len = 7 Then
+      If (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 114) Then { pr }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 103) Then { og }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 97) Then { ra }
+            If ToLower(tok_str[6]) = 109 Then { m }
               tok_type := TOK_PROGRAM;
-    if tok_len = 5 then
-      if (ToLower(tok_str[0]) = 98) and (ToLower(tok_str[1]) = 101) then { be }
-        if (ToLower(tok_str[2]) = 103) and (ToLower(tok_str[3]) = 105) then { gi }
-          if ToLower(tok_str[4]) = 110 then { n }
+    If tok_len = 5 Then
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 101) Then { be }
+        If (ToLower(tok_str[2]) = 103) And (ToLower(tok_str[3]) = 105) Then { gi }
+          If ToLower(tok_str[4]) = 110 Then { n }
             tok_type := TOK_BEGIN;
-    if tok_len = 3 then
-    begin
-      if (ToLower(tok_str[0]) = 101) and (ToLower(tok_str[1]) = 110) then { en }
-        if ToLower(tok_str[2]) = 100 then { d }
+    If tok_len = 3 Then
+    Begin
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 110) Then { en }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_END;
-      if (ToLower(tok_str[0]) = 118) and (ToLower(tok_str[1]) = 97) then { va }
-        if ToLower(tok_str[2]) = 114 then { r }
+      If (ToLower(tok_str[0]) = 118) And (ToLower(tok_str[1]) = 97) Then { va }
+        If ToLower(tok_str[2]) = 114 Then { r }
           tok_type := TOK_VAR;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 105) then { di }
-        if ToLower(tok_str[2]) = 118 then { v }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 105) Then { di }
+        If ToLower(tok_str[2]) = 118 Then { v }
           tok_type := TOK_DIV;
-      if (ToLower(tok_str[0]) = 109) and (ToLower(tok_str[1]) = 111) then { mo }
-        if ToLower(tok_str[2]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 109) And (ToLower(tok_str[1]) = 111) Then { mo }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_MOD;
-      if (ToLower(tok_str[0]) = 97) and (ToLower(tok_str[1]) = 110) then { an }
-        if ToLower(tok_str[2]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 110) Then { an }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_AND;
-      if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 111) then { no }
-        if ToLower(tok_str[2]) = 116 then { t }
+      If (ToLower(tok_str[0]) = 110) And (ToLower(tok_str[1]) = 111) Then { no }
+        If ToLower(tok_str[2]) = 116 Then { t }
           tok_type := TOK_NOT;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 111) then { fo }
-        if ToLower(tok_str[2]) = 114 then { r }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 111) Then { fo }
+        If ToLower(tok_str[2]) = 114 Then { r }
           tok_type := TOK_FOR;
-      if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 105) then { ni }
-        if ToLower(tok_str[2]) = 108 then { l }
+      If (ToLower(tok_str[0]) = 110) And (ToLower(tok_str[1]) = 105) Then { ni }
+        If ToLower(tok_str[2]) = 108 Then { l }
           tok_type := TOK_NIL;
-      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 101) then { se }
-        if ToLower(tok_str[2]) = 116 then { t }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) Then { se }
+        If ToLower(tok_str[2]) = 116 Then { t }
           tok_type := TOK_SET
-    end;
-    if tok_len = 2 then
-    begin
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 102) then { if }
+    End;
+    If tok_len = 2 Then
+    Begin
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 102) Then { If }
         tok_type := TOK_IF;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) then { do }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { Do }
         tok_type := TOK_DO;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 111) then { to }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 111) Then { To }
         tok_type := TOK_TO;
-      if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 114) then { or }
+      If (ToLower(tok_str[0]) = 111) And (ToLower(tok_str[1]) = 114) Then { Or }
         tok_type := TOK_OR;
-      if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 102) then { of }
+      If (ToLower(tok_str[0]) = 111) And (ToLower(tok_str[1]) = 102) Then { Of }
         tok_type := TOK_OF;
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
         tok_type := TOK_IN
-    end;
-    if tok_len = 4 then
-    begin
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 104) then { th }
-        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 110) then { en }
+    End;
+    If tok_len = 4 Then
+    Begin
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 104) Then { th }
+        If (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 110) Then { en }
           tok_type := TOK_THEN;
-      if (ToLower(tok_str[0]) = 101) and (ToLower(tok_str[1]) = 108) then { el }
-        if (ToLower(tok_str[2]) = 115) and (ToLower(tok_str[3]) = 101) then { se }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 108) Then { el }
+        If (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) Then { se }
           tok_type := TOK_ELSE;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 114) then { tr }
-        if (ToLower(tok_str[2]) = 117) and (ToLower(tok_str[3]) = 101) then { ue }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 114) Then { tr }
+        If (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 101) Then { ue }
           tok_type := TOK_TRUE
-    end;
-    if tok_len = 5 then
-    begin
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 111) then { co }
-        if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 115) then { ns }
-          if ToLower(tok_str[4]) = 116 then { t }
+    End;
+    If tok_len = 5 Then
+    Begin
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 111) Then { co }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 115) Then { ns }
+          If ToLower(tok_str[4]) = 116 Then { t }
             tok_type := TOK_CONST;
-      if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 104) then { wh }
-        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 108) then { il }
-          if ToLower(tok_str[4]) = 101 then { e }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 104) Then { wh }
+        If (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 108) Then { il }
+          If ToLower(tok_str[4]) = 101 Then { e }
             tok_type := TOK_WHILE;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 105) then { ti }
-          if ToLower(tok_str[4]) = 108 then { l }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 110) Then { un }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 105) Then { ti }
+          If ToLower(tok_str[4]) = 108 Then { l }
             tok_type := TOK_UNTIL;
-      if (ToLower(tok_str[0]) = 97) and (ToLower(tok_str[1]) = 114) then { ar }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 97) then { ra }
-          if ToLower(tok_str[4]) = 121 then { y }
+      If (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 114) Then { ar }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 97) Then { ra }
+          If ToLower(tok_str[4]) = 121 Then { y }
             tok_type := TOK_ARRAY;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 97) then { fa }
-        if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 115) then { ls }
-          if ToLower(tok_str[4]) = 101 then { e }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 97) Then { fa }
+        If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 115) Then { ls }
+          If ToLower(tok_str[4]) = 101 Then { e }
             tok_type := TOK_FALSE
-    end;
-    if tok_len = 6 then
-    begin
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
-          if (ToLower(tok_str[4]) = 97) and (ToLower(tok_str[5]) = 116) then { at }
+    End;
+    If tok_len = 6 Then
+    Begin
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 101) Then { pe }
+          If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 116) Then { at }
             tok_type := TOK_REPEAT;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) then { do }
-        if (ToLower(tok_str[2]) = 119) and (ToLower(tok_str[3]) = 110) then { wn }
-          if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 111) then { to }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { Do }
+        If (ToLower(tok_str[2]) = 119) And (ToLower(tok_str[3]) = 110) Then { wn }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 111) Then { To }
             tok_type := TOK_DOWNTO;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
-          if (ToLower(tok_str[4]) = 108) and (ToLower(tok_str[5]) = 110) then { ln }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 110) Then { ln }
             tok_type := TOK_READLN;
-      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 116) then { st }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 105) then { ri }
-          if (ToLower(tok_str[4]) = 110) and (ToLower(tok_str[5]) = 103) then { ng }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 116) Then { st }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 105) Then { ri }
+          If (ToLower(tok_str[4]) = 110) And (ToLower(tok_str[5]) = 103) Then { ng }
             tok_type := TOK_STRING_TYPE;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 99) and (ToLower(tok_str[3]) = 111) then { co }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 100) then { rd }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 111) Then { co }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 100) Then { rd }
             tok_type := TOK_RECORD
-    end;
-    if tok_len = 7 then
-    begin
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
-          if (ToLower(tok_str[4]) = 103) and (ToLower(tok_str[5]) = 101) then { ge }
-            if ToLower(tok_str[6]) = 114 then { r }
+    End;
+    If tok_len = 7 Then
+    Begin
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 103) And (ToLower(tok_str[5]) = 101) Then { ge }
+            If ToLower(tok_str[6]) = 114 Then { r }
               tok_type := TOK_INTEGER_TYPE;
-      if (ToLower(tok_str[0]) = 98) and (ToLower(tok_str[1]) = 111) then { bo }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 108) then { ol }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 97) then { ea }
-            if ToLower(tok_str[6]) = 110 then { n }
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 111) Then { bo }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 108) Then { ol }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 97) Then { ea }
+            If ToLower(tok_str[6]) = 110 Then { n }
               tok_type := TOK_BOOLEAN_TYPE;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 111) then { fo }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 119) then { rw }
-          if (ToLower(tok_str[4]) = 97) and (ToLower(tok_str[5]) = 114) then { ar }
-            if ToLower(tok_str[6]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 111) Then { fo }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 119) Then { rw }
+          If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 114) Then { ar }
+            If ToLower(tok_str[6]) = 100 Then { d }
               tok_type := TOK_FORWARD
-    end;
-    if tok_len = 4 then
-    begin
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 104) then { ch }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 114) then { ar }
+    End;
+    If tok_len = 4 Then
+    Begin
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 104) Then { ch }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 114) Then { ar }
           tok_type := TOK_CHAR_TYPE;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
           tok_type := TOK_READ;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 108) then { al }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 108) Then { al }
           tok_type := TOK_REAL_TYPE;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 121) then { ty }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 121) Then { ty }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 101) Then { pe }
           tok_type := TOK_TYPE_KW;
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 97) then { ca }
-        if (ToLower(tok_str[2]) = 115) and (ToLower(tok_str[3]) = 101) then { se }
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 97) Then { ca }
+        If (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) Then { se }
           tok_type := TOK_CASE;
-      if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 105) then { wi }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 104) then { th }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 105) Then { wi }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 104) Then { th }
           tok_type := TOK_WITH;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) then { te }
-        if (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) then { xt }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 101) Then { te }
+        If (ToLower(tok_str[2]) = 120) And (ToLower(tok_str[3]) = 116) Then { xt }
           tok_type := TOK_TEXT;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 105) then { fi }
-        if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 101) then { le }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 105) Then { fi }
+        If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 101) Then { le }
           tok_type := TOK_FILE;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
-        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) then { it }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 110) Then { un }
+        If (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) Then { it }
           tok_type := TOK_UNIT;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 115) then { us }
-        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 115) then { es }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 115) Then { us }
+        If (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 115) Then { es }
           tok_type := TOK_USES
-    end;
-    if tok_len = 9 then
-    begin
-      if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 99) then { oc }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 100) then { ed }
-            if (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 114) then { ur }
-              if ToLower(tok_str[8]) = 101 then { e }
+    End;
+    If tok_len = 9 Then
+    Begin
+      If (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 114) Then { pr }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 99) Then { oc }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 100) Then { ed }
+            If (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 114) Then { ur }
+              If ToLower(tok_str[8]) = 101 Then { e }
                 tok_type := TOK_PROCEDURE;
-      { interface = 105,110,116,101,114,102,97,99,101 }
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 102) then { rf }
-            if (ToLower(tok_str[6]) = 97) and (ToLower(tok_str[7]) = 99) then { ac }
-              if ToLower(tok_str[8]) = 101 then { e }
+      { Interface = 105,110,116,101,114,102,97,99,101 }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 102) Then { rf }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 99) Then { ac }
+              If ToLower(tok_str[8]) = 101 Then { e }
                 tok_type := TOK_INTERFACE
-    end;
-    if tok_len = 8 then
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 117) then { fu }
-        if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 99) then { nc }
-          if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 105) then { ti }
-            if (ToLower(tok_str[6]) = 111) and (ToLower(tok_str[7]) = 110) then { on }
+    End;
+    If tok_len = 8 Then
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 117) Then { fu }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 99) Then { nc }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
+            If (ToLower(tok_str[6]) = 111) And (ToLower(tok_str[7]) = 110) Then { on }
               tok_type := TOK_FUNCTION;
-    { implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
-    if tok_len = 14 then
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 109) then { im }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 108) then { pl }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 109) then { em }
-            if (ToLower(tok_str[6]) = 101) and (ToLower(tok_str[7]) = 110) then { en }
-              if (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 97) then { ta }
-                if (ToLower(tok_str[10]) = 116) and (ToLower(tok_str[11]) = 105) then { ti }
-                  if (ToLower(tok_str[12]) = 111) and (ToLower(tok_str[13]) = 110) then { on }
+    { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
+    If tok_len = 14 Then
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 109) Then { im }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 108) Then { pl }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 109) Then { em }
+            If (ToLower(tok_str[6]) = 101) And (ToLower(tok_str[7]) = 110) Then { en }
+              If (ToLower(tok_str[8]) = 116) And (ToLower(tok_str[9]) = 97) Then { ta }
+                If (ToLower(tok_str[10]) = 116) And (ToLower(tok_str[11]) = 105) Then { ti }
+                  If (ToLower(tok_str[12]) = 111) And (ToLower(tok_str[13]) = 110) Then { on }
                     tok_type := TOK_IMPLEMENTATION
-  end
-  else if ch = 39 then  { single quote - string }
-  begin
+  End
+  Else If ch = 39 Then  { single quote - String }
+  Begin
     tok_type := TOK_STRING;
     tok_len := 0;
     NextChar;
-    while (ch <> 39) and (ch <> -1) do
-    begin
-      if tok_len < 255 then
-      begin
+    While (ch <> 39) And (ch <> -1) Do
+    Begin
+      If tok_len < 255 Then
+      Begin
         tok_str[tok_len] := ch;
         tok_len := tok_len + 1
-      end;
+      End;
       NextChar
-    end;
+    End;
     tok_str[tok_len] := 0;
-    if ch = 39 then
+    If ch = 39 Then
       NextChar
-  end
-  else if ch = 43 then  { + }
-  begin
+  End
+  Else If ch = 43 Then  { + }
+  Begin
     tok_type := TOK_PLUS;
     NextChar
-  end
-  else if ch = 45 then  { - }
-  begin
+  End
+  Else If ch = 45 Then  { - }
+  Begin
     tok_type := TOK_MINUS;
     NextChar
-  end
-  else if ch = 42 then  { * }
-  begin
+  End
+  Else If ch = 42 Then  { * }
+  Begin
     tok_type := TOK_STAR;
     NextChar
-  end
-  else if ch = 47 then  { / }
-  begin
+  End
+  Else If ch = 47 Then  { / }
+  Begin
     tok_type := TOK_SLASH;
     NextChar
-  end
-  else if ch = 61 then  { = }
-  begin
+  End
+  Else If ch = 61 Then  { = }
+  Begin
     tok_type := TOK_EQ;
     NextChar
-  end
-  else if ch = 60 then  { < }
-  begin
+  End
+  Else If ch = 60 Then  { < }
+  Begin
     NextChar;
-    if ch = 62 then  { <> }
-    begin
+    If ch = 62 Then  { <> }
+    Begin
       tok_type := TOK_NEQ;
       NextChar
-    end
-    else if ch = 61 then  { <= }
-    begin
+    End
+    Else If ch = 61 Then  { <= }
+    Begin
       tok_type := TOK_LE;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_LT
-  end
-  else if ch = 62 then  { > }
-  begin
+  End
+  Else If ch = 62 Then  { > }
+  Begin
     NextChar;
-    if ch = 61 then  { >= }
-    begin
+    If ch = 61 Then  { >= }
+    Begin
       tok_type := TOK_GE;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_GT
-  end
-  else if ch = 40 then  { ( }
-  begin
+  End
+  Else If ch = 40 Then  { ( }
+  Begin
     tok_type := TOK_LPAREN;
     NextChar
-  end
-  else if ch = 41 then  { ) }
-  begin
+  End
+  Else If ch = 41 Then  { ) }
+  Begin
     tok_type := TOK_RPAREN;
     NextChar
-  end
-  else if ch = 91 then  { [ }
-  begin
+  End
+  Else If ch = 91 Then  { [ }
+  Begin
     tok_type := TOK_LBRACKET;
     NextChar
-  end
-  else if ch = 93 then  { ] }
-  begin
+  End
+  Else If ch = 93 Then  { ] }
+  Begin
     tok_type := TOK_RBRACKET;
     NextChar
-  end
-  else if ch = 58 then  { : }
-  begin
+  End
+  Else If ch = 58 Then  { : }
+  Begin
     NextChar;
-    if ch = 61 then  { := }
-    begin
+    If ch = 61 Then  { := }
+    Begin
       tok_type := TOK_ASSIGN;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_COLON
-  end
-  else if ch = 59 then  { ; }
-  begin
+  End
+  Else If ch = 59 Then  { ; }
+  Begin
     tok_type := TOK_SEMICOLON;
     NextChar
-  end
-  else if ch = 44 then  { , }
-  begin
+  End
+  Else If ch = 44 Then  { , }
+  Begin
     tok_type := TOK_COMMA;
     NextChar
-  end
-  else if ch = 46 then  { . }
-  begin
+  End
+  Else If ch = 46 Then  { . }
+  Begin
     NextChar;
-    if ch = 46 then  { .. }
-    begin
+    If ch = 46 Then  { .. }
+    Begin
       tok_type := TOK_DOTDOT;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_DOT
-  end
-  else if ch = 94 then  { ^ (caret) }
-  begin
+  End
+  Else If ch = 94 Then  { ^ (caret) }
+  Begin
     tok_type := TOK_CARET;
     NextChar
-  end
-  else if ch = 64 then  { @ }
-  begin
+  End
+  Else If ch = 64 Then  { @ }
+  Begin
     tok_type := TOK_AT;
     NextChar
-  end
-  else
-  begin
+  End
+  Else
+  Begin
     Error(1);  { unexpected character }
     NextChar
-  end
-end;
+  End
+End;
 

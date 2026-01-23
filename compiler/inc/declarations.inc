@@ -1,633 +1,633 @@
 { ----- Declarations ----- }
 
-procedure ParseVarDeclarations;
-var
-  idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: integer;
-begin
-  NextToken;  { consume 'var' }
-  while tok_type = TOK_IDENT do
-  begin
-    { Remember first var in a group for fixing up array size }
+Procedure ParseVarDeclarations;
+Var
+  idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: Integer;
+Begin
+  NextToken;  { consume 'Var' }
+  While tok_type = TOK_IDENT Do
+  Begin
+    { Remember first Var In a group For fixing up Array size }
     local_offset := local_offset - 8;
     first_idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
     idx := first_idx;
     NextToken;
-    while tok_type = TOK_COMMA do
-    begin
+    While tok_type = TOK_COMMA Do
+    Begin
       NextToken;
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(8);
       local_offset := local_offset - 8;
       idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
       NextToken
-    end;
+    End;
     Expect(TOK_COLON);
-    { Parse type }
-    if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-       (tok_type = TOK_BOOLEAN_TYPE) then
+    { Parse Type }
+    If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+       (tok_type = TOK_BOOLEAN_TYPE) Then
       NextToken
-    else if tok_type = TOK_REAL_TYPE then
-    begin
-      { Set type to real for all vars in this group }
-      for j := first_idx to idx do
+    Else If tok_type = TOK_REAL_TYPE Then
+    Begin
+      { Set Type To Real For all vars In this group }
+      For j := first_idx To idx Do
         sym_type[j] := TYPE_REAL;
       NextToken
-    end
-    else if tok_type = TOK_ARRAY then
-    begin
+    End
+    Else If tok_type = TOK_ARRAY Then
+    Begin
       NextToken;
       Expect(TOK_LBRACKET);
       { Parse low bound }
-      if tok_type = TOK_INTEGER then
-      begin
+      If tok_type = TOK_INTEGER Then
+      Begin
         lo_bound := tok_int;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_DOTDOT);
       { Parse high bound }
-      if tok_type = TOK_INTEGER then
-      begin
+      If tok_type = TOK_INTEGER Then
+      Begin
         hi_bound := tok_int;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RBRACKET);
       Expect(TOK_OF);
-      { Parse element type }
-      if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-         (tok_type = TOK_BOOLEAN_TYPE) then
-      begin
+      { Parse element Type }
+      If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+         (tok_type = TOK_BOOLEAN_TYPE) Then
+      Begin
         NextToken;
         arr_size := (hi_bound - lo_bound + 1) * 8;
         local_offset := local_offset - (arr_size - 8);
         sym_type[first_idx] := TYPE_ARRAY;
         sym_const_val[first_idx] := lo_bound;
         sym_label[first_idx] := arr_size;
-        sym_var_param_flags[first_idx] := 0  { 0 = basic type element }
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Array of record type }
+        sym_var_param_flags[first_idx] := 0  { 0 = basic Type element }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Array Of Record Type }
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and (sym_type[base_idx] = TYPE_RECORD) then
-        begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And (sym_type[base_idx] = TYPE_RECORD) Then
+        Begin
           arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
           local_offset := local_offset - (arr_size - 8);
           sym_type[first_idx] := TYPE_ARRAY;
           sym_const_val[first_idx] := lo_bound;
           sym_label[first_idx] := arr_size;
-          sym_var_param_flags[first_idx] := base_idx + 1;  { record type index + 1 (0 means basic) }
+          sym_var_param_flags[first_idx] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else if tok_type = TOK_STRING_TYPE then
-    begin
-      { String type: 256 bytes (1 length byte + 255 char bytes) }
+    End
+    Else If tok_type = TOK_STRING_TYPE Then
+    Begin
+      { String Type: 256 bytes (1 Length byte + 255 Char bytes) }
       NextToken;
-      { Handle all variables in the list }
-      for j := first_idx to idx do
-      begin
+      { Handle all variables In the list }
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_STRING;
-        sym_label[j] := 256;  { Store size for reference }
+        sym_label[j] := 256;  { Store size For reference }
         { Adjust offset: already allocated 8 bytes, need 248 more }
-        if j = first_idx then
-        begin
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 248;
-          sym_offset[j] := local_offset  { Update offset to start of 256-byte area }
-        end
-        else
-        begin
+          sym_offset[j] := local_offset  { Update offset To start Of 256-byte area }
+        End
+        Else
+        Begin
           local_offset := local_offset - 256;
           sym_offset[j] := local_offset
-        end
-      end
-    end
-    else if tok_type = TOK_TEXT then
-    begin
-      { Text file type: 272 bytes (fd + mode + filename) }
+        End
+      End
+    End
+    Else If tok_type = TOK_TEXT Then
+    Begin
+      { Text file Type: 272 bytes (fd + mode + filename) }
       NextToken;
-      for j := first_idx to idx do
-      begin
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_TEXT;
-        sym_const_val[j] := TYPE_CHAR;  { element type is char }
+        sym_const_val[j] := TYPE_CHAR;  { element Type is Char }
         sym_label[j] := 1;  { element size is 1 byte }
-        { Adjust offset: already allocated 8 bytes, need 264 more for 272 total }
-        if j = first_idx then
-        begin
+        { Adjust offset: already allocated 8 bytes, need 264 more For 272 total }
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 264;
           sym_offset[j] := local_offset
-        end
-        else
-        begin
+        End
+        Else
+        Begin
           local_offset := local_offset - 272;
           sym_offset[j] := local_offset
-        end
-      end
-    end
-    else if tok_type = TOK_FILE then
-    begin
-      { Typed file: file of T - 272 bytes (fd + mode + filename) }
+        End
+      End
+    End
+    Else If tok_type = TOK_FILE Then
+    Begin
+      { Typed file: file Of T - 272 bytes (fd + mode + filename) }
       NextToken;
       Expect(TOK_OF);
-      { Parse element type }
-      if tok_type = TOK_INTEGER_TYPE then
-      begin
+      { Parse element Type }
+      If tok_type = TOK_INTEGER_TYPE Then
+      Begin
         base_idx := TYPE_INTEGER;
         arr_size := 8;
         NextToken
-      end
-      else if tok_type = TOK_CHAR_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_CHAR_TYPE Then
+      Begin
         base_idx := TYPE_CHAR;
         arr_size := 1;
         NextToken
-      end
-      else if tok_type = TOK_BOOLEAN_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_BOOLEAN_TYPE Then
+      Begin
         base_idx := TYPE_BOOLEAN;
         arr_size := 1;
         NextToken
-      end
-      else if tok_type = TOK_REAL_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_REAL_TYPE Then
+      Begin
         base_idx := TYPE_REAL;
         arr_size := 8;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Record type }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Record Type }
         lo_bound := SymLookup;
-        if (lo_bound >= 0) and (sym_kind[lo_bound] = SYM_TYPEDEF) and (sym_type[lo_bound] = TYPE_RECORD) then
-        begin
+        If (lo_bound >= 0) And (sym_kind[lo_bound] = SYM_TYPEDEF) And (sym_type[lo_bound] = TYPE_RECORD) Then
+        Begin
           base_idx := TYPE_RECORD;
-          arr_size := sym_label[lo_bound];  { record size }
+          arr_size := sym_label[lo_bound];  { Record size }
           file_rec_idx[file_count] := lo_bound;
           NextToken
-        end
-        else
+        End
+        Else
           Error(14)
-      end
-      else
+      End
+      Else
         Error(9);
-      { Store file type info }
+      { Store file Type info }
       file_elem_type[file_count] := base_idx;
       file_elem_size[file_count] := arr_size;
-      for j := first_idx to idx do
-      begin
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_FILE;
         sym_const_val[j] := file_count;  { index into file arrays }
         sym_label[j] := arr_size;  { element size }
-        { Adjust offset for 272 bytes }
-        if j = first_idx then
-        begin
+        { Adjust offset For 272 bytes }
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 264;
           sym_offset[j] := local_offset
-        end
-        else
-        begin
+        End
+        Else
+        Begin
           local_offset := local_offset - 272;
           sym_offset[j] := local_offset
-        end
-      end;
+        End
+      End;
       file_count := file_count + 1
-    end
-    else if tok_type = TOK_SET then
-    begin
-      { Inline set type: set of char / set of 0..63 }
-      NextToken;  { consume 'set' }
+    End
+    Else If tok_type = TOK_SET Then
+    Begin
+      { Inline Set Type: Set Of Char / Set Of 0..63 }
+      NextToken;  { consume 'Set' }
       Expect(TOK_OF);
-      if tok_type = TOK_CHAR_TYPE then
-      begin
-        { set of char - uses 64-bit bitmask }
-        for j := first_idx to idx do
-        begin
+      If tok_type = TOK_CHAR_TYPE Then
+      Begin
+        { Set Of Char - Uses 64-bit bitmask }
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_SET;
           sym_const_val[j] := set_count
-        end;
+        End;
         set_base[set_count] := TYPE_CHAR;
         set_low[set_count] := 0;
-        set_high[set_count] := 63;  { limited to 64 elements }
+        set_high[set_count] := 63;  { limited To 64 elements }
         set_count := set_count + 1;
         NextToken
-      end
-      else if tok_type = TOK_INTEGER then
-      begin
-        { set of 0..N - inline subrange }
+      End
+      Else If tok_type = TOK_INTEGER Then
+      Begin
+        { Set Of 0..N - inline subrange }
         lo_bound := tok_int;
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then Error(9);
+        If tok_type <> TOK_INTEGER Then Error(9);
         hi_bound := tok_int;
         NextToken;
-        for j := first_idx to idx do
-        begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_SET;
           sym_const_val[j] := set_count
-        end;
+        End;
         set_base[set_count] := TYPE_INTEGER;
         set_low[set_count] := lo_bound;
         set_high[set_count] := hi_bound;
         set_count := set_count + 1
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { set of EnumType }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Set Of EnumType }
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and
-           (sym_type[base_idx] = TYPE_ENUM) then
-        begin
-          for j := first_idx to idx do
-          begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And
+           (sym_type[base_idx] = TYPE_ENUM) Then
+        Begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SET;
             sym_const_val[j] := set_count
-          end;
+          End;
           set_base[set_count] := TYPE_ENUM;
           set_low[set_count] := 0;
           set_high[set_count] := sym_label[base_idx] - 1;  { enum count - 1 }
           set_count := set_count + 1;
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else if tok_type = TOK_CARET then
-    begin
-      { Pointer type: ^BaseType or ^^BaseType or ^array[lo..hi] of T }
+    End
+    Else If tok_type = TOK_CARET Then
+    Begin
+      { Pointer Type: ^BaseType Or ^^BaseType Or ^Array[lo..hi] Of T }
       NextToken;
-      lo_bound := 1;  { reuse lo_bound for depth count }
-      while tok_type = TOK_CARET do
-      begin
+      lo_bound := 1;  { reuse lo_bound For depth count }
+      While tok_type = TOK_CARET Do
+      Begin
         lo_bound := lo_bound + 1;
         NextToken
-      end;
-      { Check for pointer to array }
-      if tok_type = TOK_ARRAY then
-      begin
-        { ^array[lo..hi] of T }
-        NextToken;  { consume 'array' }
+      End;
+      { Check For pointer To Array }
+      If tok_type = TOK_ARRAY Then
+      Begin
+        { ^Array[lo..hi] Of T }
+        NextToken;  { consume 'Array' }
         Expect(TOK_LBRACKET);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
-        hi_bound := tok_int;  { reuse hi_bound temporarily for low }
+        hi_bound := tok_int;  { reuse hi_bound temporarily For low }
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         arr_size := tok_int;  { high bound }
         NextToken;
         Expect(TOK_RBRACKET);
         Expect(TOK_OF);
-        { Parse element type }
-        if tok_type = TOK_INTEGER_TYPE then
+        { Parse element Type }
+        If tok_type = TOK_INTEGER_TYPE Then
           base_idx := TYPE_INTEGER
-        else if tok_type = TOK_CHAR_TYPE then
+        Else If tok_type = TOK_CHAR_TYPE Then
           base_idx := TYPE_CHAR
-        else if tok_type = TOK_BOOLEAN_TYPE then
+        Else If tok_type = TOK_BOOLEAN_TYPE Then
           base_idx := TYPE_BOOLEAN
-        else if tok_type = TOK_REAL_TYPE then
+        Else If tok_type = TOK_REAL_TYPE Then
           base_idx := TYPE_REAL
-        else
+        Else
           base_idx := TYPE_INTEGER;  { default }
-        { Store in ptr_arr arrays }
+        { Store In ptr_arr arrays }
         ptr_arr_lo[ptr_arr_count] := hi_bound;
         ptr_arr_hi[ptr_arr_count] := arr_size;
         ptr_arr_elem[ptr_arr_count] := base_idx;
         ptr_arr_rec[ptr_arr_count] := 0;
-        for j := first_idx to idx do
-        begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_ARRAY;  { immediate base is array }
+          sym_const_val[j] := TYPE_ARRAY;  { immediate base is Array }
           sym_label[j] := ptr_arr_count;   { index into ptr_arr arrays }
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_ARRAY;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         ptr_arr_count := ptr_arr_count + 1;
         NextToken
-      end
-      { Now parse ultimate base type }
-      else if tok_type = TOK_INTEGER_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      { Now parse ultimate base Type }
+      Else If tok_type = TOK_INTEGER_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_INTEGER
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;  { immediate base is pointer }
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_INTEGER;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_CHAR_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_CHAR_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_CHAR
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_CHAR;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_BOOLEAN_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_BOOLEAN_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_BOOLEAN
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_BOOLEAN;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_REAL_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_REAL_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_REAL
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_REAL;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Pointer to record type: ^RecordType or ^^RecordType etc }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Pointer To Record Type: ^RecordType Or ^^RecordType etc }
         arr_size := SymLookup;  { reuse arr_size as type_idx }
-        if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
-        begin
-          for j := first_idx to idx do
-          begin
+        If (arr_size >= 0) And (sym_kind[arr_size] = SYM_TYPEDEF) And (sym_type[arr_size] = TYPE_RECORD) Then
+        Begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_POINTER;
-            if lo_bound = 1 then
+            If lo_bound = 1 Then
               sym_const_val[j] := TYPE_RECORD
-            else
+            Else
               sym_const_val[j] := TYPE_POINTER;
-            sym_label[j] := arr_size;  { store record type index }
+            sym_label[j] := arr_size;  { store Record Type index }
             ptr_depth[j] := lo_bound;
             ptr_ultimate_type[j] := TYPE_RECORD;
             ptr_ultimate_rec[j] := arr_size
-          end;
+          End;
           NextToken
-        end
-        else
-          Error(14)  { expected type identifier }
-      end
-      else
-        Error(14)  { expected type identifier }
-    end
-    else if tok_type = TOK_IDENT then
-    begin
-      { May be a record, enum, subrange, or set type name }
+        End
+        Else
+          Error(14)  { expected Type identifier }
+      End
+      Else
+        Error(14)  { expected Type identifier }
+    End
+    Else If tok_type = TOK_IDENT Then
+    Begin
+      { May be a Record, enum, subrange, Or Set Type name }
       arr_size := SymLookup;  { reuse arr_size as type_idx temporarily }
-      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) then
-      begin
-        if sym_type[arr_size] = TYPE_RECORD then
-        begin
-          { Allocate space for record }
-          lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
+      If (arr_size >= 0) And (sym_kind[arr_size] = SYM_TYPEDEF) Then
+      Begin
+        If sym_type[arr_size] = TYPE_RECORD Then
+        Begin
+          { Allocate space For Record }
+          lo_bound := sym_label[arr_size];  { reuse lo_bound For Record size }
           { Adjust local_offset: we already allocated 8 bytes, need rest }
           local_offset := local_offset - (lo_bound - 8);
-          for j := first_idx to idx do
-          begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_RECORD;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_ENUM then
-        begin
-          { Enum variables use 8 bytes (same as integer) }
-          for j := first_idx to idx do
-          begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_ENUM Then
+        Begin
+          { Enum variables use 8 bytes (same as Integer) }
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_ENUM;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_SUBRANGE then
-        begin
-          { Subrange variables use 8 bytes (same as integer) }
-          for j := first_idx to idx do
-          begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_SUBRANGE Then
+        Begin
+          { Subrange variables use 8 bytes (same as Integer) }
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SUBRANGE;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_SET then
-        begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_SET Then
+        Begin
           { Set variables use 8 bytes (64-bit bitmask) }
-          for j := first_idx to idx do
-          begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SET;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else
           Error(9);
         NextToken
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else
+    End
+    Else
       Error(9);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseConstDeclarations;
-var
-  idx: integer;
-begin
-  NextToken;  { consume 'const' }
-  while tok_type = TOK_IDENT do
-  begin
+Procedure ParseConstDeclarations;
+Var
+  idx: Integer;
+Begin
+  NextToken;  { consume 'Const' }
+  While tok_type = TOK_IDENT Do
+  Begin
     idx := SymAdd(SYM_CONST, TYPE_INTEGER, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
-    if tok_type = TOK_INTEGER then
-    begin
+    If tok_type = TOK_INTEGER Then
+    Begin
       sym_const_val[idx] := tok_int;
       NextToken
-    end
-    else
+    End
+    Else
       Error(10);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseTypeDeclarations;
-var
-  type_idx, fld_start, fld_offset, fld_type: integer;
-  i, base_idx, nested_idx, nested_size, first_fld: integer;
-  enum_val, lo_val, hi_val, set_base_type: integer;
-begin
-  NextToken;  { consume 'type' }
-  while tok_type = TOK_IDENT do
-  begin
-    { Create type symbol - will set actual type later }
+Procedure ParseTypeDeclarations;
+Var
+  type_idx, fld_start, fld_offset, fld_type: Integer;
+  i, base_idx, nested_idx, nested_size, first_fld: Integer;
+  enum_val, lo_val, hi_val, set_base_type: Integer;
+Begin
+  NextToken;  { consume 'Type' }
+  While tok_type = TOK_IDENT Do
+  Begin
+    { Create Type symbol - will Set actual Type later }
     type_idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
 
-    if tok_type = TOK_RECORD then
-    begin
-      { Record type }
-      NextToken;  { consume 'record' }
+    If tok_type = TOK_RECORD Then
+    Begin
+      { Record Type }
+      NextToken;  { consume 'Record' }
       fld_start := field_count;
       fld_offset := 0;
       sym_const_val[type_idx] := fld_start;  { first field index }
 
-      { Parse fields until 'end' or 'case' (variant part) }
-      while (tok_type <> TOK_END) and (tok_type <> TOK_CASE) do
-      begin
+      { Parse fields Until 'End' Or 'Case' (variant part) }
+      While (tok_type <> TOK_END) And (tok_type <> TOK_CASE) Do
+      Begin
         { Collect field names (may be comma-separated) }
         first_fld := field_count;
-        repeat
-          if tok_type <> TOK_IDENT then
+        Repeat
+          If tok_type <> TOK_IDENT Then
             Error(11);
 
           { Save field name }
           base_idx := field_count * 32;
-          for i := 0 to tok_len - 1 do
+          For i := 0 To tok_len - 1 Do
             field_name[base_idx + i] := tok_str[i];
           field_name[base_idx + tok_len] := 0;
           field_count := field_count + 1;
 
           NextToken;
-          if tok_type = TOK_COMMA then
+          If tok_type = TOK_COMMA Then
             NextToken
-        until tok_type = TOK_COLON;
+        Until tok_type = TOK_COLON;
 
         Expect(TOK_COLON);
 
-        { Parse field type }
-        nested_size := 8;  { default for basic types }
-        if tok_type = TOK_INTEGER_TYPE then
-        begin
+        { Parse field Type }
+        nested_size := 8;  { default For basic types }
+        If tok_type = TOK_INTEGER_TYPE Then
+        Begin
           fld_type := TYPE_INTEGER;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_CHAR_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_CHAR_TYPE Then
+        Begin
           fld_type := TYPE_CHAR;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_BOOLEAN_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_BOOLEAN_TYPE Then
+        Begin
           fld_type := TYPE_BOOLEAN;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_REAL_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_REAL_TYPE Then
+        Begin
           fld_type := TYPE_REAL;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_IDENT then
-        begin
-          { Nested record type or enum type }
+        End
+        Else If tok_type = TOK_IDENT Then
+        Begin
+          { Nested Record Type Or enum Type }
           nested_idx := SymLookup;
-          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) then
-          begin
-            if sym_type[nested_idx] = TYPE_RECORD then
-            begin
+          If (nested_idx >= 0) And (sym_kind[nested_idx] = SYM_TYPEDEF) Then
+          Begin
+            If sym_type[nested_idx] = TYPE_RECORD Then
+            Begin
               fld_type := TYPE_RECORD;
               nested_size := sym_label[nested_idx]
-            end
-            else if sym_type[nested_idx] = TYPE_ENUM then
+            End
+            Else If sym_type[nested_idx] = TYPE_ENUM Then
               fld_type := TYPE_ENUM
-            else if sym_type[nested_idx] = TYPE_SUBRANGE then
+            Else If sym_type[nested_idx] = TYPE_SUBRANGE Then
               fld_type := TYPE_SUBRANGE
-            else if sym_type[nested_idx] = TYPE_SET then
+            Else If sym_type[nested_idx] = TYPE_SET Then
               fld_type := TYPE_SET
-            else
+            Else
               Error(9);
             NextToken
-          end
-          else
+          End
+          Else
             Error(9)
-        end
-        else
+        End
+        Else
           Error(9);
 
-        { Apply type to all collected field names }
-        for i := first_fld to field_count - 1 do
-        begin
+        { Apply Type To all collected field names }
+        For i := first_fld To field_count - 1 Do
+        Begin
           field_type[i] := fld_type;
           field_offset[i] := fld_offset;
           field_rec_idx[i] := type_idx;
           field_rec_type[i] := nested_idx;
-          if fld_type = TYPE_RECORD then
+          If fld_type = TYPE_RECORD Then
             fld_offset := fld_offset + nested_size
-          else
+          Else
             fld_offset := fld_offset + 8
-        end;
+        End;
 
-        { Expect semicolon or end }
-        if tok_type = TOK_SEMICOLON then
+        { Expect semicolon Or End }
+        If tok_type = TOK_SEMICOLON Then
           NextToken
-      end;
+      End;
 
-      { Check for variant part }
-      if tok_type = TOK_CASE then
-      begin
-        NextToken;  { consume 'case' }
+      { Check For variant part }
+      If tok_type = TOK_CASE Then
+      Begin
+        NextToken;  { consume 'Case' }
 
-        { Check for tag field: "case tag: type of" vs "case type of" }
-        if tok_type = TOK_IDENT then
-        begin
-          { Could be "tag: type" or just "type" - peek ahead }
-          { Save identifier for potential tag field }
+        { Check For tag field: "Case tag: Type Of" vs "Case Type Of" }
+        If tok_type = TOK_IDENT Then
+        Begin
+          { Could be "tag: Type" Or just "Type" - peek ahead }
+          { Save identifier For potential tag field }
           base_idx := field_count * 32;
-          for i := 0 to tok_len - 1 do
+          For i := 0 To tok_len - 1 Do
             field_name[base_idx + i] := tok_str[i];
           field_name[base_idx + tok_len] := 0;
 
           NextToken;
-          if tok_type = TOK_COLON then
-          begin
+          If tok_type = TOK_COLON Then
+          Begin
             { It's a tag field }
             field_count := field_count + 1;
             NextToken;
-            { Parse tag type }
-            if tok_type = TOK_INTEGER_TYPE then
+            { Parse tag Type }
+            If tok_type = TOK_INTEGER_TYPE Then
               fld_type := TYPE_INTEGER
-            else if tok_type = TOK_CHAR_TYPE then
+            Else If tok_type = TOK_CHAR_TYPE Then
               fld_type := TYPE_CHAR
-            else if tok_type = TOK_BOOLEAN_TYPE then
+            Else If tok_type = TOK_BOOLEAN_TYPE Then
               fld_type := TYPE_BOOLEAN
-            else
+            Else
               fld_type := TYPE_INTEGER;  { default }
             NextToken;
 
@@ -637,253 +637,253 @@ begin
             field_rec_idx[field_count - 1] := type_idx;
             field_rec_type[field_count - 1] := 0;
             fld_offset := fld_offset + 8
-          end
-          { else: identifier was the type name, already consumed }
-        end
-        else
-          NextToken;  { consume type keyword }
+          End
+          { Else: identifier was the Type name, already consumed }
+        End
+        Else
+          NextToken;  { consume Type keyword }
 
         Expect(TOK_OF);
 
-        { variant_start marks where all variants begin }
+        { variant_start marks where all variants Begin }
         nested_idx := fld_offset;  { reuse as variant_start }
         nested_size := 0;          { reuse as max_variant_size }
 
         { Parse variant alternatives }
-        while tok_type <> TOK_END do
-        begin
+        While tok_type <> TOK_END Do
+        Begin
           { Skip constant label(s) }
-          while (tok_type <> TOK_COLON) and (tok_type <> TOK_END) do
+          While (tok_type <> TOK_COLON) And (tok_type <> TOK_END) Do
             NextToken;
 
-          if tok_type = TOK_COLON then
-          begin
+          If tok_type = TOK_COLON Then
+          Begin
           NextToken;  { consume ':' }
           Expect(TOK_LPAREN);
 
-          { Parse fields in this variant - all start at variant_start }
-          fld_offset := nested_idx;  { reset to variant start }
+          { Parse fields In this variant - all start at variant_start }
+          fld_offset := nested_idx;  { reset To variant start }
 
-          while tok_type <> TOK_RPAREN do
-          begin
+          While tok_type <> TOK_RPAREN Do
+          Begin
             { Collect field names }
             first_fld := field_count;
-            repeat
-              if tok_type <> TOK_IDENT then
+            Repeat
+              If tok_type <> TOK_IDENT Then
                 Error(11);
               base_idx := field_count * 32;
-              for i := 0 to tok_len - 1 do
+              For i := 0 To tok_len - 1 Do
                 field_name[base_idx + i] := tok_str[i];
               field_name[base_idx + tok_len] := 0;
               field_count := field_count + 1;
               NextToken;
-              if tok_type = TOK_COMMA then
+              If tok_type = TOK_COMMA Then
                 NextToken
-            until tok_type = TOK_COLON;
+            Until tok_type = TOK_COLON;
 
             Expect(TOK_COLON);
 
-            { Parse field type }
+            { Parse field Type }
             lo_val := 8;  { reuse as field_size }
-            if tok_type = TOK_INTEGER_TYPE then
+            If tok_type = TOK_INTEGER_TYPE Then
               fld_type := TYPE_INTEGER
-            else if tok_type = TOK_CHAR_TYPE then
+            Else If tok_type = TOK_CHAR_TYPE Then
               fld_type := TYPE_CHAR
-            else if tok_type = TOK_BOOLEAN_TYPE then
+            Else If tok_type = TOK_BOOLEAN_TYPE Then
               fld_type := TYPE_BOOLEAN
-            else if tok_type = TOK_REAL_TYPE then
+            Else If tok_type = TOK_REAL_TYPE Then
               fld_type := TYPE_REAL
-            else if tok_type = TOK_IDENT then
-            begin
+            Else If tok_type = TOK_IDENT Then
+            Begin
               hi_val := SymLookup;  { reuse as lookup result }
-              if (hi_val >= 0) and (sym_kind[hi_val] = SYM_TYPEDEF) then
-              begin
-                if sym_type[hi_val] = TYPE_RECORD then
-                begin
+              If (hi_val >= 0) And (sym_kind[hi_val] = SYM_TYPEDEF) Then
+              Begin
+                If sym_type[hi_val] = TYPE_RECORD Then
+                Begin
                   fld_type := TYPE_RECORD;
                   lo_val := sym_label[hi_val]
-                end
-                else
+                End
+                Else
                   fld_type := sym_type[hi_val]
-              end
-              else
+              End
+              Else
                 fld_type := TYPE_INTEGER
-            end
-            else
+            End
+            Else
               fld_type := TYPE_INTEGER;
             NextToken;
 
             { Record fields }
-            for i := first_fld to field_count - 1 do
-            begin
+            For i := first_fld To field_count - 1 Do
+            Begin
               field_type[i] := fld_type;
               field_offset[i] := fld_offset;
               field_rec_idx[i] := type_idx;
-              if fld_type = TYPE_RECORD then
+              If fld_type = TYPE_RECORD Then
                 field_rec_type[i] := hi_val
-              else
+              Else
                 field_rec_type[i] := 0;
               fld_offset := fld_offset + lo_val
-            end;
+            End;
 
-            if tok_type = TOK_SEMICOLON then
+            If tok_type = TOK_SEMICOLON Then
               NextToken
-          end;
+          End;
 
           NextToken;  { consume ')' }
 
           { Track max variant size }
-          if (fld_offset - nested_idx) > nested_size then
+          If (fld_offset - nested_idx) > nested_size Then
             nested_size := fld_offset - nested_idx;
 
-          if tok_type = TOK_SEMICOLON then
+          If tok_type = TOK_SEMICOLON Then
             NextToken
-          end  { end if tok_type = TOK_COLON }
-        end;
+          End  { End If tok_type = TOK_COLON }
+        End;
 
         fld_offset := nested_idx + nested_size  { final size }
-      end;
+      End;
 
-      NextToken;  { consume 'end' }
-      sym_label[type_idx] := fld_offset  { total record size }
-    end
-    else if tok_type = TOK_LPAREN then
-    begin
-      { Enumerated type: (Red, Green, Blue) }
+      NextToken;  { consume 'End' }
+      sym_label[type_idx] := fld_offset  { total Record size }
+    End
+    Else If tok_type = TOK_LPAREN Then
+    Begin
+      { Enumerated Type: (Red, Green, Blue) }
       sym_type[type_idx] := TYPE_ENUM;
       sym_const_val[type_idx] := enum_count;  { index into enum arrays }
       enum_low[enum_count] := 0;
       enum_val := 0;
       NextToken;  { consume '(' }
-      while tok_type <> TOK_RPAREN do
-      begin
-        if tok_type <> TOK_IDENT then
+      While tok_type <> TOK_RPAREN Do
+      Begin
+        If tok_type <> TOK_IDENT Then
           Error(11);
         { Add enum value as a constant }
         base_idx := SymAdd(SYM_CONST, TYPE_ENUM, scope_level, 0);
         sym_const_val[base_idx] := enum_val;
-        sym_label[base_idx] := type_idx;  { link to enum type }
+        sym_label[base_idx] := type_idx;  { link To enum Type }
         enum_val := enum_val + 1;
         NextToken;
-        if tok_type = TOK_COMMA then
+        If tok_type = TOK_COMMA Then
           NextToken
-      end;
+      End;
       enum_high[enum_count] := enum_val - 1;
-      sym_label[type_idx] := enum_val;  { number of values }
+      sym_label[type_idx] := enum_val;  { number Of values }
       enum_count := enum_count + 1;
       NextToken  { consume ')' }
-    end
-    else if tok_type = TOK_SET then
-    begin
-      { Set type: set of char / set of EnumType / set of 0..63 }
+    End
+    Else If tok_type = TOK_SET Then
+    Begin
+      { Set Type: Set Of Char / Set Of EnumType / Set Of 0..63 }
       sym_type[type_idx] := TYPE_SET;
-      NextToken;  { consume 'set' }
+      NextToken;  { consume 'Set' }
       Expect(TOK_OF);
-      sym_const_val[type_idx] := set_count;  { index into set arrays }
-      if tok_type = TOK_CHAR_TYPE then
-      begin
+      sym_const_val[type_idx] := set_count;  { index into Set arrays }
+      If tok_type = TOK_CHAR_TYPE Then
+      Begin
         set_base[set_count] := TYPE_CHAR;
         set_low[set_count] := 0;
         set_high[set_count] := 255;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) then
-        begin
-          if sym_type[base_idx] = TYPE_ENUM then
-          begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) Then
+        Begin
+          If sym_type[base_idx] = TYPE_ENUM Then
+          Begin
             set_base[set_count] := TYPE_ENUM;
             nested_idx := sym_const_val[base_idx];  { enum index }
             set_low[set_count] := enum_low[nested_idx];
             set_high[set_count] := enum_high[nested_idx]
-          end
-          else if sym_type[base_idx] = TYPE_SUBRANGE then
-          begin
+          End
+          Else If sym_type[base_idx] = TYPE_SUBRANGE Then
+          Begin
             set_base[set_count] := TYPE_SUBRANGE;
             nested_idx := sym_const_val[base_idx];  { subrange index }
             set_low[set_count] := subr_low[nested_idx];
             set_high[set_count] := subr_high[nested_idx]
-          end
-          else
+          End
+          Else
             Error(9);
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else if tok_type = TOK_INTEGER then
-      begin
-        { set of 0..63 - inline subrange }
+      End
+      Else If tok_type = TOK_INTEGER Then
+      Begin
+        { Set Of 0..63 - inline subrange }
         lo_val := tok_int;
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         hi_val := tok_int;
-        if hi_val - lo_val > 63 then
-          Error(16);  { set too large }
+        If hi_val - lo_val > 63 Then
+          Error(16);  { Set too large }
         set_base[set_count] := TYPE_SUBRANGE;
         set_low[set_count] := lo_val;
         set_high[set_count] := hi_val;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       set_count := set_count + 1
-    end
-    else if (tok_type = TOK_INTEGER) or (tok_type = TOK_MINUS) then
-    begin
-      { Subrange type: 0..9 or -10..10 }
-      if tok_type = TOK_MINUS then
-      begin
+    End
+    Else If (tok_type = TOK_INTEGER) Or (tok_type = TOK_MINUS) Then
+    Begin
+      { Subrange Type: 0..9 Or -10..10 }
+      If tok_type = TOK_MINUS Then
+      Begin
         NextToken;
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         lo_val := 0 - tok_int
-      end
-      else
+      End
+      Else
         lo_val := tok_int;
       NextToken;
       Expect(TOK_DOTDOT);
-      if tok_type = TOK_MINUS then
-      begin
+      If tok_type = TOK_MINUS Then
+      Begin
         NextToken;
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         hi_val := 0 - tok_int
-      end
-      else if tok_type = TOK_INTEGER then
+      End
+      Else If tok_type = TOK_INTEGER Then
         hi_val := tok_int
-      else
+      Else
         Error(9);
       sym_type[type_idx] := TYPE_SUBRANGE;
       sym_const_val[type_idx] := subr_count;  { index into subrange arrays }
       subr_low[subr_count] := lo_val;
       subr_high[subr_count] := hi_val;
       subr_base[subr_count] := TYPE_INTEGER;
-      sym_label[type_idx] := hi_val - lo_val + 1;  { number of values }
+      sym_label[type_idx] := hi_val - lo_val + 1;  { number Of values }
       subr_count := subr_count + 1;
       NextToken
-    end
-    else if tok_type = TOK_IDENT then
-    begin
-      { Could be alias to another type, or subrange of enum }
+    End
+    Else If tok_type = TOK_IDENT Then
+    Begin
+      { Could be alias To another Type, Or subrange Of enum }
       base_idx := SymLookup;
-      if base_idx >= 0 then
-      begin
-        if sym_kind[base_idx] = SYM_CONST then
-        begin
-          { Subrange starting with enum constant }
+      If base_idx >= 0 Then
+      Begin
+        If sym_kind[base_idx] = SYM_CONST Then
+        Begin
+          { Subrange starting With enum constant }
           lo_val := sym_const_val[base_idx];
-          nested_idx := sym_label[base_idx];  { enum type }
+          nested_idx := sym_label[base_idx];  { enum Type }
           NextToken;
           Expect(TOK_DOTDOT);
-          if tok_type <> TOK_IDENT then
+          If tok_type <> TOK_IDENT Then
             Error(9);
           base_idx := SymLookup;
-          if (base_idx < 0) or (sym_kind[base_idx] <> SYM_CONST) then
+          If (base_idx < 0) Or (sym_kind[base_idx] <> SYM_CONST) Then
             Error(9);
           hi_val := sym_const_val[base_idx];
           sym_type[type_idx] := TYPE_SUBRANGE;
@@ -894,677 +894,677 @@ begin
           sym_label[type_idx] := hi_val - lo_val + 1;
           subr_count := subr_count + 1;
           NextToken
-        end
-        else if sym_kind[base_idx] = SYM_TYPEDEF then
-        begin
-          { Type alias - copy the type info }
+        End
+        Else If sym_kind[base_idx] = SYM_TYPEDEF Then
+        Begin
+          { Type alias - copy the Type info }
           sym_type[type_idx] := sym_type[base_idx];
           sym_const_val[type_idx] := sym_const_val[base_idx];
           sym_label[type_idx] := sym_label[base_idx];
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else
+    End
+    Else
       Error(9);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseProcedureDeclaration; forward;
-procedure ParseFunctionDeclaration; forward;
+Procedure ParseProcedureDeclaration; Forward;
+Procedure ParseFunctionDeclaration; Forward;
 
-procedure ParseBlock;
-var
-  saved_offset: integer;
-  alloc_size: integer;
-  body_label: integer;
-begin
+Procedure ParseBlock;
+Var
+  saved_offset: Integer;
+  alloc_size: Integer;
+  body_label: Integer;
+Begin
   saved_offset := local_offset;
   body_label := 0;
 
-  while (tok_type = TOK_CONST) or (tok_type = TOK_VAR) or (tok_type = TOK_TYPE_KW) do
-  begin
-    if tok_type = TOK_CONST then
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_VAR) Or (tok_type = TOK_TYPE_KW) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else
+    Else
       ParseVarDeclarations
-  end;
+  End;
 
-  { If there are procedure/function declarations, jump over them }
-  if (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) then
-  begin
+  { If there are Procedure/Function declarations, jump over them }
+  If (tok_type = TOK_PROCEDURE) Or (tok_type = TOK_FUNCTION) Then
+  Begin
     body_label := NewLabel;
     EmitBranchLabel(body_label)
-  end;
+  End;
 
-  while (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_PROCEDURE then
+  While (tok_type = TOK_PROCEDURE) Or (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_PROCEDURE Then
       ParseProcedureDeclaration
-    else
+    Else
       ParseFunctionDeclaration
-  end;
+  End;
 
-  if body_label > 0 then
+  If body_label > 0 Then
     EmitLabel(body_label);
 
-  { Allocate stack space - round up to 16 for alignment }
+  { Allocate stack space - round up To 16 For alignment }
   alloc_size := 0;
-  if local_offset < saved_offset then
-  begin
+  If local_offset < saved_offset Then
+  Begin
     alloc_size := saved_offset - local_offset;
-    alloc_size := ((alloc_size + 15) div 16) * 16;
+    alloc_size := ((alloc_size + 15) Div 16) * 16;
     EmitSubSP(alloc_size)
-  end;
+  End;
 
   Expect(TOK_BEGIN);
   ParseStatement;
-  while tok_type = TOK_SEMICOLON do
-  begin
+  While tok_type = TOK_SEMICOLON Do
+  Begin
     NextToken;
     ParseStatement
-  end;
+  End;
   Expect(TOK_END);
 
   { Deallocate stack space }
-  if alloc_size > 0 then
-  begin
+  If alloc_size > 0 Then
+  Begin
     EmitAddSP(alloc_size)
-  end
-end;
+  End
+End;
 
-procedure ParseProcedureDeclaration;
-var
-  idx, proc_label: integer;
-  saved_level, saved_offset: integer;
-  param_count, param_idx, i, j: integer;
-  param_indices: array[0..7] of integer;
-  is_var_group: integer;
-  saved_exit_label, proc_exit_label: integer;
-begin
-  NextToken;  { consume 'procedure' }
+Procedure ParseProcedureDeclaration;
+Var
+  idx, proc_label: Integer;
+  saved_level, saved_offset: Integer;
+  param_count, param_idx, i, j: Integer;
+  param_indices: Array[0..7] Of Integer;
+  is_var_group: Integer;
+  saved_exit_label, proc_exit_label: Integer;
+Begin
+  NextToken;  { consume 'Procedure' }
 
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
 
-  { Check if procedure already exists (forward declaration) }
+  { Check If Procedure already exists (Forward declaration) }
   idx := SymLookup;
-  if (idx >= 0) and (sym_kind[idx] = SYM_PROCEDURE) then
-  begin
-    { Reuse existing forward-declared procedure }
+  If (idx >= 0) And (sym_kind[idx] = SYM_PROCEDURE) Then
+  Begin
+    { Reuse existing Forward-declared Procedure }
     proc_label := sym_label[idx]
-  end
-  else
-  begin
-    { Create new procedure symbol }
+  End
+  Else
+  Begin
+    { Create New Procedure symbol }
     idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, scope_level, 0);
     proc_label := NewLabel;
     sym_label[idx] := proc_label
-  end;
+  End;
   NextToken;
 
-  { Save state and enter new scope for parameters }
+  { Save state And enter New scope For parameters }
   saved_level := scope_level;
   saved_offset := local_offset;
   scope_level := scope_level + 1;
-  local_offset := -8;  { Reserve -8 for static link }
+  local_offset := -8;  { Reserve -8 For static link }
   param_count := 0;
 
   { Handle optional parameters }
-  if tok_type = TOK_LPAREN then
-  begin
+  If tok_type = TOK_LPAREN Then
+  Begin
     NextToken;
-    if tok_type <> TOK_RPAREN then
-    begin
-      repeat
-        if tok_type = TOK_SEMICOLON then NextToken;
-        { Check for 'var' keyword - applies to all idents in this group }
+    If tok_type <> TOK_RPAREN Then
+    Begin
+      Repeat
+        If tok_type = TOK_SEMICOLON Then NextToken;
+        { Check For 'Var' keyword - applies To all idents In this group }
         is_var_group := 0;
-        if tok_type = TOK_VAR then
-        begin
+        If tok_type = TOK_VAR Then
+        Begin
           is_var_group := 1;
           NextToken
-        end;
-        { Parse identifier list for this parameter group }
-        if tok_type <> TOK_IDENT then Error(11);
-        repeat
-          if tok_type = TOK_COMMA then NextToken;
-          if tok_type <> TOK_IDENT then Error(11);
+        End;
+        { Parse identifier list For this parameter group }
+        If tok_type <> TOK_IDENT Then Error(11);
+        Repeat
+          If tok_type = TOK_COMMA Then NextToken;
+          If tok_type <> TOK_IDENT Then Error(11);
           { Add parameter }
           local_offset := local_offset - 8;
           param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-          if is_var_group = 1 then
+          If is_var_group = 1 Then
             sym_is_var_param[param_idx] := 1;
-          if param_count < 8 then
+          If param_count < 8 Then
             param_indices[param_count] := param_idx;
           param_count := param_count + 1;
           NextToken
-        until tok_type <> TOK_COMMA;
-        { Parse type annotation and set param types }
-        if tok_type = TOK_COLON then
-        begin
+        Until tok_type <> TOK_COMMA;
+        { Parse Type annotation And Set param types }
+        If tok_type = TOK_COLON Then
+        Begin
           NextToken;
-          if tok_type = TOK_REAL_TYPE then
-          begin
-            { Set all params in this group to TYPE_REAL }
-            { Find starting index of this group and set types }
-            { param_indices has the indices, but we need to know where this group started }
-            { For simplicity, set all recent params to real - this is approximate }
+          If tok_type = TOK_REAL_TYPE Then
+          Begin
+            { Set all params In this group To TYPE_REAL }
+            { Find starting index Of this group And Set types }
+            { param_indices has the indices, but we need To know where this group started }
+            { For simplicity, Set all recent params To Real - this is approximate }
             sym_type[param_idx] := TYPE_REAL;
             NextToken
-          end
-          else if tok_type = TOK_STRING_TYPE then
-          begin
+          End
+          Else If tok_type = TOK_STRING_TYPE Then
+          Begin
             { String parameter }
             sym_type[param_idx] := TYPE_STRING;
-            if is_var_group = 0 then
-            begin
+            If is_var_group = 0 Then
+            Begin
               { Value parameter - need 256 bytes total, already have 8, need 248 more }
               local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-in }
-            end;
-            { var string params keep the 8-byte slot for address }
+              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-In }
+            End;
+            { Var String params keep the 8-byte slot For address }
             NextToken
-          end
-          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-             (tok_type = TOK_BOOLEAN_TYPE) then
+          End
+          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+             (tok_type = TOK_BOOLEAN_TYPE) Then
             NextToken
-        end
-      until tok_type <> TOK_SEMICOLON
-    end;
+        End
+      Until tok_type <> TOK_SEMICOLON
+    End;
     Expect(TOK_RPAREN)
-  end;
+  End;
 
-  { Build var-param bitmap and store on procedure symbol }
+  { Build Var-param bitmap And store on Procedure symbol }
   sym_var_param_flags[idx] := 0;
-  for i := 0 to param_count - 1 do
-    if sym_is_var_param[param_indices[i]] = 1 then
-    begin
-      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
-      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
-      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
-      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
-      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
-      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
-      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
-      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
-    end;
+  For i := 0 To param_count - 1 Do
+    If sym_is_var_param[param_indices[i]] = 1 Then
+    Begin
+      If i = 0 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      If i = 1 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      If i = 2 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      If i = 3 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      If i = 4 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      If i = 5 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      If i = 6 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      If i = 7 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    End;
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration or interface declaration }
-  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
-  begin
-    if tok_type = TOK_FORWARD then
-    begin
+  { Check For Forward declaration Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  Begin
+    If tok_type = TOK_FORWARD Then
+    Begin
       NextToken;
       Expect(TOK_SEMICOLON)
-    end;
+    End;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
-  end
-  else
-  begin
+  End
+  Else
+  Begin
 
-  { Emit procedure label and prolog - save x29, x30, static link }
-  { For units, use named labels to avoid conflicts when linking }
-  if compiling_unit = 1 then
-  begin
+  { Emit Procedure label And prolog - save x29, x30, static link }
+  { For units, use named labels To avoid conflicts when linking }
+  If compiling_unit = 1 Then
+  Begin
     EmitGloblCurrentUnit(idx);  { Export the symbol }
     EmitUnitLabel(idx)
-  end
-  else
+  End
+  Else
     EmitLabel(proc_label);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(16);  { Allocate space for static link }
+  EmitSubSP(16);  { Allocate space For static link }
   EmitStoreStaticLink;
 
-  { Allocate space for parameters and copy from registers }
-  if param_count > 0 then
-  begin
+  { Allocate space For parameters And copy from registers }
+  If param_count > 0 Then
+  Begin
     { Allocate based on actual space needed (local_offset tracks it) }
     { param_space = -(local_offset) - 8 (static link already counted separately) }
     j := 0 - local_offset - 8;
-    j := ((j + 15) div 16) * 16;  { Align to 16 }
-    if j > 0 then
+    j := ((j + 15) Div 16) * 16;  { Align To 16 }
+    If j > 0 Then
       EmitSubSP(j);
-    for i := 0 to param_count - 1 do
-    begin
-      if i < 8 then
-      begin
-        { Check if this is a string value parameter (needs copy) }
-        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
-        begin
-          { String value param: xi has address of source, copy to local storage }
+    For i := 0 To param_count - 1 Do
+    Begin
+      If i < 8 Then
+      Begin
+        { Check If this is a String value parameter (needs copy) }
+        If (sym_type[param_indices[i]] = TYPE_STRING) And (sym_is_var_param[param_indices[i]] = 0) Then
+        Begin
+          { String value param: xi has address Of source, copy To local storage }
           { x9 = source (passed address), compute x8 = dest using large offset handling }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-          writechar(120); writechar(48 + i);  { xi }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(57); WriteChar(44); WriteChar(32);  { x9, }
+          WriteChar(120); WriteChar(48 + i);  { xi }
           EmitNL;
           { Compute dest address: x8 = x29 - offset (handle large negative offset) }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(35);
-          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(35);
+          Write(0 - sym_offset[param_indices[i]]);  { positive value }
           EmitNL;
           EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-          writechar(120); writechar(56);  { x8 }
+          WriteChar(115); WriteChar(117); WriteChar(98); WriteChar(32);  { sub }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(120); WriteChar(50); WriteChar(57); WriteChar(44); WriteChar(32);  { x29, }
+          WriteChar(120); WriteChar(56);  { x8 }
           EmitNL;
           EmitBL(rt_str_copy)
-        end
-        else
-        begin
-          { Normal param: store register to stack }
+        End
+        Else
+        Begin
+          { Normal param: store register To stack }
           EmitIndent;
-          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-          writechar(44); writechar(32); writechar(35);  { , # }
-          write(sym_offset[param_indices[i]]);
-          writechar(93);  { ] }
+          WriteChar(115); WriteChar(116); WriteChar(117); WriteChar(114); WriteChar(32);  { stur }
+          WriteChar(120); WriteChar(48 + i); WriteChar(44); WriteChar(32);  { xi, }
+          WriteChar(91); WriteChar(120); WriteChar(50); WriteChar(57);  { [x29 }
+          WriteChar(44); WriteChar(32); WriteChar(35);  { , # }
+          Write(sym_offset[param_indices[i]]);
+          WriteChar(93);  { ] }
           EmitNL
-        end
-      end
-    end
-  end;
+        End
+      End
+    End
+  End;
 
-  { Set up exit label for this procedure }
+  { Set up Exit label For this Procedure }
   saved_exit_label := exit_label;
   proc_exit_label := NewLabel;
   exit_label := proc_exit_label;
 
-  { Parse procedure body }
+  { Parse Procedure body }
   ParseBlock;
 
-  { Pop local symbols and restore scope }
+  { Pop local symbols And restore scope }
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
 
-  { Emit exit label for exit statements }
+  { Emit Exit label For Exit statements }
   EmitLabel(proc_exit_label);
   exit_label := saved_exit_label;
 
-  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  { Restore sp To frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-  writechar(120); writechar(50); writechar(57);  { x29 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(115); WriteChar(112); WriteChar(44); WriteChar(32);  { sp, }
+  WriteChar(120); WriteChar(50); WriteChar(57);  { x29 }
   EmitNL;
 
-  { Restore frame and return }
+  { Restore frame And return }
   EmitLdp;
   EmitIndent;
-  writechar(114); writechar(101); writechar(116);  { ret }
+  WriteChar(114); WriteChar(101); WriteChar(116);  { ret }
   EmitNL;
 
   Expect(TOK_SEMICOLON)
-  end  { end of else for non-forward declaration }
-end;
+  End  { End Of Else For non-Forward declaration }
+End;
 
-procedure ParseFunctionDeclaration;
-var
-  idx, func_label: integer;
-  saved_level, saved_offset: integer;
-  param_count, param_idx, i, j: integer;
-  param_indices: array[0..7] of integer;
-  is_var_group: integer;
-  saved_exit_label, func_exit_label: integer;
-begin
-  NextToken;  { consume 'function' }
+Procedure ParseFunctionDeclaration;
+Var
+  idx, func_label: Integer;
+  saved_level, saved_offset: Integer;
+  param_count, param_idx, i, j: Integer;
+  param_indices: Array[0..7] Of Integer;
+  is_var_group: Integer;
+  saved_exit_label, func_exit_label: Integer;
+Begin
+  NextToken;  { consume 'Function' }
 
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
 
-  { Check if function already exists (forward declaration) }
+  { Check If Function already exists (Forward declaration) }
   idx := SymLookup;
-  if (idx >= 0) and (sym_kind[idx] = SYM_FUNCTION) then
-  begin
-    { Reuse existing forward-declared function }
+  If (idx >= 0) And (sym_kind[idx] = SYM_FUNCTION) Then
+  Begin
+    { Reuse existing Forward-declared Function }
     func_label := sym_label[idx]
-  end
-  else
-  begin
-    { Create new function symbol }
+  End
+  Else
+  Begin
+    { Create New Function symbol }
     idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, scope_level, 0);
     func_label := NewLabel;
     sym_label[idx] := func_label
-  end;
+  End;
   NextToken;
 
-  { Save state and enter new scope for parameters }
+  { Save state And enter New scope For parameters }
   saved_level := scope_level;
   saved_offset := local_offset;
   scope_level := scope_level + 1;
-  local_offset := -16;  { Reserve -8 for static link, -16 for result }
+  local_offset := -16;  { Reserve -8 For static link, -16 For result }
   param_count := 0;
 
   { Handle optional parameters }
-  if tok_type = TOK_LPAREN then
-  begin
+  If tok_type = TOK_LPAREN Then
+  Begin
     NextToken;
-    if tok_type <> TOK_RPAREN then
-    begin
-      repeat
-        if tok_type = TOK_SEMICOLON then NextToken;
-        { Check for 'var' keyword - applies to all idents in this group }
+    If tok_type <> TOK_RPAREN Then
+    Begin
+      Repeat
+        If tok_type = TOK_SEMICOLON Then NextToken;
+        { Check For 'Var' keyword - applies To all idents In this group }
         is_var_group := 0;
-        if tok_type = TOK_VAR then
-        begin
+        If tok_type = TOK_VAR Then
+        Begin
           is_var_group := 1;
           NextToken
-        end;
-        { Parse identifier list for this parameter group }
-        if tok_type <> TOK_IDENT then Error(11);
-        repeat
-          if tok_type = TOK_COMMA then NextToken;
-          if tok_type <> TOK_IDENT then Error(11);
+        End;
+        { Parse identifier list For this parameter group }
+        If tok_type <> TOK_IDENT Then Error(11);
+        Repeat
+          If tok_type = TOK_COMMA Then NextToken;
+          If tok_type <> TOK_IDENT Then Error(11);
           { Add parameter }
           local_offset := local_offset - 8;
           param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-          if is_var_group = 1 then
+          If is_var_group = 1 Then
             sym_is_var_param[param_idx] := 1;
-          if param_count < 8 then
+          If param_count < 8 Then
             param_indices[param_count] := param_idx;
           param_count := param_count + 1;
           NextToken
-        until tok_type <> TOK_COMMA;
-        { Parse type annotation and set param types }
-        if tok_type = TOK_COLON then
-        begin
+        Until tok_type <> TOK_COMMA;
+        { Parse Type annotation And Set param types }
+        If tok_type = TOK_COLON Then
+        Begin
           NextToken;
-          if tok_type = TOK_REAL_TYPE then
-          begin
+          If tok_type = TOK_REAL_TYPE Then
+          Begin
             sym_type[param_idx] := TYPE_REAL;
             NextToken
-          end
-          else if tok_type = TOK_STRING_TYPE then
-          begin
+          End
+          Else If tok_type = TOK_STRING_TYPE Then
+          Begin
             { String parameter }
             sym_type[param_idx] := TYPE_STRING;
-            if is_var_group = 0 then
-            begin
+            If is_var_group = 0 Then
+            Begin
               { Value parameter - need 256 bytes total, already have 8, need 248 more }
               local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-in }
-            end;
-            { var string params keep the 8-byte slot for address }
+              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-In }
+            End;
+            { Var String params keep the 8-byte slot For address }
             NextToken
-          end
-          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-             (tok_type = TOK_BOOLEAN_TYPE) then
+          End
+          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+             (tok_type = TOK_BOOLEAN_TYPE) Then
             NextToken
-        end
-      until tok_type <> TOK_SEMICOLON
-    end;
+        End
+      Until tok_type <> TOK_SEMICOLON
+    End;
     Expect(TOK_RPAREN)
-  end;
+  End;
 
-  { Build var-param bitmap and store on function symbol }
+  { Build Var-param bitmap And store on Function symbol }
   sym_var_param_flags[idx] := 0;
-  for i := 0 to param_count - 1 do
-    if sym_is_var_param[param_indices[i]] = 1 then
-    begin
-      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
-      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
-      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
-      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
-      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
-      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
-      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
-      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
-    end;
+  For i := 0 To param_count - 1 Do
+    If sym_is_var_param[param_indices[i]] = 1 Then
+    Begin
+      If i = 0 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      If i = 1 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      If i = 2 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      If i = 3 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      If i = 4 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      If i = 5 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      If i = 6 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      If i = 7 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    End;
 
-  { Parse return type }
+  { Parse return Type }
   Expect(TOK_COLON);
-  if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-     (tok_type = TOK_BOOLEAN_TYPE) then
+  If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+     (tok_type = TOK_BOOLEAN_TYPE) Then
     NextToken
-  else if tok_type = TOK_REAL_TYPE then
-  begin
+  Else If tok_type = TOK_REAL_TYPE Then
+  Begin
     sym_type[idx] := TYPE_REAL;
     NextToken
-  end
-  else if tok_type = TOK_STRING_TYPE then
-  begin
+  End
+  Else If tok_type = TOK_STRING_TYPE Then
+  Begin
     sym_type[idx] := TYPE_STRING;
     NextToken
-  end
-  else
+  End
+  Else
     Error(9);
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration or interface declaration }
-  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
-  begin
-    if tok_type = TOK_FORWARD then
-    begin
+  { Check For Forward declaration Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  Begin
+    If tok_type = TOK_FORWARD Then
+    Begin
       NextToken;
       Expect(TOK_SEMICOLON)
-    end;
+    End;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
-  end
-  else
-  begin
+  End
+  Else
+  Begin
 
-  { Emit function label and prolog - save x29, x30, static link }
-  { For units, use named labels to avoid conflicts when linking }
-  if compiling_unit = 1 then
-  begin
+  { Emit Function label And prolog - save x29, x30, static link }
+  { For units, use named labels To avoid conflicts when linking }
+  If compiling_unit = 1 Then
+  Begin
     EmitGloblCurrentUnit(idx);  { Export the symbol }
     EmitUnitLabel(idx)
-  end
-  else
+  End
+  Else
     EmitLabel(func_label);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(16);  { Allocate space for static link }
+  EmitSubSP(16);  { Allocate space For static link }
   EmitStoreStaticLink;
 
-  { Allocate space for parameters and copy from registers }
-  if param_count > 0 then
-  begin
+  { Allocate space For parameters And copy from registers }
+  If param_count > 0 Then
+  Begin
     { Allocate based on actual space needed (local_offset tracks it) }
     { For functions, local_offset includes return value at -16, params start at -24 }
-    j := 0 - local_offset - 16;  { -16 for return value slot }
-    j := ((j + 15) div 16) * 16;  { Align to 16 }
-    if j > 0 then
+    j := 0 - local_offset - 16;  { -16 For return value slot }
+    j := ((j + 15) Div 16) * 16;  { Align To 16 }
+    If j > 0 Then
       EmitSubSP(j);
-    for i := 0 to param_count - 1 do
-    begin
-      if i < 8 then
-      begin
-        { Check if this is a string value parameter (needs copy) }
-        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
-        begin
-          { String value param: xi has address of source, copy to local storage }
+    For i := 0 To param_count - 1 Do
+    Begin
+      If i < 8 Then
+      Begin
+        { Check If this is a String value parameter (needs copy) }
+        If (sym_type[param_indices[i]] = TYPE_STRING) And (sym_is_var_param[param_indices[i]] = 0) Then
+        Begin
+          { String value param: xi has address Of source, copy To local storage }
           { x9 = source (passed address), compute x8 = dest using large offset handling }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-          writechar(120); writechar(48 + i);  { xi }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(57); WriteChar(44); WriteChar(32);  { x9, }
+          WriteChar(120); WriteChar(48 + i);  { xi }
           EmitNL;
           { Compute dest address: x8 = x29 - offset (handle large negative offset) }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(35);
-          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(35);
+          Write(0 - sym_offset[param_indices[i]]);  { positive value }
           EmitNL;
           EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-          writechar(120); writechar(56);  { x8 }
+          WriteChar(115); WriteChar(117); WriteChar(98); WriteChar(32);  { sub }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(120); WriteChar(50); WriteChar(57); WriteChar(44); WriteChar(32);  { x29, }
+          WriteChar(120); WriteChar(56);  { x8 }
           EmitNL;
           EmitBL(rt_str_copy)
-        end
-        else
-        begin
-          { Normal param: store register to stack }
+        End
+        Else
+        Begin
+          { Normal param: store register To stack }
           EmitIndent;
-          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-          writechar(44); writechar(32); writechar(35);  { , # }
-          write(sym_offset[param_indices[i]]);
-          writechar(93);  { ] }
+          WriteChar(115); WriteChar(116); WriteChar(117); WriteChar(114); WriteChar(32);  { stur }
+          WriteChar(120); WriteChar(48 + i); WriteChar(44); WriteChar(32);  { xi, }
+          WriteChar(91); WriteChar(120); WriteChar(50); WriteChar(57);  { [x29 }
+          WriteChar(44); WriteChar(32); WriteChar(35);  { , # }
+          Write(sym_offset[param_indices[i]]);
+          WriteChar(93);  { ] }
           EmitNL
-        end
-      end
-    end
-  end;
+        End
+      End
+    End
+  End;
 
-  { Set up exit label for this function }
+  { Set up Exit label For this Function }
   saved_exit_label := exit_label;
   func_exit_label := NewLabel;
   exit_label := func_exit_label;
 
-  { Parse function body }
+  { Parse Function body }
   ParseBlock;
 
-  { Pop local symbols and restore scope }
+  { Pop local symbols And restore scope }
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
 
-  { Emit exit label for exit statements }
+  { Emit Exit label For Exit statements }
   EmitLabel(func_exit_label);
   exit_label := saved_exit_label;
 
-  { Load result from local variable into x0 or d0 }
-  if sym_type[idx] = TYPE_REAL then
+  { Load result from local variable into x0 Or d0 }
+  If sym_type[idx] = TYPE_REAL Then
     EmitLdurD0(-16)
-  else
+  Else
     EmitLdurX0(-16);
 
-  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  { Restore sp To frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-  writechar(120); writechar(50); writechar(57);  { x29 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(115); WriteChar(112); WriteChar(44); WriteChar(32);  { sp, }
+  WriteChar(120); WriteChar(50); WriteChar(57);  { x29 }
   EmitNL;
 
-  { Restore frame and return }
+  { Restore frame And return }
   EmitLdp;
   EmitIndent;
-  writechar(114); writechar(101); writechar(116);  { ret }
+  WriteChar(114); WriteChar(101); WriteChar(116);  { ret }
   EmitNL;
 
   Expect(TOK_SEMICOLON)
-  end  { end of else for non-forward declaration }
-end;
+  End  { End Of Else For non-Forward declaration }
+End;
 
-{ Write unit name to TPU file (from current_unit_name) }
-procedure TPUWriteUnitName;
-var
-  i: integer;
-begin
-  for i := 0 to current_unit_len - 1 do
+{ Write Unit name To TPU file (from current_unit_name) }
+Procedure TPUWriteUnitName;
+Var
+  i: Integer;
+Begin
+  For i := 0 To current_unit_len - 1 Do
     writefilechar(tpu_file, current_unit_name[i])
-end;
+End;
 
-{ Write an integer to TPU file }
-procedure TPUWriteInt(n: integer);
-var
-  neg: integer;
-  digits: array[0..19] of integer;
-  count, i: integer;
-begin
+{ Write an Integer To TPU file }
+Procedure TPUWriteInt(n: Integer);
+Var
+  neg: Integer;
+  digits: Array[0..19] Of Integer;
+  count, i: Integer;
+Begin
   neg := 0;
-  if n < 0 then
-  begin
+  If n < 0 Then
+  Begin
     neg := 1;
     n := 0 - n
-  end;
+  End;
   count := 0;
-  if n = 0 then
-  begin
+  If n = 0 Then
+  Begin
     digits[0] := 48;
     count := 1
-  end
-  else
-  begin
-    while n > 0 do
-    begin
-      digits[count] := 48 + (n mod 10);
-      n := n div 10;
+  End
+  Else
+  Begin
+    While n > 0 Do
+    Begin
+      digits[count] := 48 + (n Mod 10);
+      n := n Div 10;
       count := count + 1
-    end
-  end;
-  if neg = 1 then
+    End
+  End;
+  If neg = 1 Then
     writefilechar(tpu_file, 45);  { '-' }
-  for i := count - 1 downto 0 do
+  For i := count - 1 DownTo 0 Do
     writefilechar(tpu_file, digits[i])
-end;
+End;
 
-{ Write symbol name to TPU file }
-procedure TPUWriteSymName(idx: integer);
-var
-  base, i, c: integer;
-begin
+{ Write symbol name To TPU file }
+Procedure TPUWriteSymName(idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := idx * 32;
   i := 0;
   c := sym_name[base];
-  while c <> 0 do
-  begin
+  While c <> 0 Do
+  Begin
     writefilechar(tpu_file, c);
     i := i + 1;
     c := sym_name[base + i]
-  end
-end;
+  End
+End;
 
-{ Write type name to TPU file }
-procedure TPUWriteType(t: integer);
-begin
-  if t = TYPE_INTEGER then
-    write(tpu_file, 'INTEGER')
-  else if t = TYPE_CHAR then
-    write(tpu_file, 'CHAR')
-  else if t = TYPE_BOOLEAN then
-    write(tpu_file, 'BOOLEAN')
-  else if t = TYPE_STRING then
-    write(tpu_file, 'STRING')
-  else if t = TYPE_REAL then
-    write(tpu_file, 'REAL')
-  else if t = TYPE_VOID then
-    write(tpu_file, 'VOID')
-  else if t = TYPE_POINTER then
-    write(tpu_file, 'POINTER')
-  else if t = TYPE_RECORD then
-    write(tpu_file, 'RECORD')
-  else if t = TYPE_ARRAY then
-    write(tpu_file, 'ARRAY')
-  else
-    write(tpu_file, 'UNKNOWN')
-end;
+{ Write Type name To TPU file }
+Procedure TPUWriteType(t: Integer);
+Begin
+  If t = TYPE_INTEGER Then
+    Write(tpu_file, 'Integer')
+  Else If t = TYPE_CHAR Then
+    Write(tpu_file, 'Char')
+  Else If t = TYPE_BOOLEAN Then
+    Write(tpu_file, 'Boolean')
+  Else If t = TYPE_STRING Then
+    Write(tpu_file, 'String')
+  Else If t = TYPE_REAL Then
+    Write(tpu_file, 'Real')
+  Else If t = TYPE_VOID Then
+    Write(tpu_file, 'VOID')
+  Else If t = TYPE_POINTER Then
+    Write(tpu_file, 'POINTER')
+  Else If t = TYPE_RECORD Then
+    Write(tpu_file, 'Record')
+  Else If t = TYPE_ARRAY Then
+    Write(tpu_file, 'Array')
+  Else
+    Write(tpu_file, 'UNKNOWN')
+End;
 
-{ Write TPU file for current unit }
-procedure WriteTPUFile;
-var
-  i, base, c, j: integer;
-begin
-  { Build filename in tok_str: unitname.tpu (lowercase) }
-  for i := 0 to current_unit_len - 1 do
+{ Write TPU file For current Unit }
+Procedure WriteTPUFile;
+Var
+  i, base, c, j: Integer;
+Begin
+  { Build filename In tok_str: unitname.tpu (lowercase) }
+  For i := 0 To current_unit_len - 1 Do
     tok_str[i] := ToLower(current_unit_name[i]);
   tok_str[current_unit_len] := 46;      { . }
   tok_str[current_unit_len + 1] := 116; { t }
@@ -1572,295 +1572,295 @@ begin
   tok_str[current_unit_len + 3] := 117; { u }
   tok_str[current_unit_len + 4] := 0;
 
-  { Open file for writing using assigntokstr }
+  { Open file For writing using assigntokstr }
   assigntokstr(tpu_file, 0, current_unit_len + 4);
   rewrite(tpu_file);
 
   { Write header }
-  writeln(tpu_file, 'TUXPASCAL_UNIT_V1');
+  WriteLn(tpu_file, 'TUXPASCAL_UNIT_V1');
 
-  { Write unit name }
-  write(tpu_file, 'UNIT ');
+  { Write Unit name }
+  Write(tpu_file, 'Unit ');
   TPUWriteUnitName;
-  writeln(tpu_file);
+  WriteLn(tpu_file);
 
-  { Write interface section }
-  writeln(tpu_file, 'INTERFACE');
+  { Write Interface section }
+  WriteLn(tpu_file, 'Interface');
 
-  { Write interface symbols }
-  for i := interface_start to interface_end do
-  begin
-    if sym_kind[i] = SYM_CONST then
-    begin
-      write(tpu_file, 'CONST ');
+  { Write Interface symbols }
+  For i := interface_start To interface_end Do
+  Begin
+    If sym_kind[i] = SYM_CONST Then
+    Begin
+      Write(tpu_file, 'Const ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_const_val[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_VAR then
-    begin
-      write(tpu_file, 'VAR ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_VAR Then
+    Begin
+      Write(tpu_file, 'Var ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_offset[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_PROCEDURE then
-    begin
-      write(tpu_file, 'PROC ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_PROCEDURE Then
+    Begin
+      Write(tpu_file, 'PROC ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_var_param_flags[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_FUNCTION then
-    begin
-      write(tpu_file, 'FUNC ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_FUNCTION Then
+    Begin
+      Write(tpu_file, 'FUNC ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_var_param_flags[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_TYPEDEF then
-    begin
-      write(tpu_file, 'TYPE ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_TYPEDEF Then
+    Begin
+      Write(tpu_file, 'Type ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_const_val[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      writeln(tpu_file)
-    end
-  end;
+      WriteLn(tpu_file)
+    End
+  End;
 
-  writeln(tpu_file, 'ENDINTERFACE');
+  WriteLn(tpu_file, 'ENDINTERFACE');
 
   close(tpu_file)
-end;
+End;
 
 { Read a line from TPU file into tpu_line buffer }
-function TPUReadLine: integer;
-var
-  c: integer;
-  done: integer;
-begin
+Function TPUReadLine: Integer;
+Var
+  c: Integer;
+  done: Integer;
+Begin
   tpu_line_len := 0;
   TPUReadLine := 0;
   done := 0;
-  if not eof(tpu_file) then
-  begin
-    while (not eof(tpu_file)) and (done = 0) do
-    begin
-      read(tpu_file, c);
-      if c = 10 then
+  If Not eof(tpu_file) Then
+  Begin
+    While (Not eof(tpu_file)) And (done = 0) Do
+    Begin
+      Read(tpu_file, c);
+      If c = 10 Then
         done := 1
-      else if c <> 13 then
-      begin
+      Else If c <> 13 Then
+      Begin
         tpu_line[tpu_line_len] := c;
         tpu_line_len := tpu_line_len + 1
-      end
-    end;
+      End
+    End;
     tpu_line[tpu_line_len] := 0;
-    if tpu_line_len > 0 then
+    If tpu_line_len > 0 Then
       TPUReadLine := 1
-    else if done = 1 then
+    Else If done = 1 Then
       TPUReadLine := 1  { empty line is still a line }
-  end
-end;
+  End
+End;
 
 { Note: TPULineStartsWith removed - checks are inlined using first 3 chars }
 
-{ Parse integer from tpu_line at tpu_pos (updates tpu_pos) }
-function TPUParseInt: integer;
-var
-  neg, result: integer;
-begin
+{ Parse Integer from tpu_line at tpu_pos (updates tpu_pos) }
+Function TPUParseInt: Integer;
+Var
+  neg, result: Integer;
+Begin
   neg := 0;
   result := 0;
-  if tpu_line[tpu_pos] = 45 then  { '-' }
-  begin
+  If tpu_line[tpu_pos] = 45 Then  { '-' }
+  Begin
     neg := 1;
     tpu_pos := tpu_pos + 1
-  end;
-  while (tpu_line[tpu_pos] >= 48) and (tpu_line[tpu_pos] <= 57) do
-  begin
+  End;
+  While (tpu_line[tpu_pos] >= 48) And (tpu_line[tpu_pos] <= 57) Do
+  Begin
     result := result * 10 + (tpu_line[tpu_pos] - 48);
     tpu_pos := tpu_pos + 1
-  end;
-  if neg = 1 then
+  End;
+  If neg = 1 Then
     TPUParseInt := 0 - result
-  else
+  Else
     TPUParseInt := result
-end;
+End;
 
-{ Skip spaces in tpu_line at tpu_pos (updates tpu_pos) }
-procedure TPUSkipSpaces;
-begin
-  while tpu_line[tpu_pos] = 32 do
+{ Skip spaces In tpu_line at tpu_pos (updates tpu_pos) }
+Procedure TPUSkipSpaces;
+Begin
+  While tpu_line[tpu_pos] = 32 Do
     tpu_pos := tpu_pos + 1
-end;
+End;
 
-{ Parse identifier from tpu_line at tpu_pos, store in tok_str (updates tpu_pos) }
-procedure TPUParseIdent;
-begin
+{ Parse identifier from tpu_line at tpu_pos, store In tok_str (updates tpu_pos) }
+Procedure TPUParseIdent;
+Begin
   tok_len := 0;
   TPUSkipSpaces;
-  while (tpu_line[tpu_pos] <> 32) and (tpu_line[tpu_pos] <> 0) do
-  begin
+  While (tpu_line[tpu_pos] <> 32) And (tpu_line[tpu_pos] <> 0) Do
+  Begin
     tok_str[tok_len] := tpu_line[tpu_pos];
     tok_len := tok_len + 1;
     tpu_pos := tpu_pos + 1
-  end;
+  End;
   tok_str[tok_len] := 0
-end;
+End;
 
-{ Parse type from tpu_line at tpu_pos, return TYPE_* constant }
-function TPUParseType: integer;
-begin
+{ Parse Type from tpu_line at tpu_pos, return TYPE_* constant }
+Function TPUParseType: Integer;
+Begin
   TPUParseIdent;
-  if (tok_str[0] = 73) and (tok_str[1] = 78) and (tok_str[2] = 84) then  { INT }
+  If (tok_str[0] = 73) And (tok_str[1] = 78) And (tok_str[2] = 84) Then  { INT }
     TPUParseType := TYPE_INTEGER
-  else if (tok_str[0] = 67) and (tok_str[1] = 72) and (tok_str[2] = 65) then  { CHA }
+  Else If (tok_str[0] = 67) And (tok_str[1] = 72) And (tok_str[2] = 65) Then  { CHA }
     TPUParseType := TYPE_CHAR
-  else if (tok_str[0] = 66) and (tok_str[1] = 79) and (tok_str[2] = 79) then  { BOO }
+  Else If (tok_str[0] = 66) And (tok_str[1] = 79) And (tok_str[2] = 79) Then  { BOO }
     TPUParseType := TYPE_BOOLEAN
-  else if (tok_str[0] = 83) and (tok_str[1] = 84) and (tok_str[2] = 82) then  { STR }
+  Else If (tok_str[0] = 83) And (tok_str[1] = 84) And (tok_str[2] = 82) Then  { STR }
     TPUParseType := TYPE_STRING
-  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 65) then  { REA }
+  Else If (tok_str[0] = 82) And (tok_str[1] = 69) And (tok_str[2] = 65) Then  { REA }
     TPUParseType := TYPE_REAL
-  else if (tok_str[0] = 86) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { VOI }
+  Else If (tok_str[0] = 86) And (tok_str[1] = 79) And (tok_str[2] = 73) Then  { VOI }
     TPUParseType := TYPE_VOID
-  else if (tok_str[0] = 80) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { POI }
+  Else If (tok_str[0] = 80) And (tok_str[1] = 79) And (tok_str[2] = 73) Then  { POI }
     TPUParseType := TYPE_POINTER
-  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 67) then  { REC }
+  Else If (tok_str[0] = 82) And (tok_str[1] = 69) And (tok_str[2] = 67) Then  { REC }
     TPUParseType := TYPE_RECORD
-  else if (tok_str[0] = 65) and (tok_str[1] = 82) and (tok_str[2] = 82) then  { ARR }
+  Else If (tok_str[0] = 65) And (tok_str[1] = 82) And (tok_str[2] = 82) Then  { ARR }
     TPUParseType := TYPE_ARRAY
-  else
+  Else
     TPUParseType := TYPE_INTEGER
-end;
+End;
 
-{ Load interface from a TPU file }
-function LoadTPUInterface: integer;
-var
-  idx: integer;
-  unit_base, i: integer;
-begin
+{ Load Interface from a TPU file }
+Function LoadTPUInterface: Integer;
+Var
+  idx: Integer;
+  unit_base, i: Integer;
+Begin
   LoadTPUInterface := 0;
 
-  { Read and verify header }
-  if TPUReadLine = 0 then
-  begin
+  { Read And verify header }
+  If TPUReadLine = 0 Then
+  Begin
     LoadTPUInterface := -1
-  end
-  else
-  begin
-    { Check for TUXPASCAL_UNIT_V1 }
-    if (tpu_line[0] <> 84) or (tpu_line[1] <> 85) or (tpu_line[2] <> 88) then
-    begin
+  End
+  Else
+  Begin
+    { Check For TUXPASCAL_UNIT_V1 }
+    If (tpu_line[0] <> 84) Or (tpu_line[1] <> 85) Or (tpu_line[2] <> 88) Then
+    Begin
       LoadTPUInterface := -1
-    end
-    else
-    begin
-      { Read UNIT line }
-      if TPUReadLine = 0 then
+    End
+    Else
+    Begin
+      { Read Unit line }
+      If TPUReadLine = 0 Then
         LoadTPUInterface := -1
-      else
-      begin
-        { Store unit name for symbol prefixing }
+      Else
+      Begin
+        { Store Unit name For symbol prefixing }
         unit_base := loaded_count * 32;
-        tpu_pos := 5;  { Skip 'UNIT ' }
+        tpu_pos := 5;  { Skip 'Unit ' }
         i := 0;
-        while (tpu_line[tpu_pos] <> 0) and (i < 31) do
-        begin
+        While (tpu_line[tpu_pos] <> 0) And (i < 31) Do
+        Begin
           loaded_units[unit_base + i] := tpu_line[tpu_pos];
           tpu_pos := tpu_pos + 1;
           i := i + 1
-        end;
+        End;
         loaded_units[unit_base + i] := 0;
 
         unit_sym_start[loaded_count] := sym_count;
 
-        { Read INTERFACE line }
-        if TPUReadLine = 0 then
+        { Read Interface line }
+        If TPUReadLine = 0 Then
           LoadTPUInterface := -1
-        else
-        begin
-          { Parse interface declarations until ENDINTERFACE }
-          while TPUReadLine = 1 do
-          begin
-            if (tpu_line[0] = 69) and (tpu_line[1] = 78) and (tpu_line[2] = 68) then
-            begin
+        Else
+        Begin
+          { Parse Interface declarations Until ENDINTERFACE }
+          While TPUReadLine = 1 Do
+          Begin
+            If (tpu_line[0] = 69) And (tpu_line[1] = 78) And (tpu_line[2] = 68) Then
+            Begin
               { ENDINTERFACE }
               unit_sym_end[loaded_count] := sym_count - 1;
               loaded_count := loaded_count + 1;
               LoadTPUInterface := 1
-            end
-            else if (tpu_line[0] = 67) and (tpu_line[1] = 79) and (tpu_line[2] = 78) then
-            begin
-              { CONST name type value }
-              tpu_pos := 6;  { Skip 'CONST ' }
+            End
+            Else If (tpu_line[0] = 67) And (tpu_line[1] = 79) And (tpu_line[2] = 78) Then
+            Begin
+              { Const name Type value }
+              tpu_pos := 6;  { Skip 'Const ' }
               TPUParseIdent;
               idx := SymAdd(SYM_CONST, TYPE_INTEGER, 0, 0);
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_const_val[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 86) and (tpu_line[1] = 65) and (tpu_line[2] = 82) then
-            begin
-              { VAR name type offset }
-              tpu_pos := 4;  { Skip 'VAR ' }
+            End
+            Else If (tpu_line[0] = 86) And (tpu_line[1] = 65) And (tpu_line[2] = 82) Then
+            Begin
+              { Var name Type offset }
+              tpu_pos := 4;  { Skip 'Var ' }
               TPUParseIdent;
               idx := SymAdd(SYM_VAR, TYPE_INTEGER, 0, 0);
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_offset[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 80) and (tpu_line[1] = 82) and (tpu_line[2] = 79) then
-            begin
+            End
+            Else If (tpu_line[0] = 80) And (tpu_line[1] = 82) And (tpu_line[2] = 79) Then
+            Begin
               { PROC name label flags }
               tpu_pos := 5;  { Skip 'PROC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, 0, 0);
-              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this Unit }
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_var_param_flags[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 70) and (tpu_line[1] = 85) and (tpu_line[2] = 78) then
-            begin
-              { FUNC name type label flags }
+            End
+            Else If (tpu_line[0] = 70) And (tpu_line[1] = 85) And (tpu_line[2] = 78) Then
+            Begin
+              { FUNC name Type label flags }
               tpu_pos := 5;  { Skip 'FUNC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, 0, 0);
-              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this Unit }
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_var_param_flags[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 84) and (tpu_line[1] = 89) and (tpu_line[2] = 80) then
-            begin
-              { TYPE name kind const_val label }
-              tpu_pos := 5;  { Skip 'TYPE ' }
+            End
+            Else If (tpu_line[0] = 84) And (tpu_line[1] = 89) And (tpu_line[2] = 80) Then
+            Begin
+              { Type name kind const_val label }
+              tpu_pos := 5;  { Skip 'Type ' }
               TPUParseIdent;
               idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, 0, 0);
               TPUSkipSpaces;
@@ -1869,26 +1869,26 @@ begin
               sym_const_val[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt
-            end
-          end
-        end
-      end
-    end
-  end
-end;
+            End
+          End
+        End
+      End
+    End
+  End
+End;
 
-{ Parse uses clause: uses Unit1, Unit2, ...; }
-procedure ParseUsesClause;
-var
-  i: integer;
-begin
-  NextToken;  { consume 'uses' }
-  repeat
-    if tok_type <> TOK_IDENT then
+{ Parse Uses clause: Uses Unit1, Unit2, ...; }
+Procedure ParseUsesClause;
+Var
+  i: Integer;
+Begin
+  NextToken;  { consume 'Uses' }
+  Repeat
+    If tok_type <> TOK_IDENT Then
       Error(6);  { expected identifier }
 
-    { Build TPU filename in tok_str: unitname.tpu (lowercase for case-insensitivity) }
-    for i := 0 to tok_len - 1 do
+    { Build TPU filename In tok_str: unitname.tpu (lowercase For Case-insensitivity) }
+    For i := 0 To tok_len - 1 Do
       tok_str[i] := ToLower(tok_str[i]);
     tok_str[tok_len] := 46;      { . }
     tok_str[tok_len + 1] := 116; { t }
@@ -1900,33 +1900,33 @@ begin
     assigntokstr(tpu_file, 0, tok_len + 4);
     reset(tpu_file);
 
-    { Load interface symbols }
-    if LoadTPUInterface < 0 then
-      Error(18);  { unit not found or invalid }
+    { Load Interface symbols }
+    If LoadTPUInterface < 0 Then
+      Error(18);  { Unit Not found Or invalid }
 
     close(tpu_file);
 
     NextToken;
-    if tok_type = TOK_COMMA then
+    If tok_type = TOK_COMMA Then
       NextToken
-  until tok_type = TOK_SEMICOLON;
+  Until tok_type = TOK_SEMICOLON;
   Expect(TOK_SEMICOLON)
-end;
+End;
 
-{ Parse a unit: unit Name; interface ... implementation ... end. }
-procedure ParseUnit;
-var
-  unit_lbl: integer;
-  i: integer;
-begin
-  { unit Name; }
-  NextToken;  { consume 'unit' }
-  if tok_type <> TOK_IDENT then
+{ Parse a Unit: Unit Name; Interface ... Implementation ... End. }
+Procedure ParseUnit;
+Var
+  unit_lbl: Integer;
+  i: Integer;
+Begin
+  { Unit Name; }
+  NextToken;  { consume 'Unit' }
+  If tok_type <> TOK_IDENT Then
     Error(6);  { expected identifier }
 
-  { Store unit name for qualified symbol names }
+  { Store Unit name For qualified symbol names }
   current_unit_len := tok_len;
-  for i := 0 to tok_len - 1 do
+  For i := 0 To tok_len - 1 Do
     current_unit_name[i] := tok_str[i];
   current_unit_name[tok_len] := 0;
 
@@ -1934,14 +1934,14 @@ begin
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Emit unit header - no _main, just label for unit init }
+  { Emit Unit header - no _main, just label For Unit init }
   EmitAlign4;
 
-  { Jump over runtime routines (units still need runtime for their code) }
+  { Jump over runtime routines (units still need runtime For their code) }
   unit_lbl := NewLabel;
   EmitBranchLabel(unit_lbl);
 
-  { Emit runtime routines needed by unit code }
+  { Emit runtime routines needed by Unit code }
   rt_print_int := NewLabel;
   rt_newline := NewLabel;
   rt_readchar := NewLabel;
@@ -2046,106 +2046,106 @@ begin
 
   EmitLabel(unit_lbl);
 
-  { interface section }
+  { Interface section }
   Expect(TOK_INTERFACE);
   in_interface := 1;
-  interface_start := sym_count;  { Track first interface symbol }
+  interface_start := sym_count;  { Track first Interface symbol }
 
-  { Parse interface declarations (const, type, var, procedure/function headers) }
-  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
-        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
-        (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_CONST then
+  { Parse Interface declarations (Const, Type, Var, Procedure/Function headers) }
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_TYPE_KW) Or
+        (tok_type = TOK_VAR) Or (tok_type = TOK_PROCEDURE) Or
+        (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else if tok_type = TOK_VAR then
+    Else If tok_type = TOK_VAR Then
       ParseVarDeclarations
-    else if tok_type = TOK_PROCEDURE then
-    begin
-      { In interface, only parse the header }
+    Else If tok_type = TOK_PROCEDURE Then
+    Begin
+      { In Interface, only parse the header }
       ParseProcedureDeclaration
-    end
-    else if tok_type = TOK_FUNCTION then
-    begin
+    End
+    Else If tok_type = TOK_FUNCTION Then
+    Begin
       ParseFunctionDeclaration
-    end
-  end;
+    End
+  End;
 
-  interface_end := sym_count - 1;  { Track last interface symbol }
+  interface_end := sym_count - 1;  { Track last Interface symbol }
   in_interface := 0;
 
-  { implementation section }
+  { Implementation section }
   Expect(TOK_IMPLEMENTATION);
 
-  { Parse implementation (full procedure/function bodies) }
-  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
-        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
-        (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_CONST then
+  { Parse Implementation (full Procedure/Function bodies) }
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_TYPE_KW) Or
+        (tok_type = TOK_VAR) Or (tok_type = TOK_PROCEDURE) Or
+        (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else if tok_type = TOK_VAR then
+    Else If tok_type = TOK_VAR Then
       ParseVarDeclarations
-    else if tok_type = TOK_PROCEDURE then
+    Else If tok_type = TOK_PROCEDURE Then
       ParseProcedureDeclaration
-    else if tok_type = TOK_FUNCTION then
+    Else If tok_type = TOK_FUNCTION Then
       ParseFunctionDeclaration
-  end;
+  End;
 
-  { Unit initialization entry point - always emit even if no init code }
+  { Unit initialization entry point - always emit even If no init code }
   EmitGloblUnitInit;
   EmitUnitInitLabel;
   EmitStp;
   EmitMovFP;
 
   { Optional initialization section }
-  if tok_type = TOK_BEGIN then
-  begin
+  If tok_type = TOK_BEGIN Then
+  Begin
     NextToken;
-    while tok_type <> TOK_END do
-    begin
+    While tok_type <> TOK_END Do
+    Begin
       ParseStatement;
-      if tok_type = TOK_SEMICOLON then
+      If tok_type = TOK_SEMICOLON Then
         NextToken
-    end;
+    End;
     Expect(TOK_END)
-  end;
+  End;
 
   Expect(TOK_DOT);
 
-  { Unit init returns to caller }
+  { Unit init returns To caller }
   EmitLdp;
   EmitRet;
 
-  { Write TPU file with interface information }
+  { Write TPU file With Interface information }
   WriteTPUFile;
 
   compiling_unit := 0
-end;
+End;
 
-procedure ParseProgram;
-var
-  main_lbl, i: integer;
-begin
-  { Check if this is a unit or program }
-  if tok_type = TOK_UNIT then
-  begin
+Procedure ParseProgram;
+Var
+  main_lbl, i: Integer;
+Begin
+  { Check If this is a Unit Or Program }
+  If tok_type = TOK_UNIT Then
+  Begin
     ParseUnit;
-    halt(0)  { Unit compilation done }
-  end;
+    Halt(0)  { Unit compilation done }
+  End;
 
   Expect(TOK_PROGRAM);
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Check for uses clause }
-  if tok_type = TOK_USES then
+  { Check For Uses clause }
+  If tok_type = TOK_USES Then
     ParseUsesClause;
 
   { Emit header }
@@ -2260,30 +2260,30 @@ begin
   EmitArccosRuntime;
   EmitParamStrRuntime;
 
-  { Main program entry }
+  { Main Program entry }
   EmitLabel(main_lbl);
   EmitStp;
   EmitMovFP;
 
-  { Save argc to x25, argv to x26 (before any calls clobber x0/x1) }
+  { Save argc To x25, argv To x26 (before any calls clobber x0/x1) }
   { mov x25, x0 }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
-  writechar(120); writechar(48);  { x0 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(120); WriteChar(50); WriteChar(53); WriteChar(44); WriteChar(32);  { x25, }
+  WriteChar(120); WriteChar(48);  { x0 }
   EmitNL;
   { mov x26, x1 }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);  { x26, }
-  writechar(120); writechar(49);  { x1 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(120); WriteChar(50); WriteChar(54); WriteChar(44); WriteChar(32);  { x26, }
+  WriteChar(120); WriteChar(49);  { x1 }
   EmitNL;
 
   EmitFileOpenInit;
   EmitBL(rt_heap_init);
 
-  { Call unit initialization routines }
-  for i := 0 to loaded_count - 1 do
+  { Call Unit initialization routines }
+  For i := 0 To loaded_count - 1 Do
     EmitBLUnitInit(i);
 
   ParseBlock;
@@ -2294,11 +2294,11 @@ begin
   EmitMovX0(0);
   EmitMovX16(33554433);  { 0x2000001 }
   EmitSvc
-end;
+End;
 
 { ----- Main ----- }
 
-begin
+Begin
   { Initialize }
   line_num := 1;
   col_num := 0;

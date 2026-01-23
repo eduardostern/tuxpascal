@@ -1,7 +1,7 @@
-  { Read first character and token }
+  { Read first character And token }
   NextChar;
   NextToken;
 
-  { Compile the program }
+  { Compile the Program }
   ParseProgram
-end.
+End.

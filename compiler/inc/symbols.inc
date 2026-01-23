@@ -1,40 +1,40 @@
 { ----- Symbol Table ----- }
 
-procedure CopyTokenToSym(idx: integer);
-var
-  i: integer;
-  base: integer;
-begin
+Procedure CopyTokenToSym(idx: Integer);
+Var
+  i: Integer;
+  base: Integer;
+Begin
   { sym_name is flattened: base = idx * 32 }
   base := idx * 32;
   i := 0;
-  while i < tok_len do
-  begin
+  While i < tok_len Do
+  Begin
     sym_name[base + i] := tok_str[i];
     i := i + 1
-  end;
+  End;
   sym_name[base + tok_len] := 0
-end;
+End;
 
-function SymLookup: integer;
-var
-  i: integer;
-  found: integer;
-begin
-  { Search backwards to find most recent definition }
+Function SymLookup: Integer;
+Var
+  i: Integer;
+  found: Integer;
+Begin
+  { Search backwards To find most recent definition }
   i := sym_count - 1;
   found := -1;
-  while (i >= 0) and (found = -1) do
-  begin
-    if StrEqual(i) = 1 then
+  While (i >= 0) And (found = -1) Do
+  Begin
+    If StrEqual(i) = 1 Then
       found := i;
     i := i - 1
-  end;
+  End;
   SymLookup := found
-end;
+End;
 
-function SymAdd(kind, typ, level, offset: integer): integer;
-begin
+Function SymAdd(kind, typ, level, offset: Integer): Integer;
+Begin
   CopyTokenToSym(sym_count);
   sym_kind[sym_count] := kind;
   sym_type[sym_count] := typ;
@@ -44,62 +44,62 @@ begin
   sym_const_val[sym_count] := 0;
   sym_is_var_param[sym_count] := 0;
   sym_var_param_flags[sym_count] := 0;
-  sym_unit_idx[sym_count] := -1;  { -1 = local symbol, >= 0 = imported from unit }
+  sym_unit_idx[sym_count] := -1;  { -1 = local symbol, >= 0 = imported from Unit }
   sym_count := sym_count + 1;
   SymAdd := sym_count - 1
-end;
+End;
 
-procedure PopScope(level: integer);
-begin
-  while (sym_count > 0) and (sym_level[sym_count - 1] >= level) do
+Procedure PopScope(level: Integer);
+Begin
+  While (sym_count > 0) And (sym_level[sym_count - 1] >= level) Do
     sym_count := sym_count - 1
-end;
+End;
 
-{ Check if parameter position i is marked as var in flags bitmap }
-function IsVarParam(flags, i: integer): integer;
-var
-  bit_val, result: integer;
-begin
-  if i = 0 then bit_val := 1
-  else if i = 1 then bit_val := 2
-  else if i = 2 then bit_val := 4
-  else if i = 3 then bit_val := 8
-  else if i = 4 then bit_val := 16
-  else if i = 5 then bit_val := 32
-  else if i = 6 then bit_val := 64
-  else bit_val := 128;
-  result := (flags div bit_val) mod 2;
+{ Check If parameter position i is marked as Var In flags bitmap }
+Function IsVarParam(flags, i: Integer): Integer;
+Var
+  bit_val, result: Integer;
+Begin
+  If i = 0 Then bit_val := 1
+  Else If i = 1 Then bit_val := 2
+  Else If i = 2 Then bit_val := 4
+  Else If i = 3 Then bit_val := 8
+  Else If i = 4 Then bit_val := 16
+  Else If i = 5 Then bit_val := 32
+  Else If i = 6 Then bit_val := 64
+  Else bit_val := 128;
+  result := (flags Div bit_val) Mod 2;
   IsVarParam := result
-end;
+End;
 
-{ Find a field in a record type, returns field index or -1 }
-function FindField(type_idx: integer): integer;
-var
-  i, j, base, match: integer;
-  first_fld: integer;
-begin
+{ Find a field In a Record Type, returns field index Or -1 }
+Function FindField(type_idx: Integer): Integer;
+Var
+  i, j, base, match: Integer;
+  first_fld: Integer;
+Begin
   FindField := -1;
   first_fld := sym_const_val[type_idx];
   i := first_fld;
-  while (i < field_count) and (field_rec_idx[i] = type_idx) do
-  begin
-    { Compare field name with current token }
+  While (i < field_count) And (field_rec_idx[i] = type_idx) Do
+  Begin
+    { Compare field name With current token }
     base := i * 32;
     match := 1;
     j := 0;
-    while (j < tok_len) and (match = 1) do
-    begin
-      if ToLower(field_name[base + j]) <> ToLower(tok_str[j]) then
+    While (j < tok_len) And (match = 1) Do
+    Begin
+      If ToLower(field_name[base + j]) <> ToLower(tok_str[j]) Then
         match := 0;
       j := j + 1
-    end;
-    if (match = 1) and (field_name[base + tok_len] = 0) then
-    begin
+    End;
+    If (match = 1) And (field_name[base + tok_len] = 0) Then
+    Begin
       FindField := i;
-      i := field_count  { exit loop }
-    end
-    else
+      i := field_count  { Exit loop }
+    End
+    Else
       i := i + 1
-  end
-end;
+  End
+End;
 

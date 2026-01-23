@@ -1,15 +1,15 @@
 { TuxPascal - Self-hosting Pascal Compiler }
-{ Written in Pascal, compiled by the bootstrap compiler }
-{ Split into include files for modularity }
+{ Written In Pascal, compiled by the bootstrap compiler }
+{ Split into include files For modularity }
 
-program TuxPascal;
+Program TuxPascal;
 
-{$I inc/constants.inc}
-{$I inc/utility.inc}
-{$I inc/lexer.inc}
-{$I inc/symbols.inc}
-{$I inc/emitters.inc}
-{$I inc/runtime.inc}
-{$I inc/parser.inc}
-{$I inc/declarations.inc}
-{$I inc/main.inc}
+{$I Inc/constants.Inc}
+{$I Inc/utility.Inc}
+{$I Inc/lexer.Inc}
+{$I Inc/symbols.Inc}
+{$I Inc/emitters.Inc}
+{$I Inc/runtime.Inc}
+{$I Inc/parser.Inc}
+{$I Inc/declarations.Inc}
+{$I Inc/main.Inc}

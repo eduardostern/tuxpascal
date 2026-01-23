@@ -1,629 +1,629 @@
 { ----- Output Helpers ----- }
 
-procedure EmitIndent;
-begin
-  write('    ')
-end;
+Procedure EmitIndent;
+Begin
+  Write('    ')
+End;
 
-procedure EmitNL;
-begin
-  writeln
-end;
+Procedure EmitNL;
+Begin
+  WriteLn
+End;
 
-procedure EmitGlobl;
-begin
-  writeln('.globl _main')
-end;
+Procedure EmitGlobl;
+Begin
+  WriteLn('.globl _main')
+End;
 
-procedure EmitAlign4;
-begin
-  writeln('.align 4')
-end;
+Procedure EmitAlign4;
+Begin
+  WriteLn('.align 4')
+End;
 
-procedure EmitMain;
-begin
-  writeln('_main:')
-end;
+Procedure EmitMain;
+Begin
+  WriteLn('_main:')
+End;
 
-procedure EmitLabel(n: integer);
-begin
-  write('L'); write(n); writeln(':')
-end;
+Procedure EmitLabel(n: Integer);
+Begin
+  Write('L'); Write(n); WriteLn(':')
+End;
 
-function NewLabel: integer;
-begin
+Function NewLabel: Integer;
+Begin
   NewLabel := label_count;
   label_count := label_count + 1
-end;
+End;
 
-procedure EmitStp;
-begin
-  writeln('    stp x29, x30, [sp, #-16]!')
-end;
+Procedure EmitStp;
+Begin
+  WriteLn('    stp x29, x30, [sp, #-16]!')
+End;
 
-procedure EmitMovFP;
-begin
-  writeln('    mov x29, sp')
-end;
+Procedure EmitMovFP;
+Begin
+  WriteLn('    mov x29, sp')
+End;
 
-procedure EmitLdp;
-begin
-  writeln('    ldp x29, x30, [sp], #16')
-end;
+Procedure EmitLdp;
+Begin
+  WriteLn('    ldp x29, x30, [sp], #16')
+End;
 
-procedure EmitRet;
-begin
-  writeln('    ret')
-end;
+Procedure EmitRet;
+Begin
+  WriteLn('    ret')
+End;
 
-procedure EmitStoreStaticLink;
-begin
-  writeln('    stur x9, [x29, #-8]')
-end;
+Procedure EmitStoreStaticLink;
+Begin
+  WriteLn('    stur x9, [x29, #-8]')
+End;
 
-procedure EmitStaticLink(sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x9, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x9, [x9, #-8]')
-end;
+Procedure EmitStaticLink(sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x9, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x9, [x9, #-8]')
+End;
 
-procedure EmitMovX0(val: integer);
-var
-  lo, hi: integer;
-  neg: integer;
-begin
+Procedure EmitMovX0(val: Integer);
+Var
+  lo, hi: Integer;
+  neg: Integer;
+Begin
   neg := 0;
-  if val < 0 then
-  begin
+  If val < 0 Then
+  Begin
     neg := 1;
     val := 0 - val
-  end;
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x0, #'); writeln(lo);
-    write('    movk x0, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x0, #'); writeln(val)
-  end;
-  if neg = 1 then
-    writeln('    neg x0, x0')
-end;
+  End;
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x0, #'); WriteLn(lo);
+    Write('    movk x0, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x0, #'); WriteLn(val)
+  End;
+  If neg = 1 Then
+    WriteLn('    neg x0, x0')
+End;
 
-procedure EmitMovX16(val: integer);
-var
-  lo, hi: integer;
-begin
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x16, #'); writeln(lo);
-    write('    movk x16, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x16, #'); writeln(val)
-  end
-end;
+Procedure EmitMovX16(val: Integer);
+Var
+  lo, hi: Integer;
+Begin
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x16, #'); WriteLn(lo);
+    Write('    movk x16, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x16, #'); WriteLn(val)
+  End
+End;
 
-procedure EmitMovX8(val: integer);
-var
-  lo, hi: integer;
-  neg: integer;
-begin
+Procedure EmitMovX8(val: Integer);
+Var
+  lo, hi: Integer;
+  neg: Integer;
+Begin
   neg := 0;
-  if val < 0 then
-  begin
+  If val < 0 Then
+  Begin
     neg := 1;
     val := 0 - val
-  end;
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x8, #'); writeln(lo);
-    write('    movk x8, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x8, #'); writeln(val)
-  end;
-  if neg = 1 then
-    writeln('    neg x8, x8')
-end;
+  End;
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x8, #'); WriteLn(lo);
+    Write('    movk x8, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x8, #'); WriteLn(val)
+  End;
+  If neg = 1 Then
+    WriteLn('    neg x8, x8')
+End;
 
-procedure EmitSubLargeOffset(dest, src, offset: integer);
-var
-  lo, hi: integer;
-begin
-  if offset <= 4095 then
-  begin
-    write('    sub x'); write(dest); write(', x'); write(src); write(', #'); writeln(offset)
-  end
-  else
-  begin
-    lo := offset mod 65536;
-    hi := offset div 65536;
-    write('    movz x10, #'); writeln(lo);
-    if hi > 0 then
-    begin
-      write('    movk x10, #'); write(hi); writeln(', lsl #16')
-    end;
-    write('    sub x'); write(dest); write(', x'); write(src); writeln(', x10')
-  end
-end;
+Procedure EmitSubLargeOffset(dest, src, offset: Integer);
+Var
+  lo, hi: Integer;
+Begin
+  If offset <= 4095 Then
+  Begin
+    Write('    sub x'); Write(dest); Write(', x'); Write(src); Write(', #'); WriteLn(offset)
+  End
+  Else
+  Begin
+    lo := offset Mod 65536;
+    hi := offset Div 65536;
+    Write('    movz x10, #'); WriteLn(lo);
+    If hi > 0 Then
+    Begin
+      Write('    movk x10, #'); Write(hi); WriteLn(', lsl #16')
+    End;
+    Write('    sub x'); Write(dest); Write(', x'); Write(src); WriteLn(', x10')
+  End
+End;
 
-procedure EmitSvc;
-begin
-  writeln('    svc #0x80')
-end;
+Procedure EmitSvc;
+Begin
+  WriteLn('    svc #0x80')
+End;
 
-procedure EmitPushX0;
-begin
-  writeln('    str x0, [sp, #-16]!')
-end;
+Procedure EmitPushX0;
+Begin
+  WriteLn('    str x0, [sp, #-16]!')
+End;
 
-procedure EmitPopX0;
-begin
-  writeln('    ldr x0, [sp], #16')
-end;
+Procedure EmitPopX0;
+Begin
+  WriteLn('    ldr x0, [sp], #16')
+End;
 
-procedure EmitPopX1;
-begin
-  writeln('    ldr x1, [sp], #16')
-end;
+Procedure EmitPopX1;
+Begin
+  WriteLn('    ldr x1, [sp], #16')
+End;
 
-procedure EmitPushX1;
-begin
-  writeln('    str x1, [sp, #-16]!')
-end;
+Procedure EmitPushX1;
+Begin
+  WriteLn('    str x1, [sp, #-16]!')
+End;
 
-procedure EmitAdd;
-begin
-  writeln('    add x0, x1, x0')
-end;
+Procedure EmitAdd;
+Begin
+  WriteLn('    add x0, x1, x0')
+End;
 
-procedure EmitSub;
-begin
-  writeln('    sub x0, x1, x0')
-end;
+Procedure EmitSub;
+Begin
+  WriteLn('    sub x0, x1, x0')
+End;
 
-procedure EmitMul;
-begin
-  writeln('    mul x0, x1, x0')
-end;
+Procedure EmitMul;
+Begin
+  WriteLn('    mul x0, x1, x0')
+End;
 
-procedure EmitSDiv;
-begin
-  writeln('    sdiv x0, x1, x0')
-end;
+Procedure EmitSDiv;
+Begin
+  WriteLn('    sdiv x0, x1, x0')
+End;
 
-procedure EmitMovX0X20;
-begin
-  writeln('    mov x0, x20')
-end;
+Procedure EmitMovX0X20;
+Begin
+  WriteLn('    mov x0, x20')
+End;
 
-procedure EmitBranchLabel(lbl: integer);
-begin
-  write('    b L'); writeln(lbl)
-end;
+Procedure EmitBranchLabel(lbl: Integer);
+Begin
+  Write('    b L'); WriteLn(lbl)
+End;
 
-procedure EmitBranchLabelZ(lbl: integer);
-begin
-  write('    cbz x0, L'); writeln(lbl)
-end;
+Procedure EmitBranchLabelZ(lbl: Integer);
+Begin
+  Write('    cbz x0, L'); WriteLn(lbl)
+End;
 
-procedure EmitBranchLabelNZ(lbl: integer);
-begin
-  write('    cbnz x0, L'); writeln(lbl)
-end;
+Procedure EmitBranchLabelNZ(lbl: Integer);
+Begin
+  Write('    cbnz x0, L'); WriteLn(lbl)
+End;
 
-procedure EmitBL(lbl: integer);
-begin
-  write('    bl L'); writeln(lbl)
-end;
+Procedure EmitBL(lbl: Integer);
+Begin
+  Write('    bl L'); WriteLn(lbl)
+End;
 
-procedure EmitCmpX0X1;
-begin
-  writeln('    cmp x1, x0')
-end;
+Procedure EmitCmpX0X1;
+Begin
+  WriteLn('    cmp x1, x0')
+End;
 
-procedure EmitCset(cond: integer);
-begin
-  write('    cset x0, ');
-  if cond = 0 then writeln('eq')
-  else if cond = 1 then writeln('ne')
-  else if cond = 2 then writeln('lt')
-  else if cond = 3 then writeln('le')
-  else if cond = 4 then writeln('gt')
-  else writeln('ge')
-end;
+Procedure EmitCset(cond: Integer);
+Begin
+  Write('    cset x0, ');
+  If cond = 0 Then WriteLn('eq')
+  Else If cond = 1 Then WriteLn('ne')
+  Else If cond = 2 Then WriteLn('lt')
+  Else If cond = 3 Then WriteLn('le')
+  Else If cond = 4 Then WriteLn('gt')
+  Else WriteLn('ge')
+End;
 
-procedure EmitLdurX0(offset: integer);
-begin
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    ldur x0, [x29, #'); write(offset); writeln(']')
-  end
-  else
-  begin
+Procedure EmitLdurX0(offset: Integer);
+Begin
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    ldur x0, [x29, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
     EmitMovX8(offset);
-    writeln('    add x8, x29, x8');
-    writeln('    ldr x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x29, x8');
+    WriteLn('    ldr x0, [x8]')
+  End
+End;
 
-procedure EmitLdurX0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    ldur x0, [x8, #'); write(offset); writeln(']')
-  end
-  else
-  begin
-    writeln('    mov x9, x8');
+Procedure EmitLdurX0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    ldur x0, [x8, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
+    WriteLn('    mov x9, x8');
     EmitMovX8(offset);
-    writeln('    add x8, x9, x8');
-    writeln('    ldr x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x9, x8');
+    WriteLn('    ldr x0, [x8]')
+  End
+End;
 
-procedure EmitFollowChain(sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]')
-end;
+Procedure EmitFollowChain(sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]')
+End;
 
-procedure EmitVarAddr(var_idx, cur_scope: integer);
-var
-  offset, var_level, i: integer;
-begin
+Procedure EmitVarAddr(var_idx, cur_scope: Integer);
+Var
+  offset, var_level, i: Integer;
+Begin
   offset := sym_offset[var_idx];
   var_level := sym_level[var_idx];
 
-  if var_level < cur_scope then
-  begin
-    writeln('    mov x8, x29');
-    for i := cur_scope downto var_level + 1 do
-      writeln('    ldur x8, [x8, #-8]');
-    if offset < 0 then
+  If var_level < cur_scope Then
+  Begin
+    WriteLn('    mov x8, x29');
+    For i := cur_scope DownTo var_level + 1 Do
+      WriteLn('    ldur x8, [x8, #-8]');
+    If offset < 0 Then
       EmitSubLargeOffset(0, 8, 0 - offset)
-    else
-    begin
-      if offset <= 4095 then
-      begin
-        write('    add x0, x8, #'); writeln(offset)
-      end
-      else
-      begin
-        writeln('    mov x9, x8');
+    Else
+    Begin
+      If offset <= 4095 Then
+      Begin
+        Write('    add x0, x8, #'); WriteLn(offset)
+      End
+      Else
+      Begin
+        WriteLn('    mov x9, x8');
         EmitMovX8(offset);
-        writeln('    add x0, x9, x8')
-      end
-    end
-  end
-  else
-  begin
-    if offset < 0 then
+        WriteLn('    add x0, x9, x8')
+      End
+    End
+  End
+  Else
+  Begin
+    If offset < 0 Then
       EmitSubLargeOffset(0, 29, 0 - offset)
-    else
-    begin
-      if offset <= 4095 then
-      begin
-        write('    add x0, x29, #'); writeln(offset)
-      end
-      else
-      begin
+    Else
+    Begin
+      If offset <= 4095 Then
+      Begin
+        Write('    add x0, x29, #'); WriteLn(offset)
+      End
+      Else
+      Begin
         EmitMovX8(offset);
-        writeln('    add x0, x29, x8')
-      end
-    end
-  end
-end;
+        WriteLn('    add x0, x29, x8')
+      End
+    End
+  End
+End;
 
-procedure EmitSturX0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
+Procedure EmitSturX0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
   EmitPushX0;
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
   EmitPopX0;
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    stur x0, [x8, #'); write(offset); writeln(']')
-  end
-  else
-  begin
-    writeln('    mov x9, x8');
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    stur x0, [x8, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
+    WriteLn('    mov x9, x8');
     EmitPushX0;
     EmitMovX8(offset);
-    writeln('    add x8, x9, x8');
+    WriteLn('    add x8, x9, x8');
     EmitPopX0;
-    writeln('    str x0, [x8]')
-  end
-end;
+    WriteLn('    str x0, [x8]')
+  End
+End;
 
-procedure EmitSturX0(offset: integer);
-begin
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    stur x0, [x29, #'); write(offset); writeln(']')
-  end
-  else
-  begin
+Procedure EmitSturX0(offset: Integer);
+Begin
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    stur x0, [x29, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
     EmitMovX8(offset);
-    writeln('    add x8, x29, x8');
-    writeln('    str x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x29, x8');
+    WriteLn('    str x0, [x8]')
+  End
+End;
 
-procedure EmitSubSP(n: integer);
-begin
-  if n <= 4095 then
-  begin
-    write('    sub sp, sp, #'); writeln(n)
-  end
-  else
-  begin
+Procedure EmitSubSP(n: Integer);
+Begin
+  If n <= 4095 Then
+  Begin
+    Write('    sub sp, sp, #'); WriteLn(n)
+  End
+  Else
+  Begin
     EmitMovX8(n);
-    writeln('    sub sp, sp, x8')
-  end
-end;
+    WriteLn('    sub sp, sp, x8')
+  End
+End;
 
-procedure EmitAddSP(n: integer);
-begin
-  if n <= 4095 then
-  begin
-    write('    add sp, sp, #'); writeln(n)
-  end
-  else
-  begin
+Procedure EmitAddSP(n: Integer);
+Begin
+  If n <= 4095 Then
+  Begin
+    Write('    add sp, sp, #'); WriteLn(n)
+  End
+  Else
+  Begin
     EmitMovX8(n);
-    writeln('    add sp, sp, x8')
-  end
-end;
+    WriteLn('    add sp, sp, x8')
+  End
+End;
 
-procedure EmitNeg;
-begin
-  writeln('    neg x0, x0')
-end;
+Procedure EmitNeg;
+Begin
+  WriteLn('    neg x0, x0')
+End;
 
-procedure EmitMsub;
-begin
-  writeln('    msub x0, x0, x2, x1')
-end;
+Procedure EmitMsub;
+Begin
+  WriteLn('    msub x0, x0, x2, x1')
+End;
 
-procedure EmitMovX2X0;
-begin
-  writeln('    mov x2, x0')
-end;
+Procedure EmitMovX2X0;
+Begin
+  WriteLn('    mov x2, x0')
+End;
 
-procedure EmitAndX0X1;
-begin
-  writeln('    and x0, x1, x0')
-end;
+Procedure EmitAndX0X1;
+Begin
+  WriteLn('    And x0, x1, x0')
+End;
 
-procedure EmitOrrX0X1;
-begin
-  writeln('    orr x0, x1, x0')
-end;
+Procedure EmitOrrX0X1;
+Begin
+  WriteLn('    orr x0, x1, x0')
+End;
 
-procedure EmitAndImm(val: integer);
-begin
-  write('    and x0, x0, #'); writeln(val)
-end;
+Procedure EmitAndImm(val: Integer);
+Begin
+  Write('    And x0, x0, #'); WriteLn(val)
+End;
 
-procedure EmitEorX0(val: integer);
-begin
-  write('    eor x0, x0, #'); writeln(val)
-end;
+Procedure EmitEorX0(val: Integer);
+Begin
+  Write('    eor x0, x0, #'); WriteLn(val)
+End;
 
 { ----- Floating Point Emitters ----- }
 
-procedure EmitPushD0;
-begin
-  writeln('    str d0, [sp, #-16]!')
-end;
+Procedure EmitPushD0;
+Begin
+  WriteLn('    str d0, [sp, #-16]!')
+End;
 
-procedure EmitPopD0;
-begin
-  writeln('    ldr d0, [sp], #16')
-end;
+Procedure EmitPopD0;
+Begin
+  WriteLn('    ldr d0, [sp], #16')
+End;
 
-procedure EmitPopD1;
-begin
-  writeln('    ldr d1, [sp], #16')
-end;
+Procedure EmitPopD1;
+Begin
+  WriteLn('    ldr d1, [sp], #16')
+End;
 
-procedure EmitFAdd;
-begin
-  writeln('    fadd d0, d1, d0')
-end;
+Procedure EmitFAdd;
+Begin
+  WriteLn('    fadd d0, d1, d0')
+End;
 
-procedure EmitFSub;
-begin
-  writeln('    fsub d0, d1, d0')
-end;
+Procedure EmitFSub;
+Begin
+  WriteLn('    fsub d0, d1, d0')
+End;
 
-procedure EmitFMul;
-begin
-  writeln('    fmul d0, d1, d0')
-end;
+Procedure EmitFMul;
+Begin
+  WriteLn('    fmul d0, d1, d0')
+End;
 
-procedure EmitFDiv;
-begin
-  writeln('    fdiv d0, d1, d0')
-end;
+Procedure EmitFDiv;
+Begin
+  WriteLn('    fdiv d0, d1, d0')
+End;
 
-procedure EmitFNeg;
-begin
-  writeln('    fneg d0, d0')
-end;
+Procedure EmitFNeg;
+Begin
+  WriteLn('    fneg d0, d0')
+End;
 
-procedure EmitFCmp;
-begin
-  writeln('    fcmp d1, d0')
-end;
+Procedure EmitFCmp;
+Begin
+  WriteLn('    fcmp d1, d0')
+End;
 
-procedure EmitScvtfD0X0;
-begin
-  writeln('    scvtf d0, x0')
-end;
+Procedure EmitScvtfD0X0;
+Begin
+  WriteLn('    scvtf d0, x0')
+End;
 
-procedure EmitScvtfD1X1;
-begin
-  writeln('    scvtf d1, x1')
-end;
+Procedure EmitScvtfD1X1;
+Begin
+  WriteLn('    scvtf d1, x1')
+End;
 
-procedure EmitFcvtzsX0D0;
-begin
-  writeln('    fcvtzs x0, d0')
-end;
+Procedure EmitFcvtzsX0D0;
+Begin
+  WriteLn('    fcvtzs x0, d0')
+End;
 
-procedure EmitFmovD0X0;
-begin
-  writeln('    fmov d0, x0')
-end;
+Procedure EmitFmovD0X0;
+Begin
+  WriteLn('    fmov d0, x0')
+End;
 
-procedure EmitFmovX0D0;
-begin
-  writeln('    fmov x0, d0')
-end;
+Procedure EmitFmovX0D0;
+Begin
+  WriteLn('    fmov x0, d0')
+End;
 
-procedure EmitLdurD0(offset: integer);
-begin
-  write('    ldur d0, [x29, #'); write(offset); writeln(']')
-end;
+Procedure EmitLdurD0(offset: Integer);
+Begin
+  Write('    ldur d0, [x29, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitSturD0(offset: integer);
-begin
-  write('    stur d0, [x29, #'); write(offset); writeln(']')
-end;
+Procedure EmitSturD0(offset: Integer);
+Begin
+  Write('    stur d0, [x29, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitLdurD0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
-  write('    ldur d0, [x8, #'); write(offset); writeln(']')
-end;
+Procedure EmitLdurD0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
+  Write('    ldur d0, [x8, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitSturD0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
+Procedure EmitSturD0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
   EmitPushD0;
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
   EmitPopD0;
-  write('    stur d0, [x8, #'); write(offset); writeln(']')
-end;
+  Write('    stur d0, [x8, #'); Write(offset); WriteLn(']')
+End;
 
 { ----- Unit Symbol Emitters ----- }
 
-procedure WriteSymName(sym_idx: integer);
-var
-  base, i, c: integer;
-begin
+Procedure WriteSymName(sym_idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := sym_idx * 32;
   i := 0;
   c := sym_name[base];
-  while c <> 0 do
-  begin
-    writechar(c);
+  While c <> 0 Do
+  Begin
+    WriteChar(c);
     i := i + 1;
     c := sym_name[base + i]
-  end
-end;
+  End
+End;
 
-procedure WriteCurrentUnitName;
-var
-  i: integer;
-begin
-  for i := 0 to current_unit_len - 1 do
-    writechar(current_unit_name[i])
-end;
+Procedure WriteCurrentUnitName;
+Var
+  i: Integer;
+Begin
+  For i := 0 To current_unit_len - 1 Do
+    WriteChar(current_unit_name[i])
+End;
 
-procedure WriteLoadedUnitName(unit_idx: integer);
-var
-  base, i, c: integer;
-begin
+Procedure WriteLoadedUnitName(unit_idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := unit_idx * 32;
   i := 0;
   c := loaded_units[base];
-  while c <> 0 do
-  begin
-    writechar(c);
+  While c <> 0 Do
+  Begin
+    WriteChar(c);
     i := i + 1;
     c := loaded_units[base + i]
-  end
-end;
+  End
+End;
 
-procedure EmitGloblCurrentUnit(sym_idx: integer);
-begin
-  write('.globl _');
+Procedure EmitGloblCurrentUnit(sym_idx: Integer);
+Begin
+  Write('.globl _');
   WriteCurrentUnitName;
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln
-end;
+  WriteLn
+End;
 
-procedure EmitUnitLabel(sym_idx: integer);
-begin
-  write('_');
+Procedure EmitUnitLabel(sym_idx: Integer);
+Begin
+  Write('_');
   WriteCurrentUnitName;
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln(':')
-end;
+  WriteLn(':')
+End;
 
-procedure EmitBLUnitProc(unit_idx, sym_idx: integer);
-begin
-  write('    bl _');
+Procedure EmitBLUnitProc(unit_idx, sym_idx: Integer);
+Begin
+  Write('    bl _');
   WriteLoadedUnitName(unit_idx);
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln
-end;
+  WriteLn
+End;
 
-procedure EmitGloblUnitInit;
-begin
-  write('.globl _');
+Procedure EmitGloblUnitInit;
+Begin
+  Write('.globl _');
   WriteCurrentUnitName;
-  writeln('_init')
-end;
+  WriteLn('_init')
+End;
 
-procedure EmitUnitInitLabel;
-begin
-  write('_');
+Procedure EmitUnitInitLabel;
+Begin
+  Write('_');
   WriteCurrentUnitName;
-  writeln('_init:')
-end;
+  WriteLn('_init:')
+End;
 
-procedure EmitBLUnitInit(unit_idx: integer);
-begin
-  write('    bl _');
+Procedure EmitBLUnitInit(unit_idx: Integer);
+Begin
+  Write('    bl _');
   WriteLoadedUnitName(unit_idx);
-  writeln('_init')
-end;
+  WriteLn('_init')
+End;
 

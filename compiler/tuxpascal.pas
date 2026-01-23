@@ -4,7 +4,7 @@
 
 program TuxPascal;
 
-const
+Const
   MAX_TOKENS = 1000;
   MAX_SYMBOLS = 100;
   MAX_STRINGS = 64;
@@ -35,8 +35,8 @@ const
   TOK_COMMA = 21;
   TOK_DOT = 22;
   TOK_DOTDOT = 23;
-  TOK_CARET = 24;    { ^ - dereference/pointer type }
-  TOK_AT = 25;       { @ - address-of }
+  TOK_CARET = 24;    { ^ - dereference/pointer Type }
+  TOK_AT = 25;       { @ - address-Of }
 
   { Keywords - starting at 100 }
   TOK_PROGRAM = 100;
@@ -74,19 +74,19 @@ const
   TOK_READLN = 132;
   TOK_REAL_TYPE = 133;
   TOK_FLOAT_LITERAL = 134;
-  TOK_NIL = 135;     { nil keyword }
-  TOK_RECORD = 136;  { record keyword }
-  TOK_TYPE_KW = 137;    { type keyword }
-  TOK_CASE = 138;    { case keyword }
-  TOK_WITH = 139;    { with keyword }
-  TOK_TEXT = 140;    { text file type }
+  TOK_NIL = 135;     { Nil keyword }
+  TOK_RECORD = 136;  { Record keyword }
+  TOK_TYPE_KW = 137;    { Type keyword }
+  TOK_CASE = 138;    { Case keyword }
+  TOK_WITH = 139;    { With keyword }
+  TOK_TEXT = 140;    { Text file Type }
   TOK_FILE = 141;    { file keyword }
-  TOK_SET = 142;     { set keyword }
-  TOK_IN = 143;      { in keyword (set membership) }
-  TOK_UNIT = 144;    { unit keyword }
-  TOK_INTERFACE = 145;      { interface keyword }
-  TOK_IMPLEMENTATION = 146; { implementation keyword }
-  TOK_USES = 147;    { uses keyword }
+  TOK_SET = 142;     { Set keyword }
+  TOK_IN = 143;      { In keyword (Set membership) }
+  TOK_UNIT = 144;    { Unit keyword }
+  TOK_INTERFACE = 145;      { Interface keyword }
+  TOK_IMPLEMENTATION = 146; { Implementation keyword }
+  TOK_USES = 147;    { Uses keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -94,7 +94,7 @@ const
   SYM_PROCEDURE = 2;
   SYM_FUNCTION = 3;
   SYM_PARAM = 4;
-  SYM_TYPEDEF = 5;       { type definition (for records) }
+  SYM_TYPEDEF = 5;       { Type definition (For records) }
 
   { Type kinds }
   TYPE_INTEGER = 0;
@@ -106,1135 +106,1135 @@ const
   TYPE_REAL = 6;
   TYPE_POINTER = 7;
   TYPE_RECORD = 8;
-  TYPE_FILE = 9;      { file of T - typed file }
-  TYPE_TEXT = 10;     { text file }
-  TYPE_ENUM = 11;     { enumerated type }
-  TYPE_SUBRANGE = 12; { subrange type }
-  TYPE_SET = 13;      { set type }
+  TYPE_FILE = 9;      { file Of T - typed file }
+  TYPE_TEXT = 10;     { Text file }
+  TYPE_ENUM = 11;     { enumerated Type }
+  TYPE_SUBRANGE = 12; { subrange Type }
+  TYPE_SET = 13;      { Set Type }
 
-var
+Var
   { Source input }
-  ch: integer;
-  line_num, col_num: integer;
-  pushback_ch: integer;  { -1 means no pushback }
+  ch: Integer;
+  line_num, col_num: Integer;
+  pushback_ch: Integer;  { -1 means no pushback }
 
   { Current token }
-  tok_type: integer;
-  tok_int: integer;
-  tok_str: array[0..255] of integer;  { string as array of chars }
-  tok_len: integer;
+  tok_type: Integer;
+  tok_int: Integer;
+  tok_str: Array[0..255] Of Integer;  { String as Array Of chars }
+  tok_len: Integer;
 
-  { Symbol table - flattened 2D array: sym_name[idx * 32 + char_pos] }
-  sym_name: array[0..15999] of integer;  { 500 symbols * 32 chars each }
-  sym_kind: array[0..499] of integer;
-  sym_type: array[0..499] of integer;
-  sym_level: array[0..499] of integer;
-  sym_offset: array[0..499] of integer;
-  sym_const_val: array[0..499] of integer;
-  sym_label: array[0..499] of integer;
-  sym_is_var_param: array[0..499] of integer;  { 1 if var parameter (pass by ref) }
-  sym_var_param_flags: array[0..499] of integer;  { bitmap: bit i = 1 if param i is var (for proc/func) }
-  sym_unit_idx: array[0..499] of integer;  { unit index for imported symbols, -1 for local }
-  sym_count: integer;
+  { Symbol table - flattened 2D Array: sym_name[idx * 32 + char_pos] }
+  sym_name: Array[0..15999] Of Integer;  { 500 symbols * 32 chars each }
+  sym_kind: Array[0..499] Of Integer;
+  sym_type: Array[0..499] Of Integer;
+  sym_level: Array[0..499] Of Integer;
+  sym_offset: Array[0..499] Of Integer;
+  sym_const_val: Array[0..499] Of Integer;
+  sym_label: Array[0..499] Of Integer;
+  sym_is_var_param: Array[0..499] Of Integer;  { 1 If Var parameter (pass by ref) }
+  sym_var_param_flags: Array[0..499] Of Integer;  { bitmap: bit i = 1 If param i is Var (For proc/func) }
+  sym_unit_idx: Array[0..499] Of Integer;  { Unit index For imported symbols, -1 For local }
+  sym_count: Integer;
 
   { Record field table }
-  field_name: array[0..6399] of integer;   { 200 fields * 32 chars each }
-  field_type: array[0..199] of integer;    { type of each field }
-  field_offset: array[0..199] of integer;  { offset within record }
-  field_rec_idx: array[0..199] of integer; { which record type this field belongs to }
-  field_rec_type: array[0..199] of integer; { for TYPE_RECORD fields, the nested record type index }
-  field_count: integer;                    { total fields defined }
+  field_name: Array[0..6399] Of Integer;   { 200 fields * 32 chars each }
+  field_type: Array[0..199] Of Integer;    { Type Of each field }
+  field_offset: Array[0..199] Of Integer;  { offset within Record }
+  field_rec_idx: Array[0..199] Of Integer; { which Record Type this field belongs To }
+  field_rec_type: Array[0..199] Of Integer; { For TYPE_RECORD fields, the nested Record Type index }
+  field_count: Integer;                    { total fields defined }
 
-  { Pointer metadata for multi-level pointers and pointer-to-array }
-  ptr_depth: array[0..499] of integer;        { pointer indirection depth (1=^T, 2=^^T) }
-  ptr_ultimate_type: array[0..499] of integer; { ultimate base type after all derefs }
-  ptr_ultimate_rec: array[0..499] of integer;  { if ultimate base is record, the type index }
-  ptr_arr_lo: array[0..99] of integer;     { low bound for pointer-to-array }
-  ptr_arr_hi: array[0..99] of integer;     { high bound for pointer-to-array }
-  ptr_arr_elem: array[0..99] of integer;   { element type for pointer-to-array }
-  ptr_arr_rec: array[0..99] of integer;    { if element is record, the type index }
-  ptr_arr_count: integer;                  { count of pointer-to-array types }
+  { Pointer metadata For multi-level pointers And pointer-To-Array }
+  ptr_depth: Array[0..499] Of Integer;        { pointer indirection depth (1=^T, 2=^^T) }
+  ptr_ultimate_type: Array[0..499] Of Integer; { ultimate base Type after all derefs }
+  ptr_ultimate_rec: Array[0..499] Of Integer;  { If ultimate base is Record, the Type index }
+  ptr_arr_lo: Array[0..99] Of Integer;     { low bound For pointer-To-Array }
+  ptr_arr_hi: Array[0..99] Of Integer;     { high bound For pointer-To-Array }
+  ptr_arr_elem: Array[0..99] Of Integer;   { element Type For pointer-To-Array }
+  ptr_arr_rec: Array[0..99] Of Integer;    { If element is Record, the Type index }
+  ptr_arr_count: Integer;                  { count Of pointer-To-Array types }
 
-  { Runtime labels for allocator }
-  rt_alloc: integer;
-  rt_free: integer;
+  { Runtime labels For allocator }
+  rt_alloc: Integer;
+  rt_free: Integer;
 
   { Scope tracking }
-  scope_level: integer;
-  local_offset: integer;
+  scope_level: Integer;
+  local_offset: Integer;
 
   { Code generation }
-  label_count: integer;
+  label_count: Integer;
 
-  { String table - not used yet, simplified }
-  string_count: integer;
+  { String table - Not used yet, simplified }
+  string_count: Integer;
 
   { Runtime labels }
-  rt_print_int: integer;
-  rt_newline: integer;
-  rt_readchar: integer;
-  rt_print_char: integer;
-  rt_write_char_fd: integer;  { write single char to file: x0=fd, x1=char }
-  rt_read_int: integer;
-  rt_skip_line: integer;
-  rt_print_string: integer;
-  rt_print_real: integer;
-  rt_read_real: integer;
-  rt_read_string: integer;
+  rt_print_int: Integer;
+  rt_newline: Integer;
+  rt_readchar: Integer;
+  rt_print_char: Integer;
+  rt_write_char_fd: Integer;  { Write single Char To file: x0=fd, x1=Char }
+  rt_read_int: Integer;
+  rt_skip_line: Integer;
+  rt_print_string: Integer;
+  rt_print_real: Integer;
+  rt_read_real: Integer;
+  rt_read_string: Integer;
 
   { Float literal parsing }
-  tok_float_int: integer;   { integer part of float }
-  tok_float_frac: integer;  { fractional part (scaled by 1000000) }
-  tok_float_neg: integer;   { 1 if negative }
+  tok_float_int: Integer;   { Integer part Of float }
+  tok_float_frac: Integer;  { fractional part (scaled by 1000000) }
+  tok_float_neg: Integer;   { 1 If negative }
 
-  { Expression type tracking }
-  expr_type: integer;
+  { Expression Type tracking }
+  expr_type: Integer;
 
-  { Pointer base type tracking for arithmetic }
-  ptr_base_type: integer;
+  { Pointer base Type tracking For arithmetic }
+  ptr_base_type: Integer;
 
-  { Output file descriptor - x20 is used to store it }
-  out_fd: integer;
+  { Output file descriptor - x20 is used To store it }
+  out_fd: Integer;
 
   { Error flag }
-  had_error: integer;
+  had_error: Integer;
 
-  { WITH statement tracking }
-  with_rec_idx: integer;    { symbol index of active with record, -1 if none }
-  with_rec_type: integer;   { type index for field lookup }
+  { With statement tracking }
+  with_rec_idx: Integer;    { symbol index Of active With Record, -1 If none }
+  with_rec_type: Integer;   { Type index For field lookup }
 
-  { Loop control for break/continue }
-  break_label: integer;     { label to jump to for break, 0 if not in loop }
-  continue_label: integer;  { label to jump to for continue, 0 if not in loop }
+  { Loop control For Break/Continue }
+  break_label: Integer;     { label To jump To For Break, 0 If Not In loop }
+  continue_label: Integer;  { label To jump To For Continue, 0 If Not In loop }
 
-  { Exit label for current procedure/function }
-  exit_label: integer;      { label to jump to for exit, 0 if in main program }
+  { Exit label For current Procedure/Function }
+  exit_label: Integer;      { label To jump To For Exit, 0 If In main Program }
 
-  { Runtime labels for heap }
-  rt_heap_init: integer;
+  { Runtime labels For heap }
+  rt_heap_init: Integer;
 
-  { Runtime labels for string operations }
-  rt_str_copy: integer;
-  rt_str_compare: integer;
-  rt_str_concat: integer;
-  rt_str_cmp: integer;  { lexicographic compare: returns -1, 0, or 1 }
-  rt_str_pos: integer;  { find substring: returns position or 0 }
-  rt_str_delete: integer;  { delete chars from string in place }
-  rt_str_insert: integer;  { insert string into another }
-  rt_int_to_str: integer;  { convert integer to string }
-  rt_str_to_int: integer;  { convert string to integer with error code }
-  rt_str_ltrim: integer;  { trim leading whitespace }
-  rt_str_rtrim: integer;  { trim trailing whitespace }
-  rt_str_trim: integer;   { trim both leading and trailing whitespace }
+  { Runtime labels For String operations }
+  rt_str_copy: Integer;
+  rt_str_compare: Integer;
+  rt_str_concat: Integer;
+  rt_str_cmp: Integer;  { lexicographic compare: returns -1, 0, Or 1 }
+  rt_str_pos: Integer;  { find substring: returns position Or 0 }
+  rt_str_delete: Integer;  { delete chars from String In place }
+  rt_str_insert: Integer;  { insert String into another }
+  rt_int_to_str: Integer;  { convert Integer To String }
+  rt_str_to_int: Integer;  { convert String To Integer With error code }
+  rt_str_ltrim: Integer;  { trim leading whitespace }
+  rt_str_rtrim: Integer;  { trim trailing whitespace }
+  rt_str_trim: Integer;   { trim both leading And trailing whitespace }
 
-  { Runtime labels for screen/terminal control }
-  rt_clrscr: integer;     { clear screen and home cursor }
-  rt_gotoxy: integer;     { move cursor to x,y position }
-  rt_clreol: integer;     { clear to end of line }
-  rt_textcolor: integer;  { set foreground color }
-  rt_textbackground: integer;  { set background color }
-  rt_normvideo: integer;  { reset attributes }
-  rt_highvideo: integer;  { bold/bright }
-  rt_lowvideo: integer;   { dim }
-  rt_hidecursor: integer; { hide cursor }
-  rt_showcursor: integer; { show cursor }
-  rt_sleep: integer;      { sleep for N milliseconds using nanosleep syscall }
-  rt_keypressed: integer; { check if key available (non-blocking) }
-  rt_initkeyboard: integer;  { set terminal to raw mode }
-  rt_donekeyboard: integer;  { restore terminal to cooked mode }
+  { Runtime labels For screen/terminal control }
+  rt_clrscr: Integer;     { clear screen And home cursor }
+  rt_gotoxy: Integer;     { move cursor To x,y position }
+  rt_clreol: Integer;     { clear To End Of line }
+  rt_textcolor: Integer;  { Set foreground color }
+  rt_textbackground: Integer;  { Set background color }
+  rt_normvideo: Integer;  { reset attributes }
+  rt_highvideo: Integer;  { bold/bright }
+  rt_lowvideo: Integer;   { dim }
+  rt_hidecursor: Integer; { hide cursor }
+  rt_showcursor: Integer; { show cursor }
+  rt_sleep: Integer;      { sleep For N milliseconds using nanosleep syscall }
+  rt_keypressed: Integer; { check If key available (non-blocking) }
+  rt_initkeyboard: Integer;  { Set terminal To raw mode }
+  rt_donekeyboard: Integer;  { restore terminal To cooked mode }
 
-  { Runtime labels for math functions }
-  rt_sin: integer;     { sin(x) - Taylor series }
-  rt_cos: integer;     { cos(x) - Taylor series }
-  rt_tan: integer;     { tan(x) = sin/cos }
-  rt_exp: integer;     { exp(x) - Taylor series }
-  rt_ln: integer;      { ln(x) - Newton iteration }
-  rt_random: integer;  { random - returns random integer }
-  rt_arctan: integer;  { arctan(x) - Taylor series }
-  rt_arcsin: integer;  { arcsin(x) - derived from arctan }
-  rt_arccos: integer;  { arccos(x) - pi/2 - arcsin }
+  { Runtime labels For math functions }
+  rt_sin: Integer;     { sin(x) - Taylor series }
+  rt_cos: Integer;     { cos(x) - Taylor series }
+  rt_tan: Integer;     { tan(x) = sin/cos }
+  rt_exp: Integer;     { exp(x) - Taylor series }
+  rt_ln: Integer;      { ln(x) - Newton iteration }
+  rt_random: Integer;  { random - returns random Integer }
+  rt_arctan: Integer;  { arctan(x) - Taylor series }
+  rt_arcsin: Integer;  { arcsin(x) - derived from arctan }
+  rt_arccos: Integer;  { arccos(x) - pi/2 - arcsin }
 
-  { Runtime labels for command line }
-  rt_paramstr: integer;  { paramstr(n) - get command line argument as Pascal string }
+  { Runtime labels For command line }
+  rt_paramstr: Integer;  { paramstr(n) - get command line argument as Pascal String }
 
   { Register usage:
-    x25 = argc (saved at program start)
-    x26 = argv (saved at program start)
+    x25 = argc (saved at Program start)
+    x26 = argv (saved at Program start)
     x27 = random seed }
 
-  { Saved terminal settings for restore }
-  saved_termios: array[0..79] of integer;  { 80 bytes for termios struct }
+  { Saved terminal settings For restore }
+  saved_termios: Array[0..79] Of Integer;  { 80 bytes For termios struct }
 
-  { String temp index (0-3) for copy/concat results }
-  string_temp_idx: integer;
+  { String temp index (0-3) For copy/concat results }
+  string_temp_idx: Integer;
 
-  { File I/O metadata - element type and size for typed files }
-  file_elem_type: array[0..99] of integer;  { element type for file of T }
-  file_elem_size: array[0..99] of integer;  { element size in bytes }
-  file_rec_idx: array[0..99] of integer;    { if element is record, type index }
-  file_count: integer;                      { count of file types defined }
+  { File I/O metadata - element Type And size For typed files }
+  file_elem_type: Array[0..99] Of Integer;  { element Type For file Of T }
+  file_elem_size: Array[0..99] Of Integer;  { element size In bytes }
+  file_rec_idx: Array[0..99] Of Integer;    { If element is Record, Type index }
+  file_count: Integer;                      { count Of file types defined }
 
-  { Enumerated type metadata }
-  enum_low: array[0..99] of integer;        { first value (always 0) }
-  enum_high: array[0..99] of integer;       { last value }
-  enum_count: integer;                      { count of enum types defined }
+  { Enumerated Type metadata }
+  enum_low: Array[0..99] Of Integer;        { first value (always 0) }
+  enum_high: Array[0..99] Of Integer;       { last value }
+  enum_count: Integer;                      { count Of enum types defined }
 
-  { Subrange type metadata }
-  subr_low: array[0..99] of integer;        { low bound }
-  subr_high: array[0..99] of integer;       { high bound }
-  subr_base: array[0..99] of integer;       { base type (integer, char, enum) }
-  subr_count: integer;                      { count of subrange types defined }
+  { Subrange Type metadata }
+  subr_low: Array[0..99] Of Integer;        { low bound }
+  subr_high: Array[0..99] Of Integer;       { high bound }
+  subr_base: Array[0..99] Of Integer;       { base Type (Integer, Char, enum) }
+  subr_count: Integer;                      { count Of subrange types defined }
 
-  { Set type metadata - sets limited to 64 elements (fits in one register) }
-  set_base: array[0..99] of integer;        { base type (char, enum, subrange) }
-  set_low: array[0..99] of integer;         { low bound of base type }
-  set_high: array[0..99] of integer;        { high bound of base type }
-  set_count: integer;                       { count of set types defined }
+  { Set Type metadata - sets limited To 64 elements (fits In one register) }
+  set_base: Array[0..99] Of Integer;        { base Type (Char, enum, subrange) }
+  set_low: Array[0..99] Of Integer;         { low bound Of base Type }
+  set_high: Array[0..99] Of Integer;        { high bound Of base Type }
+  set_count: Integer;                       { count Of Set types defined }
 
-  { File variable structure (at runtime, 272 bytes per file var):
-    offset 0: fd (8 bytes) - file descriptor, -1 if not open
-    offset 8: mode (8 bytes) - 0=closed, 1=read, 2=write, 3=append
-    offset 16: filename (256 bytes) - null-terminated string }
+  { File variable structure (at runtime, 272 bytes per file Var):
+    offset 0: fd (8 bytes) - file descriptor, -1 If Not open
+    offset 8: mode (8 bytes) - 0=closed, 1=Read, 2=Write, 3=append
+    offset 16: filename (256 bytes) - null-terminated String }
 
-  { Include file support - using individual variables since bootstrap doesn't support array subscripts with eof }
-  include_file0, include_file1, include_file2, include_file3: text;
-  include_file4, include_file5, include_file6, include_file7: text;
-  include_depth: integer;                   { 0 = reading from stdin, >0 = in include }
-  include_line: array[0..7] of integer;     { Line number in each include file }
-  include_col: array[0..7] of integer;      { Column number in each include file }
-  include_ch: array[0..7] of integer;       { Current char in each include file }
-  include_pushback: array[0..7] of integer; { Pushback char for each include file }
-  include_path: array[0..2047] of integer;  { Paths of included files (256 chars * 8 files) }
+  { Include file support - using individual variables since bootstrap doesn't support Array subscripts With eof }
+  include_file0, include_file1, include_file2, include_file3: Text;
+  include_file4, include_file5, include_file6, include_file7: Text;
+  include_depth: Integer;                   { 0 = reading from stdin, >0 = In include }
+  include_line: Array[0..7] Of Integer;     { Line number In each include file }
+  include_col: Array[0..7] Of Integer;      { Column number In each include file }
+  include_ch: Array[0..7] Of Integer;       { Current Char In each include file }
+  include_pushback: Array[0..7] Of Integer; { Pushback Char For each include file }
+  include_path: Array[0..2047] Of Integer;  { Paths Of included files (256 chars * 8 files) }
 
   { Unit/module support }
-  compiling_unit: integer;       { 0=program, 1=unit }
-  in_interface: integer;         { 1=in interface section }
-  current_unit_name: array[0..31] of integer;  { Name of current unit being compiled }
-  current_unit_len: integer;
+  compiling_unit: Integer;       { 0=Program, 1=Unit }
+  in_interface: Integer;         { 1=In Interface section }
+  current_unit_name: Array[0..31] Of Integer;  { Name Of current Unit being compiled }
+  current_unit_len: Integer;
 
   { TPU file support }
-  tpu_file: text;                { File handle for reading/writing TPU }
-  tpu_line: array[0..1023] of integer;  { Buffer for reading TPU lines }
-  tpu_line_len: integer;         { Length of current line }
-  tpu_pos: integer;              { Current parse position in tpu_line }
+  tpu_file: Text;                { File handle For reading/writing TPU }
+  tpu_line: Array[0..1023] Of Integer;  { Buffer For reading TPU lines }
+  tpu_line_len: Integer;         { Length Of current line }
+  tpu_pos: Integer;              { Current parse position In tpu_line }
 
   { Interface symbol tracking - marks which symbols are exported }
-  interface_start: integer;      { First symbol index in interface section }
-  interface_end: integer;        { Last symbol index in interface section }
+  interface_start: Integer;      { First symbol index In Interface section }
+  interface_end: Integer;        { Last symbol index In Interface section }
 
   { Loaded units tracking }
-  loaded_units: array[0..511] of integer;  { Unit names (16 units * 32 chars) }
-  loaded_count: integer;         { Number of loaded units }
-  unit_sym_start: array[0..15] of integer;  { First symbol index for each unit }
-  unit_sym_end: array[0..15] of integer;    { Last symbol index for each unit }
-  unit_init_label: array[0..15] of integer; { Initialization label for each unit }
+  loaded_units: Array[0..511] Of Integer;  { Unit names (16 units * 32 chars) }
+  loaded_count: Integer;         { Number Of loaded units }
+  unit_sym_start: Array[0..15] Of Integer;  { First symbol index For each Unit }
+  unit_sym_end: Array[0..15] Of Integer;    { Last symbol index For each Unit }
+  unit_init_label: Array[0..15] Of Integer; { Initialization label For each Unit }
 
 { ----- Utility ----- }
 
 { Emit helpers - output multiple chars at once }
-procedure E2(a, b: integer);
-begin writechar(a); writechar(b) end;
+Procedure E2(a, b: Integer);
+Begin WriteChar(a); WriteChar(b) End;
 
-procedure E3(a, b, c: integer);
-begin writechar(a); writechar(b); writechar(c) end;
+Procedure E3(a, b, c: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c) End;
 
-procedure E4(a, b, c, d: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d) end;
+Procedure E4(a, b, c, d: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d) End;
 
-procedure E5(a, b, c, d, e: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e) end;
+Procedure E5(a, b, c, d, e: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d); WriteChar(e) End;
 
-procedure E6(a, b, c, d, e, f: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e); writechar(f) end;
+Procedure E6(a, b, c, d, e, f: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d); WriteChar(e); WriteChar(f) End;
 
-procedure Error(msg: integer);
-var
-  i: integer;
-begin
-  write('Error ');
-  write(msg);
-  write(' at line ');
-  write(line_num);
-  write(' tok_type=');
-  write(tok_type);
-  write(' tok_len=');
-  write(tok_len);
-  write(' scope=');
-  write(scope_level);
-  write(' offset=');
-  write(local_offset);
-  write(' sym_count=');
-  write(sym_count);
-  write(' ch=');
-  write(ch);
-  write(' tok=');
-  for i := 0 to tok_len - 1 do
-    writechar(tok_str[i]);
-  writeln(0);
-  halt(1)
-end;
+Procedure Error(msg: Integer);
+Var
+  i: Integer;
+Begin
+  Write('Error ');
+  Write(msg);
+  Write(' at line ');
+  Write(line_num);
+  Write(' tok_type=');
+  Write(tok_type);
+  Write(' tok_len=');
+  Write(tok_len);
+  Write(' scope=');
+  Write(scope_level);
+  Write(' offset=');
+  Write(local_offset);
+  Write(' sym_count=');
+  Write(sym_count);
+  Write(' ch=');
+  Write(ch);
+  Write(' tok=');
+  For i := 0 To tok_len - 1 Do
+    WriteChar(tok_str[i]);
+  WriteLn(0);
+  Halt(1)
+End;
 
-function IsDigit(c: integer): integer;
-begin
-  if (c >= 48) and (c <= 57) then
+Function IsDigit(c: Integer): Integer;
+Begin
+  If (c >= 48) And (c <= 57) Then
     IsDigit := 1
-  else
+  Else
     IsDigit := 0
-end;
+End;
 
-function IsAlpha(c: integer): integer;
-begin
-  if ((c >= 65) and (c <= 90)) or ((c >= 97) and (c <= 122)) or (c = 95) then
+Function IsAlpha(c: Integer): Integer;
+Begin
+  If ((c >= 65) And (c <= 90)) Or ((c >= 97) And (c <= 122)) Or (c = 95) Then
     IsAlpha := 1
-  else
+  Else
     IsAlpha := 0
-end;
+End;
 
-function ToLower(c: integer): integer;
-begin
-  if (c >= 65) and (c <= 90) then
+Function ToLower(c: Integer): Integer;
+Begin
+  If (c >= 65) And (c <= 90) Then
     ToLower := c + 32
-  else
+  Else
     ToLower := c
-end;
+End;
 
-function StrEqual(idx: integer): integer;
-var
-  i: integer;
-  match: integer;
-  base: integer;
-  c1, c2: integer;
-begin
-  { Compare tok_str with sym_name[idx] }
+Function StrEqual(idx: Integer): Integer;
+Var
+  i: Integer;
+  match: Integer;
+  base: Integer;
+  c1, c2: Integer;
+Begin
+  { Compare tok_str With sym_name[idx] }
   { sym_name is flattened: base = idx * 32 }
   base := idx * 32;
   match := 1;
   i := 0;
-  while (i < tok_len) and (match = 1) do
-  begin
+  While (i < tok_len) And (match = 1) Do
+  Begin
     c1 := tok_str[i];
     c2 := sym_name[base + i];
-    if ToLower(c1) <> ToLower(c2) then
+    If ToLower(c1) <> ToLower(c2) Then
       match := 0;
     i := i + 1
-  end;
-  if match = 1 then
-    if sym_name[base + tok_len] <> 0 then
+  End;
+  If match = 1 Then
+    If sym_name[base + tok_len] <> 0 Then
       match := 0;
   StrEqual := match
-end;
+End;
 
-{ Check if current token matches a string (case insensitive) }
-{ s1-s8 are ASCII codes of the expected string, 0 marks end }
-function TokIs8(s1, s2, s3, s4, s5, s6, s7, s8: integer): integer;
-var
-  i, match, slen: integer;
-  s: array[0..7] of integer;
-begin
+{ Check If current token matches a String (Case insensitive) }
+{ s1-s8 are ASCII codes Of the expected String, 0 marks End }
+Function TokIs8(s1, s2, s3, s4, s5, s6, s7, s8: Integer): Integer;
+Var
+  i, match, slen: Integer;
+  s: Array[0..7] Of Integer;
+Begin
   s[0] := s1; s[1] := s2; s[2] := s3; s[3] := s4;
   s[4] := s5; s[5] := s6; s[6] := s7; s[7] := s8;
-  { Find length of expected string }
+  { Find Length Of expected String }
   slen := 0;
-  while (slen < 8) and (s[slen] <> 0) do
+  While (slen < 8) And (s[slen] <> 0) Do
     slen := slen + 1;
-  { Check length match }
-  if tok_len <> slen then
+  { Check Length match }
+  If tok_len <> slen Then
     match := 0
-  else
-  begin
+  Else
+  Begin
     match := 1;
     i := 0;
-    while (i < slen) and (match = 1) do
-    begin
-      if ToLower(tok_str[i]) <> ToLower(s[i]) then
+    While (i < slen) And (match = 1) Do
+    Begin
+      If ToLower(tok_str[i]) <> ToLower(s[i]) Then
         match := 0;
       i := i + 1
-    end
-  end;
+    End
+  End;
   TokIs8 := match
-end;
+End;
 
 { ----- Lexer ----- }
 
-{ Check if current include file is at EOF }
-function IncludeEof: integer;
-begin
+{ Check If current include file is at EOF }
+Function IncludeEof: Integer;
+Begin
   IncludeEof := 0;
-  if include_depth = 1 then
-  begin if eof(include_file0) then IncludeEof := 1 end
-  else if include_depth = 2 then
-  begin if eof(include_file1) then IncludeEof := 1 end
-  else if include_depth = 3 then
-  begin if eof(include_file2) then IncludeEof := 1 end
-  else if include_depth = 4 then
-  begin if eof(include_file3) then IncludeEof := 1 end
-  else if include_depth = 5 then
-  begin if eof(include_file4) then IncludeEof := 1 end
-  else if include_depth = 6 then
-  begin if eof(include_file5) then IncludeEof := 1 end
-  else if include_depth = 7 then
-  begin if eof(include_file6) then IncludeEof := 1 end
-  else if include_depth = 8 then
-  begin if eof(include_file7) then IncludeEof := 1 end
-end;
+  If include_depth = 1 Then
+  Begin If eof(include_file0) Then IncludeEof := 1 End
+  Else If include_depth = 2 Then
+  Begin If eof(include_file1) Then IncludeEof := 1 End
+  Else If include_depth = 3 Then
+  Begin If eof(include_file2) Then IncludeEof := 1 End
+  Else If include_depth = 4 Then
+  Begin If eof(include_file3) Then IncludeEof := 1 End
+  Else If include_depth = 5 Then
+  Begin If eof(include_file4) Then IncludeEof := 1 End
+  Else If include_depth = 6 Then
+  Begin If eof(include_file5) Then IncludeEof := 1 End
+  Else If include_depth = 7 Then
+  Begin If eof(include_file6) Then IncludeEof := 1 End
+  Else If include_depth = 8 Then
+  Begin If eof(include_file7) Then IncludeEof := 1 End
+End;
 
 { Read a character from current include file }
-function IncludeRead: integer;
-var
-  c: integer;
-begin
+Function IncludeRead: Integer;
+Var
+  c: Integer;
+Begin
   c := -1;
-  if include_depth = 1 then
-    read(include_file0, c)
-  else if include_depth = 2 then
-    read(include_file1, c)
-  else if include_depth = 3 then
-    read(include_file2, c)
-  else if include_depth = 4 then
-    read(include_file3, c)
-  else if include_depth = 5 then
-    read(include_file4, c)
-  else if include_depth = 6 then
-    read(include_file5, c)
-  else if include_depth = 7 then
-    read(include_file6, c)
-  else if include_depth = 8 then
-    read(include_file7, c);
+  If include_depth = 1 Then
+    Read(include_file0, c)
+  Else If include_depth = 2 Then
+    Read(include_file1, c)
+  Else If include_depth = 3 Then
+    Read(include_file2, c)
+  Else If include_depth = 4 Then
+    Read(include_file3, c)
+  Else If include_depth = 5 Then
+    Read(include_file4, c)
+  Else If include_depth = 6 Then
+    Read(include_file5, c)
+  Else If include_depth = 7 Then
+    Read(include_file6, c)
+  Else If include_depth = 8 Then
+    Read(include_file7, c);
   IncludeRead := c
-end;
+End;
 
 { Close current include file }
-procedure IncludeClose;
-begin
-  if include_depth = 1 then
+Procedure IncludeClose;
+Begin
+  If include_depth = 1 Then
     close(include_file0)
-  else if include_depth = 2 then
+  Else If include_depth = 2 Then
     close(include_file1)
-  else if include_depth = 3 then
+  Else If include_depth = 3 Then
     close(include_file2)
-  else if include_depth = 4 then
+  Else If include_depth = 4 Then
     close(include_file3)
-  else if include_depth = 5 then
+  Else If include_depth = 5 Then
     close(include_file4)
-  else if include_depth = 6 then
+  Else If include_depth = 6 Then
     close(include_file5)
-  else if include_depth = 7 then
+  Else If include_depth = 7 Then
     close(include_file6)
-  else if include_depth = 8 then
+  Else If include_depth = 8 Then
     close(include_file7)
-end;
+End;
 
-{ Read a single character from stdin or current include file }
-function ReadCurrentChar: integer;
-begin
-  if include_depth = 0 then
-    ReadCurrentChar := readchar
-  else
-  begin
-    if IncludeEof = 1 then
+{ Read a single character from stdin Or current include file }
+Function ReadCurrentChar: Integer;
+Begin
+  If include_depth = 0 Then
+    ReadCurrentChar := ReadChar
+  Else
+  Begin
+    If IncludeEof = 1 Then
       ReadCurrentChar := -1
-    else
+    Else
       ReadCurrentChar := IncludeRead
-  end
-end;
+  End
+End;
 
-{ Pop back to parent include file }
-procedure PopIncludeFile;
-begin
-  if include_depth > 0 then
-  begin
+{ Pop back To parent include file }
+Procedure PopIncludeFile;
+Begin
+  If include_depth > 0 Then
+  Begin
     IncludeClose;
     include_depth := include_depth - 1;
     { Restore parent file state }
-    if include_depth > 0 then
-    begin
+    If include_depth > 0 Then
+    Begin
       line_num := include_line[include_depth - 1];
       col_num := include_col[include_depth - 1];
       ch := include_ch[include_depth - 1];
       pushback_ch := include_pushback[include_depth - 1]
-    end
-  end
-end;
+    End
+  End
+End;
 
-procedure NextChar;
-var
-  c: integer;
-begin
-  if pushback_ch >= 0 then
-  begin
+Procedure NextChar;
+Var
+  c: Integer;
+Begin
+  If pushback_ch >= 0 Then
+  Begin
     ch := pushback_ch;
     pushback_ch := -1
-  end
-  else
-  begin
+  End
+  Else
+  Begin
     c := ReadCurrentChar;
-    { If EOF in include file, pop back to parent }
-    while (c = -1) and (include_depth > 0) do
-    begin
+    { If EOF In include file, pop back To parent }
+    While (c = -1) And (include_depth > 0) Do
+    Begin
       PopIncludeFile;
-      if include_depth = 0 then
-        c := readchar
-      else
+      If include_depth = 0 Then
+        c := ReadChar
+      Else
         c := ReadCurrentChar
-    end;
+    End;
     ch := c;
-    if ch = 10 then
-    begin
+    If ch = 10 Then
+    Begin
       line_num := line_num + 1;
       col_num := 0
-    end
-    else
+    End
+    Else
       col_num := col_num + 1
-  end
-end;
+  End
+End;
 
 { Open include file using filename from tok_str at given position }
-procedure IncludeOpenFromTokStr(start, len: integer);
-begin
-  if include_depth = 1 then
-  begin assigntokstr(include_file0, start, len); reset(include_file0) end
-  else if include_depth = 2 then
-  begin assigntokstr(include_file1, start, len); reset(include_file1) end
-  else if include_depth = 3 then
-  begin assigntokstr(include_file2, start, len); reset(include_file2) end
-  else if include_depth = 4 then
-  begin assigntokstr(include_file3, start, len); reset(include_file3) end
-  else if include_depth = 5 then
-  begin assigntokstr(include_file4, start, len); reset(include_file4) end
-  else if include_depth = 6 then
-  begin assigntokstr(include_file5, start, len); reset(include_file5) end
-  else if include_depth = 7 then
-  begin assigntokstr(include_file6, start, len); reset(include_file6) end
-  else if include_depth = 8 then
-  begin assigntokstr(include_file7, start, len); reset(include_file7) end
-end;
+Procedure IncludeOpenFromTokStr(start, len: Integer);
+Begin
+  If include_depth = 1 Then
+  Begin assigntokstr(include_file0, start, len); reset(include_file0) End
+  Else If include_depth = 2 Then
+  Begin assigntokstr(include_file1, start, len); reset(include_file1) End
+  Else If include_depth = 3 Then
+  Begin assigntokstr(include_file2, start, len); reset(include_file2) End
+  Else If include_depth = 4 Then
+  Begin assigntokstr(include_file3, start, len); reset(include_file3) End
+  Else If include_depth = 5 Then
+  Begin assigntokstr(include_file4, start, len); reset(include_file4) End
+  Else If include_depth = 6 Then
+  Begin assigntokstr(include_file5, start, len); reset(include_file5) End
+  Else If include_depth = 7 Then
+  Begin assigntokstr(include_file6, start, len); reset(include_file6) End
+  Else If include_depth = 8 Then
+  Begin assigntokstr(include_file7, start, len); reset(include_file7) End
+End;
 
-{ Push a new include file onto the stack }
-procedure PushIncludeFile(path_start, path_len: integer);
-var
-  i: integer;
-begin
-  if include_depth >= 8 then
+{ Push a New include file onto the stack }
+Procedure PushIncludeFile(path_start, path_len: Integer);
+Var
+  i: Integer;
+Begin
+  If include_depth >= 8 Then
     Error(17)  { include nesting too deep - Error halts }
-  else
-  begin
+  Else
+  Begin
     { Save current state }
-    if include_depth > 0 then
-    begin
+    If include_depth > 0 Then
+    Begin
       include_line[include_depth - 1] := line_num;
       include_col[include_depth - 1] := col_num;
       include_ch[include_depth - 1] := ch;
       include_pushback[include_depth - 1] := pushback_ch
-    end;
+    End;
 
     { Open include file }
     include_depth := include_depth + 1;
     IncludeOpenFromTokStr(path_start, path_len);
 
-    { Store path for reference (include_depth is already incremented) }
-    for i := 0 to path_len - 1 do
+    { Store path For reference (include_depth is already incremented) }
+    For i := 0 To path_len - 1 Do
       include_path[(include_depth - 1) * 256 + i] := tok_str[path_start + i];
     include_path[(include_depth - 1) * 256 + path_len] := 0;
 
     line_num := 1;
     col_num := 0;
     pushback_ch := -1;
-    { Read first character from new file }
+    { Read first character from New file }
     ch := ReadCurrentChar
-  end
-end;
+  End
+End;
 
-{ Parse and process include directive: dollar-I or dollar-INCLUDE }
-procedure ParseIncludeDirective;
-var
-  i: integer;
-begin
-  { Skip whitespace after I or INCLUDE }
-  while (ch = 32) or (ch = 9) do
+{ Parse And process include directive: dollar-I Or dollar-INCLUDE }
+Procedure ParseIncludeDirective;
+Var
+  i: Integer;
+Begin
+  { Skip whitespace after I Or INCLUDE }
+  While (ch = 32) Or (ch = 9) Do
     NextChar;
 
-  { Read filename until closing brace or whitespace }
+  { Read filename Until closing brace Or whitespace }
   i := 0;
-  while (ch <> 125) and (ch <> 32) and (ch <> 9) and (ch <> -1) and (i < 255) do
-  begin
+  While (ch <> 125) And (ch <> 32) And (ch <> 9) And (ch <> -1) And (i < 255) Do
+  Begin
     tok_str[i] := ch;
     i := i + 1;
     NextChar
-  end;
+  End;
   tok_str[i] := 0;
 
-  { Skip to end of directive }
-  while (ch <> 125) and (ch <> -1) do
+  { Skip To End Of directive }
+  While (ch <> 125) And (ch <> -1) Do
     NextChar;
-  if ch = 125 then
+  If ch = 125 Then
     NextChar;
 
   { Process include }
-  if i > 0 then
+  If i > 0 Then
     PushIncludeFile(0, i)
-end;
+End;
 
-procedure SkipWhitespace;
-var
-  directive_char: integer;
-begin
-  while (ch = 32) or (ch = 9) or (ch = 10) or (ch = 13) do
+Procedure SkipWhitespace;
+Var
+  directive_char: Integer;
+Begin
+  While (ch = 32) Or (ch = 9) Or (ch = 10) Or (ch = 13) Do
     NextChar;
-  { Skip comments and process directives }
-  if ch = 123 then  { '{' }
-  begin
+  { Skip comments And process directives }
+  If ch = 123 Then  { '{' }
+  Begin
     NextChar;
-    { Check for compiler directive }
-    if ch = 36 then  { '$' }
-    begin
+    { Check For compiler directive }
+    If ch = 36 Then  { '$' }
+    Begin
       NextChar;
       directive_char := ToLower(ch);
-      if directive_char = 105 then  { 'i' }
-      begin
+      If directive_char = 105 Then  { 'i' }
+      Begin
         NextChar;
-        { Check for 'include' or just whitespace after 'i' }
-        if (ch = 32) or (ch = 9) or (ch = 125) then
-        begin
+        { Check For 'include' Or just whitespace after 'i' }
+        If (ch = 32) Or (ch = 9) Or (ch = 125) Then
+        Begin
           { Short form: dollar-I filename }
           ParseIncludeDirective;
           SkipWhitespace
-        end
-        else if ToLower(ch) = 110 then  { 'n' - could be 'include' }
-        begin
-          { Check for 'nclude' }
+        End
+        Else If ToLower(ch) = 110 Then  { 'n' - could be 'include' }
+        Begin
+          { Check For 'nclude' }
           NextChar;
-          if ToLower(ch) = 99 then  { 'c' }
-          begin
+          If ToLower(ch) = 99 Then  { 'c' }
+          Begin
             NextChar;
-            if ToLower(ch) = 108 then  { 'l' }
-            begin
+            If ToLower(ch) = 108 Then  { 'l' }
+            Begin
               NextChar;
-              if ToLower(ch) = 117 then  { 'u' }
-              begin
+              If ToLower(ch) = 117 Then  { 'u' }
+              Begin
                 NextChar;
-                if ToLower(ch) = 100 then  { 'd' }
-                begin
+                If ToLower(ch) = 100 Then  { 'd' }
+                Begin
                   NextChar;
-                  if ToLower(ch) = 101 then  { 'e' }
-                  begin
+                  If ToLower(ch) = 101 Then  { 'e' }
+                  Begin
                     NextChar;
                     { Full form: dollar-INCLUDE filename }
                     ParseIncludeDirective;
                     SkipWhitespace
-                  end
-                  else
-                  begin
-                    { Unknown directive, skip to end }
-                    while (ch <> 125) and (ch <> -1) do NextChar;
-                    if ch = 125 then NextChar;
+                  End
+                  Else
+                  Begin
+                    { Unknown directive, skip To End }
+                    While (ch <> 125) And (ch <> -1) Do NextChar;
+                    If ch = 125 Then NextChar;
                     SkipWhitespace
-                  end
-                end
-                else
-                begin
-                  while (ch <> 125) and (ch <> -1) do NextChar;
-                  if ch = 125 then NextChar;
+                  End
+                End
+                Else
+                Begin
+                  While (ch <> 125) And (ch <> -1) Do NextChar;
+                  If ch = 125 Then NextChar;
                   SkipWhitespace
-                end
-              end
-              else
-              begin
-                while (ch <> 125) and (ch <> -1) do NextChar;
-                if ch = 125 then NextChar;
+                End
+              End
+              Else
+              Begin
+                While (ch <> 125) And (ch <> -1) Do NextChar;
+                If ch = 125 Then NextChar;
                 SkipWhitespace
-              end
-            end
-            else
-            begin
-              while (ch <> 125) and (ch <> -1) do NextChar;
-              if ch = 125 then NextChar;
+              End
+            End
+            Else
+            Begin
+              While (ch <> 125) And (ch <> -1) Do NextChar;
+              If ch = 125 Then NextChar;
               SkipWhitespace
-            end
-          end
-          else
-          begin
-            while (ch <> 125) and (ch <> -1) do NextChar;
-            if ch = 125 then NextChar;
+            End
+          End
+          Else
+          Begin
+            While (ch <> 125) And (ch <> -1) Do NextChar;
+            If ch = 125 Then NextChar;
             SkipWhitespace
-          end
-        end
-        else
-        begin
-          { Unknown directive starting with 'i', skip }
-          while (ch <> 125) and (ch <> -1) do NextChar;
-          if ch = 125 then NextChar;
+          End
+        End
+        Else
+        Begin
+          { Unknown directive starting With 'i', skip }
+          While (ch <> 125) And (ch <> -1) Do NextChar;
+          If ch = 125 Then NextChar;
           SkipWhitespace
-        end
-      end
-      else
-      begin
+        End
+      End
+      Else
+      Begin
         { Unknown directive, skip as comment }
-        while (ch <> 125) and (ch <> -1) do NextChar;
-        if ch = 125 then NextChar;
+        While (ch <> 125) And (ch <> -1) Do NextChar;
+        If ch = 125 Then NextChar;
         SkipWhitespace
-      end
-    end
-    else
-    begin
+      End
+    End
+    Else
+    Begin
       { Regular comment }
-      while (ch <> 125) and (ch <> -1) do
+      While (ch <> 125) And (ch <> -1) Do
         NextChar;
-      if ch = 125 then
+      If ch = 125 Then
         NextChar;
       SkipWhitespace
-    end
-  end
-end;
+    End
+  End
+End;
 
-procedure NextToken;
-var
-  i: integer;
-begin
+Procedure NextToken;
+Var
+  i: Integer;
+Begin
   SkipWhitespace;
 
-  if ch = -1 then
-  begin
+  If ch = -1 Then
+  Begin
     tok_type := TOK_EOF;
     tok_len := 0
-  end
-  else if IsDigit(ch) = 1 then
-  begin
+  End
+  Else If IsDigit(ch) = 1 Then
+  Begin
     tok_type := TOK_INTEGER;
     tok_int := 0;
-    while IsDigit(ch) = 1 do
-    begin
+    While IsDigit(ch) = 1 Do
+    Begin
       tok_int := tok_int * 10 + (ch - 48);
       NextChar
-    end;
-    { Check for decimal point (but not ..) }
-    if ch = 46 then  { '.' }
-    begin
+    End;
+    { Check For decimal point (but Not ..) }
+    If ch = 46 Then  { '.' }
+    Begin
       NextChar;
-      if IsDigit(ch) = 1 then
-      begin
+      If IsDigit(ch) = 1 Then
+      Begin
         { This is a float literal }
         tok_type := TOK_FLOAT_LITERAL;
         tok_float_int := tok_int;
         tok_float_frac := 0;
         tok_float_neg := 0;
-        { Parse fractional digits (up to 6 digits of precision) }
+        { Parse fractional digits (up To 6 digits Of precision) }
         i := 0;
-        while (IsDigit(ch) = 1) and (i < 6) do
-        begin
+        While (IsDigit(ch) = 1) And (i < 6) Do
+        Begin
           tok_float_frac := tok_float_frac * 10 + (ch - 48);
           i := i + 1;
           NextChar
-        end;
-        { Scale frac to 6 digits }
-        while i < 6 do
-        begin
+        End;
+        { Scale frac To 6 digits }
+        While i < 6 Do
+        Begin
           tok_float_frac := tok_float_frac * 10;
           i := i + 1
-        end;
+        End;
         { Skip any remaining fractional digits }
-        while IsDigit(ch) = 1 do
+        While IsDigit(ch) = 1 Do
           NextChar
-      end
-      else
-      begin
-        { It was just an integer followed by '.', push back current char }
-        { and set pushback to '.' so next NextToken gets DOT or DOTDOT }
+      End
+      Else
+      Begin
+        { It was just an Integer followed by '.', push back current Char }
+        { And Set pushback To '.' so next NextToken gets DOT Or DOTDOT }
         pushback_ch := ch;
         ch := 46  { Put '.' back as current so the DOT handling code gets it }
-      end
-    end
-  end
-  else if IsAlpha(ch) = 1 then
-  begin
+      End
+    End
+  End
+  Else If IsAlpha(ch) = 1 Then
+  Begin
     tok_type := TOK_IDENT;
     tok_len := 0;
-    while (IsAlpha(ch) = 1) or (IsDigit(ch) = 1) do
-    begin
-      if tok_len < 255 then
-      begin
+    While (IsAlpha(ch) = 1) Or (IsDigit(ch) = 1) Do
+    Begin
+      If tok_len < 255 Then
+      Begin
         tok_str[tok_len] := ch;
         tok_len := tok_len + 1
-      end;
+      End;
       NextChar
-    end;
+    End;
     tok_str[tok_len] := 0;
 
-    { Check for keywords }
+    { Check For keywords }
     { This is simplified - would need proper keyword table }
-    if tok_len = 7 then
-      if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 103) then { og }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 97) then { ra }
-            if ToLower(tok_str[6]) = 109 then { m }
+    If tok_len = 7 Then
+      If (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 114) Then { pr }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 103) Then { og }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 97) Then { ra }
+            If ToLower(tok_str[6]) = 109 Then { m }
               tok_type := TOK_PROGRAM;
-    if tok_len = 5 then
-      if (ToLower(tok_str[0]) = 98) and (ToLower(tok_str[1]) = 101) then { be }
-        if (ToLower(tok_str[2]) = 103) and (ToLower(tok_str[3]) = 105) then { gi }
-          if ToLower(tok_str[4]) = 110 then { n }
+    If tok_len = 5 Then
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 101) Then { be }
+        If (ToLower(tok_str[2]) = 103) And (ToLower(tok_str[3]) = 105) Then { gi }
+          If ToLower(tok_str[4]) = 110 Then { n }
             tok_type := TOK_BEGIN;
-    if tok_len = 3 then
-    begin
-      if (ToLower(tok_str[0]) = 101) and (ToLower(tok_str[1]) = 110) then { en }
-        if ToLower(tok_str[2]) = 100 then { d }
+    If tok_len = 3 Then
+    Begin
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 110) Then { en }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_END;
-      if (ToLower(tok_str[0]) = 118) and (ToLower(tok_str[1]) = 97) then { va }
-        if ToLower(tok_str[2]) = 114 then { r }
+      If (ToLower(tok_str[0]) = 118) And (ToLower(tok_str[1]) = 97) Then { va }
+        If ToLower(tok_str[2]) = 114 Then { r }
           tok_type := TOK_VAR;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 105) then { di }
-        if ToLower(tok_str[2]) = 118 then { v }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 105) Then { di }
+        If ToLower(tok_str[2]) = 118 Then { v }
           tok_type := TOK_DIV;
-      if (ToLower(tok_str[0]) = 109) and (ToLower(tok_str[1]) = 111) then { mo }
-        if ToLower(tok_str[2]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 109) And (ToLower(tok_str[1]) = 111) Then { mo }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_MOD;
-      if (ToLower(tok_str[0]) = 97) and (ToLower(tok_str[1]) = 110) then { an }
-        if ToLower(tok_str[2]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 110) Then { an }
+        If ToLower(tok_str[2]) = 100 Then { d }
           tok_type := TOK_AND;
-      if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 111) then { no }
-        if ToLower(tok_str[2]) = 116 then { t }
+      If (ToLower(tok_str[0]) = 110) And (ToLower(tok_str[1]) = 111) Then { no }
+        If ToLower(tok_str[2]) = 116 Then { t }
           tok_type := TOK_NOT;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 111) then { fo }
-        if ToLower(tok_str[2]) = 114 then { r }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 111) Then { fo }
+        If ToLower(tok_str[2]) = 114 Then { r }
           tok_type := TOK_FOR;
-      if (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 105) then { ni }
-        if ToLower(tok_str[2]) = 108 then { l }
+      If (ToLower(tok_str[0]) = 110) And (ToLower(tok_str[1]) = 105) Then { ni }
+        If ToLower(tok_str[2]) = 108 Then { l }
           tok_type := TOK_NIL;
-      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 101) then { se }
-        if ToLower(tok_str[2]) = 116 then { t }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) Then { se }
+        If ToLower(tok_str[2]) = 116 Then { t }
           tok_type := TOK_SET
-    end;
-    if tok_len = 2 then
-    begin
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 102) then { if }
+    End;
+    If tok_len = 2 Then
+    Begin
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 102) Then { If }
         tok_type := TOK_IF;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) then { do }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { Do }
         tok_type := TOK_DO;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 111) then { to }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 111) Then { To }
         tok_type := TOK_TO;
-      if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 114) then { or }
+      If (ToLower(tok_str[0]) = 111) And (ToLower(tok_str[1]) = 114) Then { Or }
         tok_type := TOK_OR;
-      if (ToLower(tok_str[0]) = 111) and (ToLower(tok_str[1]) = 102) then { of }
+      If (ToLower(tok_str[0]) = 111) And (ToLower(tok_str[1]) = 102) Then { Of }
         tok_type := TOK_OF;
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
         tok_type := TOK_IN
-    end;
-    if tok_len = 4 then
-    begin
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 104) then { th }
-        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 110) then { en }
+    End;
+    If tok_len = 4 Then
+    Begin
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 104) Then { th }
+        If (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 110) Then { en }
           tok_type := TOK_THEN;
-      if (ToLower(tok_str[0]) = 101) and (ToLower(tok_str[1]) = 108) then { el }
-        if (ToLower(tok_str[2]) = 115) and (ToLower(tok_str[3]) = 101) then { se }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 108) Then { el }
+        If (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) Then { se }
           tok_type := TOK_ELSE;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 114) then { tr }
-        if (ToLower(tok_str[2]) = 117) and (ToLower(tok_str[3]) = 101) then { ue }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 114) Then { tr }
+        If (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 101) Then { ue }
           tok_type := TOK_TRUE
-    end;
-    if tok_len = 5 then
-    begin
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 111) then { co }
-        if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 115) then { ns }
-          if ToLower(tok_str[4]) = 116 then { t }
+    End;
+    If tok_len = 5 Then
+    Begin
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 111) Then { co }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 115) Then { ns }
+          If ToLower(tok_str[4]) = 116 Then { t }
             tok_type := TOK_CONST;
-      if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 104) then { wh }
-        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 108) then { il }
-          if ToLower(tok_str[4]) = 101 then { e }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 104) Then { wh }
+        If (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 108) Then { il }
+          If ToLower(tok_str[4]) = 101 Then { e }
             tok_type := TOK_WHILE;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 105) then { ti }
-          if ToLower(tok_str[4]) = 108 then { l }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 110) Then { un }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 105) Then { ti }
+          If ToLower(tok_str[4]) = 108 Then { l }
             tok_type := TOK_UNTIL;
-      if (ToLower(tok_str[0]) = 97) and (ToLower(tok_str[1]) = 114) then { ar }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 97) then { ra }
-          if ToLower(tok_str[4]) = 121 then { y }
+      If (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 114) Then { ar }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 97) Then { ra }
+          If ToLower(tok_str[4]) = 121 Then { y }
             tok_type := TOK_ARRAY;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 97) then { fa }
-        if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 115) then { ls }
-          if ToLower(tok_str[4]) = 101 then { e }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 97) Then { fa }
+        If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 115) Then { ls }
+          If ToLower(tok_str[4]) = 101 Then { e }
             tok_type := TOK_FALSE
-    end;
-    if tok_len = 6 then
-    begin
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
-          if (ToLower(tok_str[4]) = 97) and (ToLower(tok_str[5]) = 116) then { at }
+    End;
+    If tok_len = 6 Then
+    Begin
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 101) Then { pe }
+          If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 116) Then { at }
             tok_type := TOK_REPEAT;
-      if (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) then { do }
-        if (ToLower(tok_str[2]) = 119) and (ToLower(tok_str[3]) = 110) then { wn }
-          if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 111) then { to }
+      If (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) Then { Do }
+        If (ToLower(tok_str[2]) = 119) And (ToLower(tok_str[3]) = 110) Then { wn }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 111) Then { To }
             tok_type := TOK_DOWNTO;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
-          if (ToLower(tok_str[4]) = 108) and (ToLower(tok_str[5]) = 110) then { ln }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
+          If (ToLower(tok_str[4]) = 108) And (ToLower(tok_str[5]) = 110) Then { ln }
             tok_type := TOK_READLN;
-      if (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 116) then { st }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 105) then { ri }
-          if (ToLower(tok_str[4]) = 110) and (ToLower(tok_str[5]) = 103) then { ng }
+      If (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 116) Then { st }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 105) Then { ri }
+          If (ToLower(tok_str[4]) = 110) And (ToLower(tok_str[5]) = 103) Then { ng }
             tok_type := TOK_STRING_TYPE;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 99) and (ToLower(tok_str[3]) = 111) then { co }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 100) then { rd }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 111) Then { co }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 100) Then { rd }
             tok_type := TOK_RECORD
-    end;
-    if tok_len = 7 then
-    begin
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
-          if (ToLower(tok_str[4]) = 103) and (ToLower(tok_str[5]) = 101) then { ge }
-            if ToLower(tok_str[6]) = 114 then { r }
+    End;
+    If tok_len = 7 Then
+    Begin
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 103) And (ToLower(tok_str[5]) = 101) Then { ge }
+            If ToLower(tok_str[6]) = 114 Then { r }
               tok_type := TOK_INTEGER_TYPE;
-      if (ToLower(tok_str[0]) = 98) and (ToLower(tok_str[1]) = 111) then { bo }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 108) then { ol }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 97) then { ea }
-            if ToLower(tok_str[6]) = 110 then { n }
+      If (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 111) Then { bo }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 108) Then { ol }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 97) Then { ea }
+            If ToLower(tok_str[6]) = 110 Then { n }
               tok_type := TOK_BOOLEAN_TYPE;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 111) then { fo }
-        if (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 119) then { rw }
-          if (ToLower(tok_str[4]) = 97) and (ToLower(tok_str[5]) = 114) then { ar }
-            if ToLower(tok_str[6]) = 100 then { d }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 111) Then { fo }
+        If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 119) Then { rw }
+          If (ToLower(tok_str[4]) = 97) And (ToLower(tok_str[5]) = 114) Then { ar }
+            If ToLower(tok_str[6]) = 100 Then { d }
               tok_type := TOK_FORWARD
-    end;
-    if tok_len = 4 then
-    begin
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 104) then { ch }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 114) then { ar }
+    End;
+    If tok_len = 4 Then
+    Begin
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 104) Then { ch }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 114) Then { ar }
           tok_type := TOK_CHAR_TYPE;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) then { ad }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) Then { ad }
           tok_type := TOK_READ;
-      if (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) then { re }
-        if (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 108) then { al }
+      If (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) Then { re }
+        If (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 108) Then { al }
           tok_type := TOK_REAL_TYPE;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 121) then { ty }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 101) then { pe }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 121) Then { ty }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 101) Then { pe }
           tok_type := TOK_TYPE_KW;
-      if (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 97) then { ca }
-        if (ToLower(tok_str[2]) = 115) and (ToLower(tok_str[3]) = 101) then { se }
+      If (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 97) Then { ca }
+        If (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) Then { se }
           tok_type := TOK_CASE;
-      if (ToLower(tok_str[0]) = 119) and (ToLower(tok_str[1]) = 105) then { wi }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 104) then { th }
+      If (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 105) Then { wi }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 104) Then { th }
           tok_type := TOK_WITH;
-      if (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) then { te }
-        if (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) then { xt }
+      If (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 101) Then { te }
+        If (ToLower(tok_str[2]) = 120) And (ToLower(tok_str[3]) = 116) Then { xt }
           tok_type := TOK_TEXT;
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 105) then { fi }
-        if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 101) then { le }
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 105) Then { fi }
+        If (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 101) Then { le }
           tok_type := TOK_FILE;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
-        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) then { it }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 110) Then { un }
+        If (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) Then { it }
           tok_type := TOK_UNIT;
-      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 115) then { us }
-        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 115) then { es }
+      If (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 115) Then { us }
+        If (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 115) Then { es }
           tok_type := TOK_USES
-    end;
-    if tok_len = 9 then
-    begin
-      if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
-        if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 99) then { oc }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 100) then { ed }
-            if (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 114) then { ur }
-              if ToLower(tok_str[8]) = 101 then { e }
+    End;
+    If tok_len = 9 Then
+    Begin
+      If (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 114) Then { pr }
+        If (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 99) Then { oc }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 100) Then { ed }
+            If (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 114) Then { ur }
+              If ToLower(tok_str[8]) = 101 Then { e }
                 tok_type := TOK_PROCEDURE;
-      { interface = 105,110,116,101,114,102,97,99,101 }
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
-        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
-          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 102) then { rf }
-            if (ToLower(tok_str[6]) = 97) and (ToLower(tok_str[7]) = 99) then { ac }
-              if ToLower(tok_str[8]) = 101 then { e }
+      { Interface = 105,110,116,101,114,102,97,99,101 }
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) Then { In }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 102) Then { rf }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 99) Then { ac }
+              If ToLower(tok_str[8]) = 101 Then { e }
                 tok_type := TOK_INTERFACE
-    end;
-    if tok_len = 8 then
-      if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 117) then { fu }
-        if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 99) then { nc }
-          if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 105) then { ti }
-            if (ToLower(tok_str[6]) = 111) and (ToLower(tok_str[7]) = 110) then { on }
+    End;
+    If tok_len = 8 Then
+      If (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 117) Then { fu }
+        If (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 99) Then { nc }
+          If (ToLower(tok_str[4]) = 116) And (ToLower(tok_str[5]) = 105) Then { ti }
+            If (ToLower(tok_str[6]) = 111) And (ToLower(tok_str[7]) = 110) Then { on }
               tok_type := TOK_FUNCTION;
-    { implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
-    if tok_len = 14 then
-      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 109) then { im }
-        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 108) then { pl }
-          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 109) then { em }
-            if (ToLower(tok_str[6]) = 101) and (ToLower(tok_str[7]) = 110) then { en }
-              if (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 97) then { ta }
-                if (ToLower(tok_str[10]) = 116) and (ToLower(tok_str[11]) = 105) then { ti }
-                  if (ToLower(tok_str[12]) = 111) and (ToLower(tok_str[13]) = 110) then { on }
+    { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
+    If tok_len = 14 Then
+      If (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 109) Then { im }
+        If (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 108) Then { pl }
+          If (ToLower(tok_str[4]) = 101) And (ToLower(tok_str[5]) = 109) Then { em }
+            If (ToLower(tok_str[6]) = 101) And (ToLower(tok_str[7]) = 110) Then { en }
+              If (ToLower(tok_str[8]) = 116) And (ToLower(tok_str[9]) = 97) Then { ta }
+                If (ToLower(tok_str[10]) = 116) And (ToLower(tok_str[11]) = 105) Then { ti }
+                  If (ToLower(tok_str[12]) = 111) And (ToLower(tok_str[13]) = 110) Then { on }
                     tok_type := TOK_IMPLEMENTATION
-  end
-  else if ch = 39 then  { single quote - string }
-  begin
+  End
+  Else If ch = 39 Then  { single quote - String }
+  Begin
     tok_type := TOK_STRING;
     tok_len := 0;
     NextChar;
-    while (ch <> 39) and (ch <> -1) do
-    begin
-      if tok_len < 255 then
-      begin
+    While (ch <> 39) And (ch <> -1) Do
+    Begin
+      If tok_len < 255 Then
+      Begin
         tok_str[tok_len] := ch;
         tok_len := tok_len + 1
-      end;
+      End;
       NextChar
-    end;
+    End;
     tok_str[tok_len] := 0;
-    if ch = 39 then
+    If ch = 39 Then
       NextChar
-  end
-  else if ch = 43 then  { + }
-  begin
+  End
+  Else If ch = 43 Then  { + }
+  Begin
     tok_type := TOK_PLUS;
     NextChar
-  end
-  else if ch = 45 then  { - }
-  begin
+  End
+  Else If ch = 45 Then  { - }
+  Begin
     tok_type := TOK_MINUS;
     NextChar
-  end
-  else if ch = 42 then  { * }
-  begin
+  End
+  Else If ch = 42 Then  { * }
+  Begin
     tok_type := TOK_STAR;
     NextChar
-  end
-  else if ch = 47 then  { / }
-  begin
+  End
+  Else If ch = 47 Then  { / }
+  Begin
     tok_type := TOK_SLASH;
     NextChar
-  end
-  else if ch = 61 then  { = }
-  begin
+  End
+  Else If ch = 61 Then  { = }
+  Begin
     tok_type := TOK_EQ;
     NextChar
-  end
-  else if ch = 60 then  { < }
-  begin
+  End
+  Else If ch = 60 Then  { < }
+  Begin
     NextChar;
-    if ch = 62 then  { <> }
-    begin
+    If ch = 62 Then  { <> }
+    Begin
       tok_type := TOK_NEQ;
       NextChar
-    end
-    else if ch = 61 then  { <= }
-    begin
+    End
+    Else If ch = 61 Then  { <= }
+    Begin
       tok_type := TOK_LE;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_LT
-  end
-  else if ch = 62 then  { > }
-  begin
+  End
+  Else If ch = 62 Then  { > }
+  Begin
     NextChar;
-    if ch = 61 then  { >= }
-    begin
+    If ch = 61 Then  { >= }
+    Begin
       tok_type := TOK_GE;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_GT
-  end
-  else if ch = 40 then  { ( }
-  begin
+  End
+  Else If ch = 40 Then  { ( }
+  Begin
     tok_type := TOK_LPAREN;
     NextChar
-  end
-  else if ch = 41 then  { ) }
-  begin
+  End
+  Else If ch = 41 Then  { ) }
+  Begin
     tok_type := TOK_RPAREN;
     NextChar
-  end
-  else if ch = 91 then  { [ }
-  begin
+  End
+  Else If ch = 91 Then  { [ }
+  Begin
     tok_type := TOK_LBRACKET;
     NextChar
-  end
-  else if ch = 93 then  { ] }
-  begin
+  End
+  Else If ch = 93 Then  { ] }
+  Begin
     tok_type := TOK_RBRACKET;
     NextChar
-  end
-  else if ch = 58 then  { : }
-  begin
+  End
+  Else If ch = 58 Then  { : }
+  Begin
     NextChar;
-    if ch = 61 then  { := }
-    begin
+    If ch = 61 Then  { := }
+    Begin
       tok_type := TOK_ASSIGN;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_COLON
-  end
-  else if ch = 59 then  { ; }
-  begin
+  End
+  Else If ch = 59 Then  { ; }
+  Begin
     tok_type := TOK_SEMICOLON;
     NextChar
-  end
-  else if ch = 44 then  { , }
-  begin
+  End
+  Else If ch = 44 Then  { , }
+  Begin
     tok_type := TOK_COMMA;
     NextChar
-  end
-  else if ch = 46 then  { . }
-  begin
+  End
+  Else If ch = 46 Then  { . }
+  Begin
     NextChar;
-    if ch = 46 then  { .. }
-    begin
+    If ch = 46 Then  { .. }
+    Begin
       tok_type := TOK_DOTDOT;
       NextChar
-    end
-    else
+    End
+    Else
       tok_type := TOK_DOT
-  end
-  else if ch = 94 then  { ^ (caret) }
-  begin
+  End
+  Else If ch = 94 Then  { ^ (caret) }
+  Begin
     tok_type := TOK_CARET;
     NextChar
-  end
-  else if ch = 64 then  { @ }
-  begin
+  End
+  Else If ch = 64 Then  { @ }
+  Begin
     tok_type := TOK_AT;
     NextChar
-  end
-  else
-  begin
+  End
+  Else
+  Begin
     Error(1);  { unexpected character }
     NextChar
-  end
-end;
+  End
+End;
 
 { ----- Symbol Table ----- }
 
-procedure CopyTokenToSym(idx: integer);
-var
-  i: integer;
-  base: integer;
-begin
+Procedure CopyTokenToSym(idx: Integer);
+Var
+  i: Integer;
+  base: Integer;
+Begin
   { sym_name is flattened: base = idx * 32 }
   base := idx * 32;
   i := 0;
-  while i < tok_len do
-  begin
+  While i < tok_len Do
+  Begin
     sym_name[base + i] := tok_str[i];
     i := i + 1
-  end;
+  End;
   sym_name[base + tok_len] := 0
-end;
+End;
 
-function SymLookup: integer;
-var
-  i: integer;
-  found: integer;
-begin
-  { Search backwards to find most recent definition }
+Function SymLookup: Integer;
+Var
+  i: Integer;
+  found: Integer;
+Begin
+  { Search backwards To find most recent definition }
   i := sym_count - 1;
   found := -1;
-  while (i >= 0) and (found = -1) do
-  begin
-    if StrEqual(i) = 1 then
+  While (i >= 0) And (found = -1) Do
+  Begin
+    If StrEqual(i) = 1 Then
       found := i;
     i := i - 1
-  end;
+  End;
   SymLookup := found
-end;
+End;
 
-function SymAdd(kind, typ, level, offset: integer): integer;
-begin
+Function SymAdd(kind, typ, level, offset: Integer): Integer;
+Begin
   CopyTokenToSym(sym_count);
   sym_kind[sym_count] := kind;
   sym_type[sym_count] := typ;
@@ -1244,701 +1244,701 @@ begin
   sym_const_val[sym_count] := 0;
   sym_is_var_param[sym_count] := 0;
   sym_var_param_flags[sym_count] := 0;
-  sym_unit_idx[sym_count] := -1;  { -1 = local symbol, >= 0 = imported from unit }
+  sym_unit_idx[sym_count] := -1;  { -1 = local symbol, >= 0 = imported from Unit }
   sym_count := sym_count + 1;
   SymAdd := sym_count - 1
-end;
+End;
 
-procedure PopScope(level: integer);
-begin
-  while (sym_count > 0) and (sym_level[sym_count - 1] >= level) do
+Procedure PopScope(level: Integer);
+Begin
+  While (sym_count > 0) And (sym_level[sym_count - 1] >= level) Do
     sym_count := sym_count - 1
-end;
+End;
 
-{ Check if parameter position i is marked as var in flags bitmap }
-function IsVarParam(flags, i: integer): integer;
-var
-  bit_val, result: integer;
-begin
-  if i = 0 then bit_val := 1
-  else if i = 1 then bit_val := 2
-  else if i = 2 then bit_val := 4
-  else if i = 3 then bit_val := 8
-  else if i = 4 then bit_val := 16
-  else if i = 5 then bit_val := 32
-  else if i = 6 then bit_val := 64
-  else bit_val := 128;
-  result := (flags div bit_val) mod 2;
+{ Check If parameter position i is marked as Var In flags bitmap }
+Function IsVarParam(flags, i: Integer): Integer;
+Var
+  bit_val, result: Integer;
+Begin
+  If i = 0 Then bit_val := 1
+  Else If i = 1 Then bit_val := 2
+  Else If i = 2 Then bit_val := 4
+  Else If i = 3 Then bit_val := 8
+  Else If i = 4 Then bit_val := 16
+  Else If i = 5 Then bit_val := 32
+  Else If i = 6 Then bit_val := 64
+  Else bit_val := 128;
+  result := (flags Div bit_val) Mod 2;
   IsVarParam := result
-end;
+End;
 
-{ Find a field in a record type, returns field index or -1 }
-function FindField(type_idx: integer): integer;
-var
-  i, j, base, match: integer;
-  first_fld: integer;
-begin
+{ Find a field In a Record Type, returns field index Or -1 }
+Function FindField(type_idx: Integer): Integer;
+Var
+  i, j, base, match: Integer;
+  first_fld: Integer;
+Begin
   FindField := -1;
   first_fld := sym_const_val[type_idx];
   i := first_fld;
-  while (i < field_count) and (field_rec_idx[i] = type_idx) do
-  begin
-    { Compare field name with current token }
+  While (i < field_count) And (field_rec_idx[i] = type_idx) Do
+  Begin
+    { Compare field name With current token }
     base := i * 32;
     match := 1;
     j := 0;
-    while (j < tok_len) and (match = 1) do
-    begin
-      if ToLower(field_name[base + j]) <> ToLower(tok_str[j]) then
+    While (j < tok_len) And (match = 1) Do
+    Begin
+      If ToLower(field_name[base + j]) <> ToLower(tok_str[j]) Then
         match := 0;
       j := j + 1
-    end;
-    if (match = 1) and (field_name[base + tok_len] = 0) then
-    begin
+    End;
+    If (match = 1) And (field_name[base + tok_len] = 0) Then
+    Begin
       FindField := i;
-      i := field_count  { exit loop }
-    end
-    else
+      i := field_count  { Exit loop }
+    End
+    Else
       i := i + 1
-  end
-end;
+  End
+End;
 
 { ----- Output Helpers ----- }
 
-procedure EmitIndent;
-begin
-  write('    ')
-end;
+Procedure EmitIndent;
+Begin
+  Write('    ')
+End;
 
-procedure EmitNL;
-begin
-  writeln
-end;
+Procedure EmitNL;
+Begin
+  WriteLn
+End;
 
-procedure EmitGlobl;
-begin
-  writeln('.globl _main')
-end;
+Procedure EmitGlobl;
+Begin
+  WriteLn('.globl _main')
+End;
 
-procedure EmitAlign4;
-begin
-  writeln('.align 4')
-end;
+Procedure EmitAlign4;
+Begin
+  WriteLn('.align 4')
+End;
 
-procedure EmitMain;
-begin
-  writeln('_main:')
-end;
+Procedure EmitMain;
+Begin
+  WriteLn('_main:')
+End;
 
-procedure EmitLabel(n: integer);
-begin
-  write('L'); write(n); writeln(':')
-end;
+Procedure EmitLabel(n: Integer);
+Begin
+  Write('L'); Write(n); WriteLn(':')
+End;
 
-function NewLabel: integer;
-begin
+Function NewLabel: Integer;
+Begin
   NewLabel := label_count;
   label_count := label_count + 1
-end;
+End;
 
-procedure EmitStp;
-begin
-  writeln('    stp x29, x30, [sp, #-16]!')
-end;
+Procedure EmitStp;
+Begin
+  WriteLn('    stp x29, x30, [sp, #-16]!')
+End;
 
-procedure EmitMovFP;
-begin
-  writeln('    mov x29, sp')
-end;
+Procedure EmitMovFP;
+Begin
+  WriteLn('    mov x29, sp')
+End;
 
-procedure EmitLdp;
-begin
-  writeln('    ldp x29, x30, [sp], #16')
-end;
+Procedure EmitLdp;
+Begin
+  WriteLn('    ldp x29, x30, [sp], #16')
+End;
 
-procedure EmitRet;
-begin
-  writeln('    ret')
-end;
+Procedure EmitRet;
+Begin
+  WriteLn('    ret')
+End;
 
-procedure EmitStoreStaticLink;
-begin
-  writeln('    stur x9, [x29, #-8]')
-end;
+Procedure EmitStoreStaticLink;
+Begin
+  WriteLn('    stur x9, [x29, #-8]')
+End;
 
-procedure EmitStaticLink(sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x9, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x9, [x9, #-8]')
-end;
+Procedure EmitStaticLink(sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x9, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x9, [x9, #-8]')
+End;
 
-procedure EmitMovX0(val: integer);
-var
-  lo, hi: integer;
-  neg: integer;
-begin
+Procedure EmitMovX0(val: Integer);
+Var
+  lo, hi: Integer;
+  neg: Integer;
+Begin
   neg := 0;
-  if val < 0 then
-  begin
+  If val < 0 Then
+  Begin
     neg := 1;
     val := 0 - val
-  end;
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x0, #'); writeln(lo);
-    write('    movk x0, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x0, #'); writeln(val)
-  end;
-  if neg = 1 then
-    writeln('    neg x0, x0')
-end;
+  End;
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x0, #'); WriteLn(lo);
+    Write('    movk x0, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x0, #'); WriteLn(val)
+  End;
+  If neg = 1 Then
+    WriteLn('    neg x0, x0')
+End;
 
-procedure EmitMovX16(val: integer);
-var
-  lo, hi: integer;
-begin
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x16, #'); writeln(lo);
-    write('    movk x16, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x16, #'); writeln(val)
-  end
-end;
+Procedure EmitMovX16(val: Integer);
+Var
+  lo, hi: Integer;
+Begin
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x16, #'); WriteLn(lo);
+    Write('    movk x16, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x16, #'); WriteLn(val)
+  End
+End;
 
-procedure EmitMovX8(val: integer);
-var
-  lo, hi: integer;
-  neg: integer;
-begin
+Procedure EmitMovX8(val: Integer);
+Var
+  lo, hi: Integer;
+  neg: Integer;
+Begin
   neg := 0;
-  if val < 0 then
-  begin
+  If val < 0 Then
+  Begin
     neg := 1;
     val := 0 - val
-  end;
-  if val > 65535 then
-  begin
-    lo := val mod 65536;
-    hi := val div 65536;
-    write('    movz x8, #'); writeln(lo);
-    write('    movk x8, #'); write(hi); writeln(', lsl #16')
-  end
-  else
-  begin
-    write('    mov x8, #'); writeln(val)
-  end;
-  if neg = 1 then
-    writeln('    neg x8, x8')
-end;
+  End;
+  If val > 65535 Then
+  Begin
+    lo := val Mod 65536;
+    hi := val Div 65536;
+    Write('    movz x8, #'); WriteLn(lo);
+    Write('    movk x8, #'); Write(hi); WriteLn(', lsl #16')
+  End
+  Else
+  Begin
+    Write('    mov x8, #'); WriteLn(val)
+  End;
+  If neg = 1 Then
+    WriteLn('    neg x8, x8')
+End;
 
-procedure EmitSubLargeOffset(dest, src, offset: integer);
-var
-  lo, hi: integer;
-begin
-  if offset <= 4095 then
-  begin
-    write('    sub x'); write(dest); write(', x'); write(src); write(', #'); writeln(offset)
-  end
-  else
-  begin
-    lo := offset mod 65536;
-    hi := offset div 65536;
-    write('    movz x10, #'); writeln(lo);
-    if hi > 0 then
-    begin
-      write('    movk x10, #'); write(hi); writeln(', lsl #16')
-    end;
-    write('    sub x'); write(dest); write(', x'); write(src); writeln(', x10')
-  end
-end;
+Procedure EmitSubLargeOffset(dest, src, offset: Integer);
+Var
+  lo, hi: Integer;
+Begin
+  If offset <= 4095 Then
+  Begin
+    Write('    sub x'); Write(dest); Write(', x'); Write(src); Write(', #'); WriteLn(offset)
+  End
+  Else
+  Begin
+    lo := offset Mod 65536;
+    hi := offset Div 65536;
+    Write('    movz x10, #'); WriteLn(lo);
+    If hi > 0 Then
+    Begin
+      Write('    movk x10, #'); Write(hi); WriteLn(', lsl #16')
+    End;
+    Write('    sub x'); Write(dest); Write(', x'); Write(src); WriteLn(', x10')
+  End
+End;
 
-procedure EmitSvc;
-begin
-  writeln('    svc #0x80')
-end;
+Procedure EmitSvc;
+Begin
+  WriteLn('    svc #0x80')
+End;
 
-procedure EmitPushX0;
-begin
-  writeln('    str x0, [sp, #-16]!')
-end;
+Procedure EmitPushX0;
+Begin
+  WriteLn('    str x0, [sp, #-16]!')
+End;
 
-procedure EmitPopX0;
-begin
-  writeln('    ldr x0, [sp], #16')
-end;
+Procedure EmitPopX0;
+Begin
+  WriteLn('    ldr x0, [sp], #16')
+End;
 
-procedure EmitPopX1;
-begin
-  writeln('    ldr x1, [sp], #16')
-end;
+Procedure EmitPopX1;
+Begin
+  WriteLn('    ldr x1, [sp], #16')
+End;
 
-procedure EmitPushX1;
-begin
-  writeln('    str x1, [sp, #-16]!')
-end;
+Procedure EmitPushX1;
+Begin
+  WriteLn('    str x1, [sp, #-16]!')
+End;
 
-procedure EmitAdd;
-begin
-  writeln('    add x0, x1, x0')
-end;
+Procedure EmitAdd;
+Begin
+  WriteLn('    add x0, x1, x0')
+End;
 
-procedure EmitSub;
-begin
-  writeln('    sub x0, x1, x0')
-end;
+Procedure EmitSub;
+Begin
+  WriteLn('    sub x0, x1, x0')
+End;
 
-procedure EmitMul;
-begin
-  writeln('    mul x0, x1, x0')
-end;
+Procedure EmitMul;
+Begin
+  WriteLn('    mul x0, x1, x0')
+End;
 
-procedure EmitSDiv;
-begin
-  writeln('    sdiv x0, x1, x0')
-end;
+Procedure EmitSDiv;
+Begin
+  WriteLn('    sdiv x0, x1, x0')
+End;
 
-procedure EmitMovX0X20;
-begin
-  writeln('    mov x0, x20')
-end;
+Procedure EmitMovX0X20;
+Begin
+  WriteLn('    mov x0, x20')
+End;
 
-procedure EmitBranchLabel(lbl: integer);
-begin
-  write('    b L'); writeln(lbl)
-end;
+Procedure EmitBranchLabel(lbl: Integer);
+Begin
+  Write('    b L'); WriteLn(lbl)
+End;
 
-procedure EmitBranchLabelZ(lbl: integer);
-begin
-  write('    cbz x0, L'); writeln(lbl)
-end;
+Procedure EmitBranchLabelZ(lbl: Integer);
+Begin
+  Write('    cbz x0, L'); WriteLn(lbl)
+End;
 
-procedure EmitBranchLabelNZ(lbl: integer);
-begin
-  write('    cbnz x0, L'); writeln(lbl)
-end;
+Procedure EmitBranchLabelNZ(lbl: Integer);
+Begin
+  Write('    cbnz x0, L'); WriteLn(lbl)
+End;
 
-procedure EmitBL(lbl: integer);
-begin
-  write('    bl L'); writeln(lbl)
-end;
+Procedure EmitBL(lbl: Integer);
+Begin
+  Write('    bl L'); WriteLn(lbl)
+End;
 
-procedure EmitCmpX0X1;
-begin
-  writeln('    cmp x1, x0')
-end;
+Procedure EmitCmpX0X1;
+Begin
+  WriteLn('    cmp x1, x0')
+End;
 
-procedure EmitCset(cond: integer);
-begin
-  write('    cset x0, ');
-  if cond = 0 then writeln('eq')
-  else if cond = 1 then writeln('ne')
-  else if cond = 2 then writeln('lt')
-  else if cond = 3 then writeln('le')
-  else if cond = 4 then writeln('gt')
-  else writeln('ge')
-end;
+Procedure EmitCset(cond: Integer);
+Begin
+  Write('    cset x0, ');
+  If cond = 0 Then WriteLn('eq')
+  Else If cond = 1 Then WriteLn('ne')
+  Else If cond = 2 Then WriteLn('lt')
+  Else If cond = 3 Then WriteLn('le')
+  Else If cond = 4 Then WriteLn('gt')
+  Else WriteLn('ge')
+End;
 
-procedure EmitLdurX0(offset: integer);
-begin
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    ldur x0, [x29, #'); write(offset); writeln(']')
-  end
-  else
-  begin
+Procedure EmitLdurX0(offset: Integer);
+Begin
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    ldur x0, [x29, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
     EmitMovX8(offset);
-    writeln('    add x8, x29, x8');
-    writeln('    ldr x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x29, x8');
+    WriteLn('    ldr x0, [x8]')
+  End
+End;
 
-procedure EmitLdurX0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    ldur x0, [x8, #'); write(offset); writeln(']')
-  end
-  else
-  begin
-    writeln('    mov x9, x8');
+Procedure EmitLdurX0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    ldur x0, [x8, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
+    WriteLn('    mov x9, x8');
     EmitMovX8(offset);
-    writeln('    add x8, x9, x8');
-    writeln('    ldr x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x9, x8');
+    WriteLn('    ldr x0, [x8]')
+  End
+End;
 
-procedure EmitFollowChain(sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]')
-end;
+Procedure EmitFollowChain(sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]')
+End;
 
-procedure EmitVarAddr(var_idx, cur_scope: integer);
-var
-  offset, var_level, i: integer;
-begin
+Procedure EmitVarAddr(var_idx, cur_scope: Integer);
+Var
+  offset, var_level, i: Integer;
+Begin
   offset := sym_offset[var_idx];
   var_level := sym_level[var_idx];
 
-  if var_level < cur_scope then
-  begin
-    writeln('    mov x8, x29');
-    for i := cur_scope downto var_level + 1 do
-      writeln('    ldur x8, [x8, #-8]');
-    if offset < 0 then
+  If var_level < cur_scope Then
+  Begin
+    WriteLn('    mov x8, x29');
+    For i := cur_scope DownTo var_level + 1 Do
+      WriteLn('    ldur x8, [x8, #-8]');
+    If offset < 0 Then
       EmitSubLargeOffset(0, 8, 0 - offset)
-    else
-    begin
-      if offset <= 4095 then
-      begin
-        write('    add x0, x8, #'); writeln(offset)
-      end
-      else
-      begin
-        writeln('    mov x9, x8');
+    Else
+    Begin
+      If offset <= 4095 Then
+      Begin
+        Write('    add x0, x8, #'); WriteLn(offset)
+      End
+      Else
+      Begin
+        WriteLn('    mov x9, x8');
         EmitMovX8(offset);
-        writeln('    add x0, x9, x8')
-      end
-    end
-  end
-  else
-  begin
-    if offset < 0 then
+        WriteLn('    add x0, x9, x8')
+      End
+    End
+  End
+  Else
+  Begin
+    If offset < 0 Then
       EmitSubLargeOffset(0, 29, 0 - offset)
-    else
-    begin
-      if offset <= 4095 then
-      begin
-        write('    add x0, x29, #'); writeln(offset)
-      end
-      else
-      begin
+    Else
+    Begin
+      If offset <= 4095 Then
+      Begin
+        Write('    add x0, x29, #'); WriteLn(offset)
+      End
+      Else
+      Begin
         EmitMovX8(offset);
-        writeln('    add x0, x29, x8')
-      end
-    end
-  end
-end;
+        WriteLn('    add x0, x29, x8')
+      End
+    End
+  End
+End;
 
-procedure EmitSturX0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
+Procedure EmitSturX0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
   EmitPushX0;
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
   EmitPopX0;
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    stur x0, [x8, #'); write(offset); writeln(']')
-  end
-  else
-  begin
-    writeln('    mov x9, x8');
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    stur x0, [x8, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
+    WriteLn('    mov x9, x8');
     EmitPushX0;
     EmitMovX8(offset);
-    writeln('    add x8, x9, x8');
+    WriteLn('    add x8, x9, x8');
     EmitPopX0;
-    writeln('    str x0, [x8]')
-  end
-end;
+    WriteLn('    str x0, [x8]')
+  End
+End;
 
-procedure EmitSturX0(offset: integer);
-begin
-  if (offset >= -255) and (offset <= 255) then
-  begin
-    write('    stur x0, [x29, #'); write(offset); writeln(']')
-  end
-  else
-  begin
+Procedure EmitSturX0(offset: Integer);
+Begin
+  If (offset >= -255) And (offset <= 255) Then
+  Begin
+    Write('    stur x0, [x29, #'); Write(offset); WriteLn(']')
+  End
+  Else
+  Begin
     EmitMovX8(offset);
-    writeln('    add x8, x29, x8');
-    writeln('    str x0, [x8]')
-  end
-end;
+    WriteLn('    add x8, x29, x8');
+    WriteLn('    str x0, [x8]')
+  End
+End;
 
-procedure EmitSubSP(n: integer);
-begin
-  if n <= 4095 then
-  begin
-    write('    sub sp, sp, #'); writeln(n)
-  end
-  else
-  begin
+Procedure EmitSubSP(n: Integer);
+Begin
+  If n <= 4095 Then
+  Begin
+    Write('    sub sp, sp, #'); WriteLn(n)
+  End
+  Else
+  Begin
     EmitMovX8(n);
-    writeln('    sub sp, sp, x8')
-  end
-end;
+    WriteLn('    sub sp, sp, x8')
+  End
+End;
 
-procedure EmitAddSP(n: integer);
-begin
-  if n <= 4095 then
-  begin
-    write('    add sp, sp, #'); writeln(n)
-  end
-  else
-  begin
+Procedure EmitAddSP(n: Integer);
+Begin
+  If n <= 4095 Then
+  Begin
+    Write('    add sp, sp, #'); WriteLn(n)
+  End
+  Else
+  Begin
     EmitMovX8(n);
-    writeln('    add sp, sp, x8')
-  end
-end;
+    WriteLn('    add sp, sp, x8')
+  End
+End;
 
-procedure EmitNeg;
-begin
-  writeln('    neg x0, x0')
-end;
+Procedure EmitNeg;
+Begin
+  WriteLn('    neg x0, x0')
+End;
 
-procedure EmitMsub;
-begin
-  writeln('    msub x0, x0, x2, x1')
-end;
+Procedure EmitMsub;
+Begin
+  WriteLn('    msub x0, x0, x2, x1')
+End;
 
-procedure EmitMovX2X0;
-begin
-  writeln('    mov x2, x0')
-end;
+Procedure EmitMovX2X0;
+Begin
+  WriteLn('    mov x2, x0')
+End;
 
-procedure EmitAndX0X1;
-begin
-  writeln('    and x0, x1, x0')
-end;
+Procedure EmitAndX0X1;
+Begin
+  WriteLn('    And x0, x1, x0')
+End;
 
-procedure EmitOrrX0X1;
-begin
-  writeln('    orr x0, x1, x0')
-end;
+Procedure EmitOrrX0X1;
+Begin
+  WriteLn('    orr x0, x1, x0')
+End;
 
-procedure EmitAndImm(val: integer);
-begin
-  write('    and x0, x0, #'); writeln(val)
-end;
+Procedure EmitAndImm(val: Integer);
+Begin
+  Write('    And x0, x0, #'); WriteLn(val)
+End;
 
-procedure EmitEorX0(val: integer);
-begin
-  write('    eor x0, x0, #'); writeln(val)
-end;
+Procedure EmitEorX0(val: Integer);
+Begin
+  Write('    eor x0, x0, #'); WriteLn(val)
+End;
 
 { ----- Floating Point Emitters ----- }
 
-procedure EmitPushD0;
-begin
-  writeln('    str d0, [sp, #-16]!')
-end;
+Procedure EmitPushD0;
+Begin
+  WriteLn('    str d0, [sp, #-16]!')
+End;
 
-procedure EmitPopD0;
-begin
-  writeln('    ldr d0, [sp], #16')
-end;
+Procedure EmitPopD0;
+Begin
+  WriteLn('    ldr d0, [sp], #16')
+End;
 
-procedure EmitPopD1;
-begin
-  writeln('    ldr d1, [sp], #16')
-end;
+Procedure EmitPopD1;
+Begin
+  WriteLn('    ldr d1, [sp], #16')
+End;
 
-procedure EmitFAdd;
-begin
-  writeln('    fadd d0, d1, d0')
-end;
+Procedure EmitFAdd;
+Begin
+  WriteLn('    fadd d0, d1, d0')
+End;
 
-procedure EmitFSub;
-begin
-  writeln('    fsub d0, d1, d0')
-end;
+Procedure EmitFSub;
+Begin
+  WriteLn('    fsub d0, d1, d0')
+End;
 
-procedure EmitFMul;
-begin
-  writeln('    fmul d0, d1, d0')
-end;
+Procedure EmitFMul;
+Begin
+  WriteLn('    fmul d0, d1, d0')
+End;
 
-procedure EmitFDiv;
-begin
-  writeln('    fdiv d0, d1, d0')
-end;
+Procedure EmitFDiv;
+Begin
+  WriteLn('    fdiv d0, d1, d0')
+End;
 
-procedure EmitFNeg;
-begin
-  writeln('    fneg d0, d0')
-end;
+Procedure EmitFNeg;
+Begin
+  WriteLn('    fneg d0, d0')
+End;
 
-procedure EmitFCmp;
-begin
-  writeln('    fcmp d1, d0')
-end;
+Procedure EmitFCmp;
+Begin
+  WriteLn('    fcmp d1, d0')
+End;
 
-procedure EmitScvtfD0X0;
-begin
-  writeln('    scvtf d0, x0')
-end;
+Procedure EmitScvtfD0X0;
+Begin
+  WriteLn('    scvtf d0, x0')
+End;
 
-procedure EmitScvtfD1X1;
-begin
-  writeln('    scvtf d1, x1')
-end;
+Procedure EmitScvtfD1X1;
+Begin
+  WriteLn('    scvtf d1, x1')
+End;
 
-procedure EmitFcvtzsX0D0;
-begin
-  writeln('    fcvtzs x0, d0')
-end;
+Procedure EmitFcvtzsX0D0;
+Begin
+  WriteLn('    fcvtzs x0, d0')
+End;
 
-procedure EmitFmovD0X0;
-begin
-  writeln('    fmov d0, x0')
-end;
+Procedure EmitFmovD0X0;
+Begin
+  WriteLn('    fmov d0, x0')
+End;
 
-procedure EmitFmovX0D0;
-begin
-  writeln('    fmov x0, d0')
-end;
+Procedure EmitFmovX0D0;
+Begin
+  WriteLn('    fmov x0, d0')
+End;
 
-procedure EmitLdurD0(offset: integer);
-begin
-  write('    ldur d0, [x29, #'); write(offset); writeln(']')
-end;
+Procedure EmitLdurD0(offset: Integer);
+Begin
+  Write('    ldur d0, [x29, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitSturD0(offset: integer);
-begin
-  write('    stur d0, [x29, #'); write(offset); writeln(']')
-end;
+Procedure EmitSturD0(offset: Integer);
+Begin
+  Write('    stur d0, [x29, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitLdurD0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
-  write('    ldur d0, [x8, #'); write(offset); writeln(']')
-end;
+Procedure EmitLdurD0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
+  Write('    ldur d0, [x8, #'); Write(offset); WriteLn(']')
+End;
 
-procedure EmitSturD0Outer(offset, sym_level, cur_level: integer);
-var
-  i: integer;
-begin
+Procedure EmitSturD0Outer(offset, sym_level, cur_level: Integer);
+Var
+  i: Integer;
+Begin
   EmitPushD0;
-  writeln('    mov x8, x29');
-  for i := cur_level downto sym_level + 1 do
-    writeln('    ldur x8, [x8, #-8]');
+  WriteLn('    mov x8, x29');
+  For i := cur_level DownTo sym_level + 1 Do
+    WriteLn('    ldur x8, [x8, #-8]');
   EmitPopD0;
-  write('    stur d0, [x8, #'); write(offset); writeln(']')
-end;
+  Write('    stur d0, [x8, #'); Write(offset); WriteLn(']')
+End;
 
 { ----- Unit Symbol Emitters ----- }
 
-procedure WriteSymName(sym_idx: integer);
-var
-  base, i, c: integer;
-begin
+Procedure WriteSymName(sym_idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := sym_idx * 32;
   i := 0;
   c := sym_name[base];
-  while c <> 0 do
-  begin
-    writechar(c);
+  While c <> 0 Do
+  Begin
+    WriteChar(c);
     i := i + 1;
     c := sym_name[base + i]
-  end
-end;
+  End
+End;
 
-procedure WriteCurrentUnitName;
-var
-  i: integer;
-begin
-  for i := 0 to current_unit_len - 1 do
-    writechar(current_unit_name[i])
-end;
+Procedure WriteCurrentUnitName;
+Var
+  i: Integer;
+Begin
+  For i := 0 To current_unit_len - 1 Do
+    WriteChar(current_unit_name[i])
+End;
 
-procedure WriteLoadedUnitName(unit_idx: integer);
-var
-  base, i, c: integer;
-begin
+Procedure WriteLoadedUnitName(unit_idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := unit_idx * 32;
   i := 0;
   c := loaded_units[base];
-  while c <> 0 do
-  begin
-    writechar(c);
+  While c <> 0 Do
+  Begin
+    WriteChar(c);
     i := i + 1;
     c := loaded_units[base + i]
-  end
-end;
+  End
+End;
 
-procedure EmitGloblCurrentUnit(sym_idx: integer);
-begin
-  write('.globl _');
+Procedure EmitGloblCurrentUnit(sym_idx: Integer);
+Begin
+  Write('.globl _');
   WriteCurrentUnitName;
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln
-end;
+  WriteLn
+End;
 
-procedure EmitUnitLabel(sym_idx: integer);
-begin
-  write('_');
+Procedure EmitUnitLabel(sym_idx: Integer);
+Begin
+  Write('_');
   WriteCurrentUnitName;
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln(':')
-end;
+  WriteLn(':')
+End;
 
-procedure EmitBLUnitProc(unit_idx, sym_idx: integer);
-begin
-  write('    bl _');
+Procedure EmitBLUnitProc(unit_idx, sym_idx: Integer);
+Begin
+  Write('    bl _');
   WriteLoadedUnitName(unit_idx);
-  write('_');
+  Write('_');
   WriteSymName(sym_idx);
-  writeln
-end;
+  WriteLn
+End;
 
-procedure EmitGloblUnitInit;
-begin
-  write('.globl _');
+Procedure EmitGloblUnitInit;
+Begin
+  Write('.globl _');
   WriteCurrentUnitName;
-  writeln('_init')
-end;
+  WriteLn('_init')
+End;
 
-procedure EmitUnitInitLabel;
-begin
-  write('_');
+Procedure EmitUnitInitLabel;
+Begin
+  Write('_');
   WriteCurrentUnitName;
-  writeln('_init:')
-end;
+  WriteLn('_init:')
+End;
 
-procedure EmitBLUnitInit(unit_idx: integer);
-begin
-  write('    bl _');
+Procedure EmitBLUnitInit(unit_idx: Integer);
+Begin
+  Write('    bl _');
   WriteLoadedUnitName(unit_idx);
-  writeln('_init')
-end;
+  WriteLn('_init')
+End;
 
 { ----- Print Runtime ----- }
 
-procedure EmitPrintIntRuntime;
-var
-  loop_lbl, done_lbl, neg_lbl, print_lbl: integer;
-begin
-  { Runtime routine to print integer in x0 }
+Procedure EmitPrintIntRuntime;
+Var
+  loop_lbl, done_lbl, neg_lbl, print_lbl: Integer;
+Begin
+  { Runtime routine To print Integer In x0 }
   EmitLabel(rt_print_int);
   EmitStp;
   EmitMovFP;
@@ -1949,9 +1949,9 @@ begin
   { Handle negative }
   neg_lbl := NewLabel;
   done_lbl := NewLabel;
-  writeln('    cmp x0, #0');
+  WriteLn('    cmp x0, #0');
 
-  write('    b.ge L'); writeln(neg_lbl);
+  Write('    b.ge L'); WriteLn(neg_lbl);
 
   { Print minus sign }
   EmitMovX0(1);
@@ -1960,8 +1960,8 @@ begin
   EmitSturX0(-8);
   EmitMovX16(33554436); { 0x2000004 }
   EmitMovX0X20;
-  writeln('    sub x1, x29, #8');
-  writeln('    mov x2, #1');
+  WriteLn('    sub x1, x29, #8');
+  WriteLn('    mov x2, #1');
   EmitSvc;
 
   { Negate }
@@ -1971,7 +1971,7 @@ begin
 
   EmitLabel(neg_lbl);
 
-  { Convert to string (digits in reverse) }
+  { Convert To String (digits In reverse) }
   EmitMovX0(0);
   EmitSturX0(-40);  { digit count }
 
@@ -1996,18 +1996,18 @@ begin
   EmitMsub;
 
   { Store digit }
-  writeln('    add x0, x0, #48');
+  WriteLn('    add x0, x0, #48');
 
-  writeln('    ldur x1, [x29, #-40]');
+  WriteLn('    ldur x1, [x29, #-40]');
 
-  writeln('    sub x2, x29, #48');
+  WriteLn('    sub x2, x29, #48');
 
-  writeln('    strb w0, [x2, x1]');
+  WriteLn('    strb w0, [x2, x1]');
 
   { digit count++ }
-  writeln('    add x1, x1, #1');
+  WriteLn('    add x1, x1, #1');
 
-  writeln('    stur x1, [x29, #-40]');
+  WriteLn('    stur x1, [x29, #-40]');
 
   { val /= 10 }
   EmitLdurX0(-24);
@@ -2031,7 +2031,7 @@ begin
 
   EmitLabel(done_lbl);
 
-  { Print digits in reverse order }
+  { Print digits In reverse order }
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
   EmitLabel(loop_lbl);
@@ -2039,20 +2039,20 @@ begin
   EmitBranchLabelZ(done_lbl);
 
   { digit count-- }
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitSturX0(-40);
 
   { Load digit }
-  writeln('    sub x1, x29, #48');
+  WriteLn('    sub x1, x29, #48');
 
-  writeln('    ldrb w0, [x1, x0]');
+  WriteLn('    ldrb w0, [x1, x0]');
 
-  { Print char }
+  { Print Char }
   EmitSturX0(-8);
   EmitMovX16(33554436);
   EmitMovX0X20;
-  writeln('    sub x1, x29, #8');
-  writeln('    mov x2, #1');
+  WriteLn('    sub x1, x29, #8');
+  WriteLn('    mov x2, #1');
   EmitSvc;
 
   EmitBranchLabel(loop_lbl);
@@ -2063,144 +2063,144 @@ begin
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitNewlineRuntime;
-begin
-  { Newline routine - print chr(10) }
+Procedure EmitNewlineRuntime;
+Begin
+  { Newline routine - print Chr(10) }
   EmitLabel(rt_newline);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
   EmitMovX0(10);
   EmitSturX0(-9);
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;
-  writeln('    sub x1, x29, #9');
-  writeln('    mov x2, #1');
+  WriteLn('    sub x1, x29, #9');
+  WriteLn('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitReadcharRuntime;
-begin
-  { Readchar routine - read one char, return in x0 (-1 for EOF) }
-  { Uses x19 as input file descriptor (0=stdin, or opened file) }
+Procedure EmitReadcharRuntime;
+Begin
+  { ReadChar routine - Read one Char, return In x0 (-1 For EOF) }
+  { Uses x19 as input file descriptor (0=stdin, Or opened file) }
   EmitLabel(rt_readchar);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  { Check if read returned >= 1 }
-  writeln('    cmp x0, #1');
-  write('    b.ge L'); writeln(label_count);
+  { Check If Read returned >= 1 }
+  WriteLn('    cmp x0, #1');
+  Write('    b.ge L'); WriteLn(label_count);
   EmitMovX0(-1);  { EOF }
   EmitBranchLabel(label_count + 1);
   EmitLabel(label_count);
   label_count := label_count + 1;
-  writeln('    ldrb w0, [sp]');
+  WriteLn('    ldrb w0, [sp]');
   EmitLabel(label_count);
   label_count := label_count + 1;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitPrintCharRuntime;
-begin
-  { Print char routine - print char in x0 }
+Procedure EmitPrintCharRuntime;
+Begin
+  { Print Char routine - print Char In x0 }
   EmitLabel(rt_print_char);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  writeln('    strb w0, [sp]');
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  WriteLn('    strb w0, [sp]');
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitWriteCharFdRuntime;
-begin
-  { Write char to fd routine - x0=fd, x1=char }
+Procedure EmitWriteCharFdRuntime;
+Begin
+  { Write Char To fd routine - x0=fd, x1=Char }
   EmitLabel(rt_write_char_fd);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  { Store char on stack }
-  writeln('    strb w1, [sp]');
-  { x0 already has fd, set up rest of syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
+  { Store Char on stack }
+  WriteLn('    strb w1, [sp]');
+  { x0 already has fd, Set up rest Of syscall }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitPrintStringRuntime;
-var
-  loop_lbl, done_lbl: integer;
-begin
-  { Print string routine - x0 = address of pascal string (length byte + chars) }
+Procedure EmitPrintStringRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { Print String routine - x0 = address Of pascal String (Length byte + chars) }
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
   EmitLabel(rt_print_string);
   EmitStp;
   EmitMovFP;
   EmitSubSP(32);
-  { Save base address to [x29, #-8] }
-  writeln('    stur x0, [x29, #-8]');
-  { Load length from [x0] into x1 and save to [x29, #-16] }
-  writeln('    ldrb w1, [x0]');
-  writeln('    stur x1, [x29, #-16]');
-  { Initialize index to 0 at [x29, #-24] }
-  writeln('    mov x2, #0');
-  writeln('    stur x2, [x29, #-24]');
+  { Save base address To [x29, #-8] }
+  WriteLn('    stur x0, [x29, #-8]');
+  { Load Length from [x0] into x1 And save To [x29, #-16] }
+  WriteLn('    ldrb w1, [x0]');
+  WriteLn('    stur x1, [x29, #-16]');
+  { Initialize index To 0 at [x29, #-24] }
+  WriteLn('    mov x2, #0');
+  WriteLn('    stur x2, [x29, #-24]');
   { Loop label }
   EmitLabel(loop_lbl);
-  { Load index and length, compare }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    cmp x2, x1');
+  { Load index And Length, compare }
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    cmp x2, x1');
   { b.ge done_lbl }
-  write('    b.ge L'); writeln(done_lbl);
-  { Load char at [base + index + 1] }
-  writeln('    ldur x0, [x29, #-8]');
-  writeln('    add x0, x0, x2');
-  writeln('    add x0, x0, #1');
-  writeln('    ldrb w0, [x0]');
+  Write('    b.ge L'); WriteLn(done_lbl);
+  { Load Char at [base + index + 1] }
+  WriteLn('    ldur x0, [x29, #-8]');
+  WriteLn('    add x0, x0, x2');
+  WriteLn('    add x0, x0, #1');
+  WriteLn('    ldrb w0, [x0]');
   { Call print_char }
   EmitBL(rt_print_char);
   { Increment index }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    add x2, x2, #1');
-  writeln('    stur x2, [x29, #-24]');
-  { Branch back to loop }
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    add x2, x2, #1');
+  WriteLn('    stur x2, [x29, #-24]');
+  { Branch back To loop }
   EmitBranchLabel(loop_lbl);
   { Done label }
   EmitLabel(done_lbl);
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitReadIntRuntime;
-var
-  skip_ws_lbl, read_digit_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: integer;
-begin
-  { Read integer routine - reads from x19 (input fd), returns in x0 }
+Procedure EmitReadIntRuntime;
+Var
+  skip_ws_lbl, read_digit_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: Integer;
+Begin
+  { Read Integer routine - reads from x19 (input fd), returns In x0 }
   { Skips whitespace, handles optional minus sign, reads digits }
   EmitLabel(rt_read_int);
   EmitStp;
@@ -2208,99 +2208,99 @@ begin
   EmitSubSP(48);
 
   { x21 = accumulated value, x22 = negative flag }
-  writeln('    mov x21, #0');
-  writeln('    mov x22, #0');
+  WriteLn('    mov x21, #0');
+  WriteLn('    mov x22, #0');
 
   { Skip whitespace loop }
   skip_ws_lbl := NewLabel;
   EmitLabel(skip_ws_lbl);
-  { Read one char }
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  { Read one Char }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  { Check if read failed }
-  writeln('    cmp x0, #1');
+  { Check If Read failed }
+  WriteLn('    cmp x0, #1');
   done_lbl := NewLabel;
-  write('    b.lt L'); writeln(done_lbl);
-  { Load char into x23 }
-  writeln('    ldrb w23, [sp]');
-  { Check if space (32), tab (9), newline (10), or carriage return (13) }
-  writeln('    cmp x23, #32');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x23, #9');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x23, #10');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x23, #13');
-  write('    b.eq L'); writeln(skip_ws_lbl);
+  Write('    b.lt L'); WriteLn(done_lbl);
+  { Load Char into x23 }
+  WriteLn('    ldrb w23, [sp]');
+  { Check If space (32), tab (9), newline (10), Or carriage return (13) }
+  WriteLn('    cmp x23, #32');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x23, #9');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x23, #10');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x23, #13');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
 
-  { Check for minus sign (45) }
+  { Check For minus sign (45) }
   neg_lbl := NewLabel;
   not_neg_lbl := NewLabel;
-  writeln('    cmp x23, #45');
-  write('    b.ne L'); writeln(not_neg_lbl);
+  WriteLn('    cmp x23, #45');
+  Write('    b.ne L'); WriteLn(not_neg_lbl);
   { Set negative flag }
-  writeln('    mov x22, #1');
+  WriteLn('    mov x22, #1');
   EmitBranchLabel(neg_lbl);
   EmitLabel(not_neg_lbl);
   { Not a minus, so it should be a digit - process it }
-  writeln('    sub x23, x23, #48');
-  { Check if valid digit (0-9) }
-  writeln('    cmp x23, #9');
-  write('    b.hi L'); writeln(done_lbl);
-  { Add to accumulated value: x21 = x21 * 10 + x23 }
-  writeln('    mov x24, #10');
-  writeln('    mul x21, x21, x24');
-  writeln('    add x21, x21, x23');
+  WriteLn('    sub x23, x23, #48');
+  { Check If valid digit (0-9) }
+  WriteLn('    cmp x23, #9');
+  Write('    b.hi L'); WriteLn(done_lbl);
+  { Add To accumulated value: x21 = x21 * 10 + x23 }
+  WriteLn('    mov x24, #10');
+  WriteLn('    mul x21, x21, x24');
+  WriteLn('    add x21, x21, x23');
 
   { Read digit loop }
   EmitLabel(neg_lbl);
   read_digit_lbl := NewLabel;
   EmitLabel(read_digit_lbl);
-  { Read one char }
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  { Read one Char }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  { Check if read failed }
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
-  { Load char into x23 }
-  writeln('    ldrb w23, [sp]');
-  { Save original char to x18 for pushback }
-  writeln('    mov x18, x23');
-  { Convert to digit }
-  writeln('    sub x23, x23, #48');
-  { Check if valid digit (0-9) }
-  writeln('    cmp x23, #9');
-  write('    b.hi L'); writeln(done_lbl);
-  { Add to accumulated value: x21 = x21 * 10 + x23 }
-  writeln('    mov x24, #10');
-  writeln('    mul x21, x21, x24');
-  writeln('    add x21, x21, x23');
+  { Check If Read failed }
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
+  { Load Char into x23 }
+  WriteLn('    ldrb w23, [sp]');
+  { Save original Char To x18 For pushback }
+  WriteLn('    mov x18, x23');
+  { Convert To digit }
+  WriteLn('    sub x23, x23, #48');
+  { Check If valid digit (0-9) }
+  WriteLn('    cmp x23, #9');
+  Write('    b.hi L'); WriteLn(done_lbl);
+  { Add To accumulated value: x21 = x21 * 10 + x23 }
+  WriteLn('    mov x24, #10');
+  WriteLn('    mul x21, x21, x24');
+  WriteLn('    add x21, x21, x23');
   EmitBranchLabel(read_digit_lbl);
 
-  { Done - apply negative if needed }
+  { Done - apply negative If needed }
   EmitLabel(done_lbl);
   skip_neg_lbl := NewLabel;
-  write('    cbz x22, L'); writeln(skip_neg_lbl);
-  writeln('    neg x21, x21');
+  Write('    cbz x22, L'); WriteLn(skip_neg_lbl);
+  WriteLn('    neg x21, x21');
   EmitLabel(skip_neg_lbl);
-  { Move result to x0 }
-  writeln('    mov x0, x21');
+  { Move result To x0 }
+  WriteLn('    mov x0, x21');
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitSkipLineRuntime;
-var
-  loop_lbl, done_lbl, check_pb_lbl: integer;
-begin
-  { Skip to end of line routine - reads chars until newline or EOF }
+Procedure EmitSkipLineRuntime;
+Var
+  loop_lbl, done_lbl, check_pb_lbl: Integer;
+Begin
+  { Skip To End Of line routine - reads chars Until newline Or EOF }
   { Uses x18 as pushback character from read_int (-1 means none) }
   EmitLabel(rt_skip_line);
   EmitStp;
@@ -2311,78 +2311,78 @@ begin
   done_lbl := NewLabel;
   check_pb_lbl := NewLabel;
 
-  { First check if pushback character is available }
-  writeln('    cmp x18, #0');
-  write('    b.lt L'); writeln(loop_lbl);
-  { Check if pushback is newline }
-  writeln('    cmp x18, #10');
+  { First check If pushback character is available }
+  WriteLn('    cmp x18, #0');
+  Write('    b.lt L'); WriteLn(loop_lbl);
+  { Check If pushback is newline }
+  WriteLn('    cmp x18, #10');
   { Clear pushback }
-  writeln('    mov x18, #-1');
-  write('    b.eq L'); writeln(done_lbl);
+  WriteLn('    mov x18, #-1');
+  Write('    b.eq L'); WriteLn(done_lbl);
 
   EmitLabel(loop_lbl);
-  { Read one char }
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  { Read one Char }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  { Check if read failed }
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
-  { Load char }
-  writeln('    ldrb w0, [sp]');
-  { Check if newline (10) }
-  writeln('    cmp x0, #10');
-  write('    b.ne L'); writeln(loop_lbl);
+  { Check If Read failed }
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
+  { Load Char }
+  WriteLn('    ldrb w0, [sp]');
+  { Check If newline (10) }
+  WriteLn('    cmp x0, #10');
+  Write('    b.ne L'); WriteLn(loop_lbl);
 
   EmitLabel(done_lbl);
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitPrintRealRuntime;
-var
-  neg_lbl, skip_neg_lbl, print_frac_lbl, frac_loop_lbl: integer;
-begin
-  { Print real in d0 - format: integer.fraction (6 decimal places) }
+Procedure EmitPrintRealRuntime;
+Var
+  neg_lbl, skip_neg_lbl, print_frac_lbl, frac_loop_lbl: Integer;
+Begin
+  { Print Real In d0 - format: Integer.fraction (6 decimal places) }
   EmitLabel(rt_print_real);
   EmitStp;
   EmitMovFP;
   EmitSubSP(64);
 
-  { Save original value to [x29, #-16] as double }
-  writeln('    stur d0, [x29, #-16]');
+  { Save original value To [x29, #-16] as double }
+  WriteLn('    stur d0, [x29, #-16]');
 
-  { Check for negative }
+  { Check For negative }
   neg_lbl := NewLabel;
   skip_neg_lbl := NewLabel;
   { fcmp d0, #0.0 }
-  writeln('    fcmp d0, #0.0');
+  WriteLn('    fcmp d0, #0.0');
   { b.ge skip_neg }
-  write('    b.ge L'); writeln(neg_lbl);
+  Write('    b.ge L'); WriteLn(neg_lbl);
 
-  { Print '-' and negate }
+  { Print '-' And negate }
   EmitMovX0(45);  { '-' }
   EmitBL(rt_print_char);
   { fneg d0, d0 }
-  writeln('    ldur d0, [x29, #-16]');
+  WriteLn('    ldur d0, [x29, #-16]');
   EmitFNeg;
-  writeln('    stur d0, [x29, #-16]');
+  WriteLn('    stur d0, [x29, #-16]');
 
   EmitLabel(neg_lbl);
 
-  { Load value and get integer part }
-  writeln('    ldur d0, [x29, #-16]');
+  { Load value And get Integer part }
+  WriteLn('    ldur d0, [x29, #-16]');
 
-  { fcvtzs x0, d0 - truncate to integer }
+  { fcvtzs x0, d0 - truncate To Integer }
   EmitFcvtzsX0D0;
 
-  { Save integer part to [x29, #-24] }
-  writeln('    stur x0, [x29, #-24]');
+  { Save Integer part To [x29, #-24] }
+  WriteLn('    stur x0, [x29, #-24]');
 
-  { Print integer part }
+  { Print Integer part }
   EmitBL(rt_print_int);
 
   { Print '.' }
@@ -2390,59 +2390,59 @@ begin
   EmitBL(rt_print_char);
 
   { Calculate fractional part: (original - int_part) * 1000000 }
-  writeln('    ldur d0, [x29, #-16]');
+  WriteLn('    ldur d0, [x29, #-16]');
 
-  { Load integer part and convert to float }
-  writeln('    ldur x0, [x29, #-24]');
+  { Load Integer part And convert To float }
+  WriteLn('    ldur x0, [x29, #-24]');
 
   { scvtf d1, x0 }
-  writeln('    scvtf d1, x0');
+  WriteLn('    scvtf d1, x0');
 
   { fsub d0, d0, d1 - fractional part (d0 = original - int_part) }
-  { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
-  writeln('    fsub d0, d0, d1');
+  { EmitFSub does d0=d1-d0, so emit inline For d0=d0-d1 }
+  WriteLn('    fsub d0, d0, d1');
 
   { Multiply by 1000000 }
   EmitMovX0(1000000);
   EmitScvtfD0X0;  { d0 = 1000000.0 }
   EmitPushD0;
-  writeln('    ldur d0, [x29, #-16]');
-  writeln('    ldur x0, [x29, #-24]');
-  writeln('    scvtf d1, x0');
+  WriteLn('    ldur d0, [x29, #-16]');
+  WriteLn('    ldur x0, [x29, #-24]');
+  WriteLn('    scvtf d1, x0');
   { fsub d0, d0, d1 - d0 = frac part (original - int_part) }
-  { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
-  writeln('    fsub d0, d0, d1');
+  { EmitFSub does d0=d1-d0, so emit inline For d0=d0-d1 }
+  WriteLn('    fsub d0, d0, d1');
   EmitPopD1;  { d1 = 1000000.0 }
   EmitFMul;  { d0 = frac * 1000000 }
 
-  { Convert to integer }
+  { Convert To Integer }
   EmitFcvtzsX0D0;
 
-  { Save fractional digits to [x29, #-32] }
-  writeln('    stur x0, [x29, #-32]');
+  { Save fractional digits To [x29, #-32] }
+  WriteLn('    stur x0, [x29, #-32]');
 
-  { Print fractional part with leading zeros (6 digits) }
+  { Print fractional part With leading zeros (6 digits) }
   { Count digits needed }
   frac_loop_lbl := NewLabel;
   print_frac_lbl := NewLabel;
 
-  { Print leading zeros: if frac < 100000, print '0', etc }
-  writeln('    ldur x0, [x29, #-32]');
+  { Print leading zeros: If frac < 100000, print '0', etc }
+  WriteLn('    ldur x0, [x29, #-32]');
 
   { x1 = 100000 - use movz since 100000 > 65535 }
   { movz x1, #34464; movk x1, #1, lsl #16 }
-  writeln('    movz x1, #34464');
-  writeln('    movk x1, #1, lsl #16');
+  WriteLn('    movz x1, #34464');
+  WriteLn('    movk x1, #1, lsl #16');
 
   EmitLabel(frac_loop_lbl);
   { cmp x1, #10 }
-  writeln('    cmp x1, #10');
+  WriteLn('    cmp x1, #10');
   { b.lt print_frac }
-  write('    b.lt L'); writeln(print_frac_lbl);
+  Write('    b.lt L'); WriteLn(print_frac_lbl);
   { cmp x0, x1 }
-  writeln('    cmp x0, x1');
+  WriteLn('    cmp x0, x1');
   { b.ge print_frac }
-  write('    b.ge L'); writeln(print_frac_lbl);
+  Write('    b.ge L'); WriteLn(print_frac_lbl);
   { Print '0' }
   EmitPushX0;
   EmitPushX1;
@@ -2451,14 +2451,14 @@ begin
   EmitPopX1;
   EmitPopX0;
   { x1 = x1 / 10 }
-  writeln('    mov x2, #10');
-  writeln('    udiv x1, x1, x2');
+  WriteLn('    mov x2, #10');
+  WriteLn('    udiv x1, x1, x2');
   EmitBranchLabel(frac_loop_lbl);
 
   EmitLabel(print_frac_lbl);
-  { Load and print the fractional value }
-  writeln('    ldur x0, [x29, #-32]');
-  { Only print if non-zero }
+  { Load And print the fractional value }
+  WriteLn('    ldur x0, [x29, #-32]');
+  { Only print If non-zero }
   EmitBranchLabelZ(label_count);
   EmitBL(rt_print_int);
   EmitLabel(label_count);
@@ -2467,341 +2467,341 @@ begin
   EmitAddSP(64);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitReadRealRuntime;
-var
-  skip_ws_lbl, read_int_lbl, read_frac_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: integer;
-begin
-  { Read real from input, return in d0 }
+Procedure EmitReadRealRuntime;
+Var
+  skip_ws_lbl, read_int_lbl, read_frac_lbl, done_lbl, neg_lbl, not_neg_lbl, skip_neg_lbl: Integer;
+Begin
+  { Read Real from input, return In d0 }
   EmitLabel(rt_read_real);
   EmitStp;
   EmitMovFP;
   EmitSubSP(64);
 
-  { x21 = integer part, x22 = fractional part (scaled), x23 = neg flag, x24 = frac scale }
-  writeln('    mov x21, #0');
-  writeln('    mov x22, #0');
-  writeln('    mov x23, #0');
-  writeln('    mov x24, #1');
+  { x21 = Integer part, x22 = fractional part (scaled), x23 = neg flag, x24 = frac scale }
+  WriteLn('    mov x21, #0');
+  WriteLn('    mov x22, #0');
+  WriteLn('    mov x23, #0');
+  WriteLn('    mov x24, #1');
 
   { Skip whitespace }
   skip_ws_lbl := NewLabel;
   EmitLabel(skip_ws_lbl);
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
   done_lbl := NewLabel;
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
-  { Load char }
-  writeln('    ldrb w25, [sp]');
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
+  { Load Char }
+  WriteLn('    ldrb w25, [sp]');
   { Check whitespace }
-  writeln('    cmp x25, #32');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x25, #9');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x25, #10');
-  write('    b.eq L'); writeln(skip_ws_lbl);
-  writeln('    cmp x25, #13');
-  write('    b.eq L'); writeln(skip_ws_lbl);
+  WriteLn('    cmp x25, #32');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x25, #9');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x25, #10');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
+  WriteLn('    cmp x25, #13');
+  Write('    b.eq L'); WriteLn(skip_ws_lbl);
 
-  { Check for minus }
+  { Check For minus }
   neg_lbl := NewLabel;
   not_neg_lbl := NewLabel;
-  writeln('    cmp x25, #45');
-  write('    b.ne L'); writeln(not_neg_lbl);
-  writeln('    mov x23, #1');
+  WriteLn('    cmp x25, #45');
+  Write('    b.ne L'); WriteLn(not_neg_lbl);
+  WriteLn('    mov x23, #1');
   EmitBranchLabel(neg_lbl);
   EmitLabel(not_neg_lbl);
 
-  { First char is a digit - process it }
-  writeln('    sub x25, x25, #48');
-  writeln('    cmp x25, #9');
-  write('    b.hi L'); writeln(done_lbl);
+  { First Char is a digit - process it }
+  WriteLn('    sub x25, x25, #48');
+  WriteLn('    cmp x25, #9');
+  Write('    b.hi L'); WriteLn(done_lbl);
   { x21 = x21 * 10 + x25 }
-  writeln('    mov x26, #10');
-  writeln('    mul x21, x21, x26');
-  writeln('    add x21, x21, x25');
+  WriteLn('    mov x26, #10');
+  WriteLn('    mul x21, x21, x26');
+  WriteLn('    add x21, x21, x25');
 
-  { Read integer part loop }
+  { Read Integer part loop }
   EmitLabel(neg_lbl);
   read_int_lbl := NewLabel;
   read_frac_lbl := NewLabel;
   EmitLabel(read_int_lbl);
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
-  writeln('    ldrb w25, [sp]');
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
+  WriteLn('    ldrb w25, [sp]');
 
-  { Check for '.' }
-  writeln('    cmp x25, #46');
-  write('    b.eq L'); writeln(read_frac_lbl);
+  { Check For '.' }
+  WriteLn('    cmp x25, #46');
+  Write('    b.eq L'); WriteLn(read_frac_lbl);
 
-  { Check if digit }
-  writeln('    sub x25, x25, #48');
-  writeln('    cmp x25, #9');
-  write('    b.hi L'); writeln(done_lbl);
+  { Check If digit }
+  WriteLn('    sub x25, x25, #48');
+  WriteLn('    cmp x25, #9');
+  Write('    b.hi L'); WriteLn(done_lbl);
   { x21 = x21 * 10 + x25 }
-  writeln('    mov x26, #10');
-  writeln('    mul x21, x21, x26');
-  writeln('    add x21, x21, x25');
+  WriteLn('    mov x26, #10');
+  WriteLn('    mul x21, x21, x26');
+  WriteLn('    add x21, x21, x25');
   EmitBranchLabel(read_int_lbl);
 
   { Read fractional part }
   EmitLabel(read_frac_lbl);
   skip_neg_lbl := NewLabel;
   EmitLabel(skip_neg_lbl);
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read }
   EmitSvc;
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
-  writeln('    ldrb w25, [sp]');
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
+  WriteLn('    ldrb w25, [sp]');
 
-  { Check if digit }
-  writeln('    sub x25, x25, #48');
-  writeln('    cmp x25, #9');
-  write('    b.hi L'); writeln(done_lbl);
+  { Check If digit }
+  WriteLn('    sub x25, x25, #48');
+  WriteLn('    cmp x25, #9');
+  Write('    b.hi L'); WriteLn(done_lbl);
   { x22 = x22 * 10 + x25, x24 = x24 * 10 }
-  writeln('    mov x26, #10');
-  writeln('    mul x22, x22, x26');
-  writeln('    add x22, x22, x25');
-  writeln('    mul x24, x24, x26');
+  WriteLn('    mov x26, #10');
+  WriteLn('    mul x22, x22, x26');
+  WriteLn('    add x22, x22, x25');
+  WriteLn('    mul x24, x24, x26');
   EmitBranchLabel(skip_neg_lbl);
 
-  { Done - combine integer and fractional parts }
+  { Done - combine Integer And fractional parts }
   EmitLabel(done_lbl);
-  { d0 = x21 (integer part) }
-  writeln('    scvtf d0, x21');
+  { d0 = x21 (Integer part) }
+  WriteLn('    scvtf d0, x21');
   { d1 = x22 (fractional part) }
-  writeln('    scvtf d1, x22');
+  WriteLn('    scvtf d1, x22');
   { d2 = x24 (scale) }
-  writeln('    scvtf d2, x24');
+  WriteLn('    scvtf d2, x24');
   { d1 = d1 / d2 }
-  writeln('    fdiv d1, d1, d2');
+  WriteLn('    fdiv d1, d1, d2');
   { d0 = d0 + d1 }
   EmitFAdd;
 
-  { Apply negative if needed }
+  { Apply negative If needed }
   skip_neg_lbl := NewLabel;
-  write('    cbz x23, L'); writeln(skip_neg_lbl);
+  Write('    cbz x23, L'); WriteLn(skip_neg_lbl);
   EmitFNeg;
   EmitLabel(skip_neg_lbl);
 
   EmitAddSP(64);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitReadStringRuntime;
-var
-  loop_lbl, done_lbl, store_len_lbl: integer;
-begin
-  { Read string from input (x19), string buffer address passed in x0 }
-  { String format: byte 0 = length, bytes 1-255 = characters }
-  { Reads until newline or max 255 chars }
+Procedure EmitReadStringRuntime;
+Var
+  loop_lbl, done_lbl, store_len_lbl: Integer;
+Begin
+  { Read String from input (x19), String buffer address passed In x0 }
+  { String format: byte 0 = Length, bytes 1-255 = characters }
+  { Reads Until newline Or max 255 chars }
   EmitLabel(rt_read_string);
   EmitStp;
   EmitMovFP;
   EmitSubSP(32);
 
-  { Save string buffer address in x21 }
-  writeln('    mov x21, x0');
+  { Save String buffer address In x21 }
+  WriteLn('    mov x21, x0');
 
   { x22 = character count (starts at 0) }
-  writeln('    mov x22, #0');
+  WriteLn('    mov x22, #0');
 
   { Read loop }
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
   EmitLabel(loop_lbl);
 
-  { Check if count >= 255 }
-  writeln('    cmp x22, #255');
-  write('    b.ge L'); writeln(done_lbl);
+  { Check If count >= 255 }
+  WriteLn('    cmp x22, #255');
+  Write('    b.ge L'); WriteLn(done_lbl);
 
-  { Read one character: read(x19, sp, 1) }
-  writeln('    mov x0, x19');
-  writeln('    mov x1, sp');
-  writeln('    mov x2, #1');
-  EmitMovX16(33554435);  { 0x2000003 = read syscall }
+  { Read one character: Read(x19, sp, 1) }
+  WriteLn('    mov x0, x19');
+  WriteLn('    mov x1, sp');
+  WriteLn('    mov x2, #1');
+  EmitMovX16(33554435);  { 0x2000003 = Read syscall }
   EmitSvc;
 
-  { Check if read failed or EOF (x0 < 1) }
-  writeln('    cmp x0, #1');
-  write('    b.lt L'); writeln(done_lbl);
+  { Check If Read failed Or EOF (x0 < 1) }
+  WriteLn('    cmp x0, #1');
+  Write('    b.lt L'); WriteLn(done_lbl);
 
   { Load character into x23 }
-  writeln('    ldrb w23, [sp]');
+  WriteLn('    ldrb w23, [sp]');
 
-  { Check if newline (10) or carriage return (13) }
-  writeln('    cmp x23, #10');
-  write('    b.eq L'); writeln(done_lbl);
-  writeln('    cmp x23, #13');
-  write('    b.eq L'); writeln(done_lbl);
+  { Check If newline (10) Or carriage return (13) }
+  WriteLn('    cmp x23, #10');
+  Write('    b.eq L'); WriteLn(done_lbl);
+  WriteLn('    cmp x23, #13');
+  Write('    b.eq L'); WriteLn(done_lbl);
 
   { Store character at buffer[count+1] }
   { x24 = x21 + x22 + 1 }
-  writeln('    add x24, x21, x22');
-  writeln('    add x24, x24, #1');
-  writeln('    strb w23, [x24]');
+  WriteLn('    add x24, x21, x22');
+  WriteLn('    add x24, x24, #1');
+  WriteLn('    strb w23, [x24]');
 
   { Increment count }
-  writeln('    add x22, x22, #1');
+  WriteLn('    add x22, x22, #1');
 
   { Loop back }
-  write('    b L'); writeln(loop_lbl);
+  Write('    b L'); WriteLn(loop_lbl);
 
-  { Done - store length at buffer[0] }
+  { Done - store Length at buffer[0] }
   EmitLabel(done_lbl);
-  writeln('    strb w22, [x21]');
+  WriteLn('    strb w22, [x21]');
 
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitFileOpenInit;
-var
-  skip_input_lbl, skip_output_lbl: integer;
-begin
-  { Initialize x19 (input fd) and x20 (output fd) from command line }
+Procedure EmitFileOpenInit;
+Var
+  skip_input_lbl, skip_output_lbl: Integer;
+Begin
+  { Initialize x19 (input fd) And x20 (output fd) from command line }
   { On entry: x0 = argc, x1 = argv }
   { Usage: tpcv2 input.pas output.s }
   skip_input_lbl := NewLabel;
   skip_output_lbl := NewLabel;
 
-  { Save argc and argv to callee-saved registers }
-  writeln('    mov x21, x0');
-  writeln('    mov x22, x1');
+  { Save argc And argv To callee-saved registers }
+  WriteLn('    mov x21, x0');
+  WriteLn('    mov x22, x1');
 
   { Default: x19 = 0 (stdin), x20 = 1 (stdout), x18 = -1 (no pushback) }
-  writeln('    mov x19, #0');
-  writeln('    mov x20, #1');
-  writeln('    mov x18, #-1');
+  WriteLn('    mov x19, #0');
+  WriteLn('    mov x20, #1');
+  WriteLn('    mov x18, #-1');
 
   { If argc < 2, skip input file open }
-  writeln('    cmp x21, #2');
-  write('    b.lt L'); writeln(skip_input_lbl);
+  WriteLn('    cmp x21, #2');
+  Write('    b.lt L'); WriteLn(skip_input_lbl);
 
   { Load argv[1] into x0 (input filename) }
-  writeln('    ldr x0, [x22, #8]');
+  WriteLn('    ldr x0, [x22, #8]');
 
   { Open input file: open(filename, O_RDONLY, 0) }
-  writeln('    mov x1, #0');
-  writeln('    mov x2, #0');
+  WriteLn('    mov x1, #0');
+  WriteLn('    mov x2, #0');
   EmitMovX16(33554437);  { 0x2000005 = open }
   EmitSvc;
 
-  { Move input fd to x19 }
-  writeln('    mov x19, x0');
+  { Move input fd To x19 }
+  WriteLn('    mov x19, x0');
 
   { If argc < 4, skip output file open (need: prog input.pas -o output.s) }
-  writeln('    cmp x21, #4');
-  write('    b.lt L'); writeln(skip_output_lbl);
+  WriteLn('    cmp x21, #4');
+  Write('    b.lt L'); WriteLn(skip_output_lbl);
 
-  { Check if argv[2] == "-o": load argv[2], check first two bytes }
-  writeln('    ldr x0, [x22, #16]');
-  { Load first byte, check for '-' (45) }
-  writeln('    ldrb w1, [x0]');
-  writeln('    cmp w1, #45');
-  write('    b.ne L'); writeln(skip_output_lbl);
-  { Load second byte, check for 'o' (111) }
-  writeln('    ldrb w1, [x0, #1]');
-  writeln('    cmp w1, #111');
-  write('    b.ne L'); writeln(skip_output_lbl);
+  { Check If argv[2] == "-o": load argv[2], check first two bytes }
+  WriteLn('    ldr x0, [x22, #16]');
+  { Load first byte, check For '-' (45) }
+  WriteLn('    ldrb w1, [x0]');
+  WriteLn('    cmp w1, #45');
+  Write('    b.ne L'); WriteLn(skip_output_lbl);
+  { Load second byte, check For 'o' (111) }
+  WriteLn('    ldrb w1, [x0, #1]');
+  WriteLn('    cmp w1, #111');
+  Write('    b.ne L'); WriteLn(skip_output_lbl);
 
   { Load argv[3] into x0 (output filename) }
-  writeln('    ldr x0, [x22, #24]');
+  WriteLn('    ldr x0, [x22, #24]');
 
   { Open output file: open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644) }
   { O_WRONLY=1, O_CREAT=0x200, O_TRUNC=0x400 => 0x601 = 1537 }
-  writeln('    mov x1, #1537');
+  WriteLn('    mov x1, #1537');
   { mode 0644 = 420 decimal }
-  writeln('    mov x2, #420');
+  WriteLn('    mov x2, #420');
   EmitMovX16(33554437);  { 0x2000005 = open }
   EmitSvc;
 
-  { Move output fd to x20 }
-  writeln('    mov x20, x0');
+  { Move output fd To x20 }
+  WriteLn('    mov x20, x0');
 
   EmitLabel(skip_output_lbl);
   EmitLabel(skip_input_lbl)
-end;
+End;
 
-procedure EmitHeapInitRuntime;
-begin
+Procedure EmitHeapInitRuntime;
+Begin
   { Initialize heap using mmap syscall }
-  { Allocates 1MB of memory for heap, stores base in x21 }
-  { Initializes free list head in x22 pointing to entire block }
+  { Allocates 1MB Of memory For heap, stores base In x21 }
+  { Initializes free list head In x22 pointing To entire block }
   EmitLabel(rt_heap_init);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
 
   { mov x0, #0  - addr = NULL (let kernel choose) }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
-  { mov x1, #1048576  - length = 1MB (0x100000) }
+  { mov x1, #1048576  - Length = 1MB (0x100000) }
   { Need movz + movk since 1048576 > 65535 }
-  writeln('    movz x1, #0');
-  writeln('    movk x1, #16, lsl #16');
+  WriteLn('    movz x1, #0');
+  WriteLn('    movk x1, #16, lsl #16');
 
   { mov x2, #3  - PROT_READ | PROT_WRITE }
-  writeln('    mov x2, #3');
+  WriteLn('    mov x2, #3');
 
   { mov x3, #4098  - MAP_PRIVATE | MAP_ANON (0x1002) }
-  writeln('    mov x3, #4098');
+  WriteLn('    mov x3, #4098');
 
   { mov x4, #-1  - fd = -1 }
-  writeln('    movn x4, #0');
+  WriteLn('    movn x4, #0');
 
   { mov x5, #0  - offset = 0 }
-  writeln('    mov x5, #0');
+  WriteLn('    mov x5, #0');
 
   { mmap syscall: 0x20000C5 }
-  writeln('    movz x16, #0xC5');
-  writeln('    movk x16, #0x200, lsl #16');
+  WriteLn('    movz x16, #0xC5');
+  WriteLn('    movk x16, #0x200, lsl #16');
 
   EmitSvc;
 
-  { mov x21, x0  - store heap base in x21 }
-  writeln('    mov x21, x0');
+  { mov x21, x0  - store heap base In x21 }
+  WriteLn('    mov x21, x0');
 
-  { Initialize free list: x22 = x21 (free list head points to heap base) }
-  writeln('    mov x22, x21');
+  { Initialize free list: x22 = x21 (free list head points To heap base) }
+  WriteLn('    mov x22, x21');
 
   { Store block size (1MB) at [x21]: first free block header }
   { movz x1, #0; movk x1, #16, lsl #16 = 1048576 }
-  writeln('    movz x1, #0');
-  writeln('    movk x1, #16, lsl #16');
+  WriteLn('    movz x1, #0');
+  WriteLn('    movk x1, #16, lsl #16');
   { str x1, [x21] - store size }
-  writeln('    str x1, [x21]');
+  WriteLn('    str x1, [x21]');
 
   { Store next=0 at [x21, #8]: no next free block }
-  writeln('    str xzr, [x21, #8]');
+  WriteLn('    str xzr, [x21, #8]');
 
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitAllocRuntime;
-var
-  loop_lbl, found_lbl, split_lbl, no_split_lbl, update_head_lbl, done_lbl, oom_lbl: integer;
-begin
-  { Allocate memory from free list with block splitting }
+Procedure EmitAllocRuntime;
+Var
+  loop_lbl, found_lbl, split_lbl, no_split_lbl, update_head_lbl, done_lbl, oom_lbl: Integer;
+Begin
+  { Allocate memory from free list With block splitting }
   { Input: x0 = requested size }
-  { Output: x0 = pointer to user data, or 0 if OOM }
+  { Output: x0 = pointer To user data, Or 0 If OOM }
   loop_lbl := NewLabel;
   found_lbl := NewLabel;
   split_lbl := NewLabel;
@@ -2815,160 +2815,160 @@ begin
   EmitMovFP;
   EmitSubSP(16);
 
-  { Add 16 for header and align to 16 bytes: x0 = (x0 + 31) & ~15 }
-  writeln('    add x0, x0, #31');
-  { and x0, x0, #-16 }
-  writeln('    and x0, x0, #-16');
-  { Save required size to x3 }
-  writeln('    mov x3, x0');
+  { Add 16 For header And align To 16 bytes: x0 = (x0 + 31) & ~15 }
+  WriteLn('    add x0, x0, #31');
+  { And x0, x0, #-16 }
+  WriteLn('    And x0, x0, #-16');
+  { Save required size To x3 }
+  WriteLn('    mov x3, x0');
 
   { x1 = prev (0 initially), x2 = curr (x22 = free list head) }
-  writeln('    mov x1, #0');
-  writeln('    mov x2, x22');
+  WriteLn('    mov x1, #0');
+  WriteLn('    mov x2, x22');
 
-  { Loop: walk free list looking for big enough block }
+  { Loop: walk free list looking For big enough block }
   EmitLabel(loop_lbl);
-  { cbz x2, oom - end of list }
-  write('    cbz x2, L'); writeln(oom_lbl);
+  { cbz x2, oom - End Of list }
+  Write('    cbz x2, L'); WriteLn(oom_lbl);
   { ldr x4, [x2] - x4 = block size }
-  writeln('    ldr x4, [x2]');
-  { cmp x4, x3 - compare block size to required }
-  writeln('    cmp x4, x3');
+  WriteLn('    ldr x4, [x2]');
+  { cmp x4, x3 - compare block size To required }
+  WriteLn('    cmp x4, x3');
   { b.ge found }
-  write('    b.ge L'); writeln(found_lbl);
-  { Not big enough - move to next }
+  Write('    b.ge L'); WriteLn(found_lbl);
+  { Not big enough - move To next }
   { mov x1, x2 - prev = curr }
-  writeln('    mov x1, x2');
+  WriteLn('    mov x1, x2');
   { ldr x2, [x2, #8] - curr = curr->next }
-  writeln('    ldr x2, [x2, #8]');
+  WriteLn('    ldr x2, [x2, #8]');
   EmitBranchLabel(loop_lbl);
 
-  { Found a big enough block - check if we can split it }
+  { Found a big enough block - check If we can split it }
   EmitLabel(found_lbl);
   { x2 = block addr, x3 = required size, x4 = block size }
   { ldr x5, [x2, #8] - x5 = found->next }
-  writeln('    ldr x5, [x2, #8]');
-  { Check if block can be split: x4 - x3 >= 32 }
+  WriteLn('    ldr x5, [x2, #8]');
+  { Check If block can be split: x4 - x3 >= 32 }
   { sub x6, x4, x3 - x6 = remainder size }
-  writeln('    sub x6, x4, x3');
+  WriteLn('    sub x6, x4, x3');
   { cmp x6, #32 }
-  writeln('    cmp x6, #32');
-  { b.lt no_split - if remainder < 32, don't split }
-  write('    b.lt L'); writeln(no_split_lbl);
+  WriteLn('    cmp x6, #32');
+  { b.lt no_split - If remainder < 32, don't split }
+  Write('    b.lt L'); WriteLn(no_split_lbl);
 
   { Split the block }
   EmitLabel(split_lbl);
   { x6 = remainder size, x7 = remainder block address = x2 + x3 }
   { add x7, x2, x3 }
-  writeln('    add x7, x2, x3');
+  WriteLn('    add x7, x2, x3');
   { str x6, [x7] - remainder->size = x6 }
-  writeln('    str x6, [x7]');
+  WriteLn('    str x6, [x7]');
   { str x5, [x7, #8] - remainder->next = found->next }
-  writeln('    str x5, [x7, #8]');
+  WriteLn('    str x5, [x7, #8]');
   { str x3, [x2] - found->size = required size }
-  writeln('    str x3, [x2]');
-  { mov x5, x7 - use remainder as new "next" for unlinking }
-  writeln('    mov x5, x7');
+  WriteLn('    str x3, [x2]');
+  { mov x5, x7 - use remainder as New "next" For unlinking }
+  WriteLn('    mov x5, x7');
 
-  { Unlink found block from free list (and link remainder in its place) }
+  { Unlink found block from free list (And link remainder In its place) }
   EmitLabel(no_split_lbl);
-  { cbz x1, update_head - if prev==0, update head }
-  write('    cbz x1, L'); writeln(update_head_lbl);
-  { str x5, [x1, #8] - prev->next = x5 (remainder or found->next) }
-  writeln('    str x5, [x1, #8]');
+  { cbz x1, update_head - If prev==0, update head }
+  Write('    cbz x1, L'); WriteLn(update_head_lbl);
+  { str x5, [x1, #8] - prev->next = x5 (remainder Or found->next) }
+  WriteLn('    str x5, [x1, #8]');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(update_head_lbl);
-  { mov x22, x5 - free list head = x5 (remainder or found->next) }
-  writeln('    mov x22, x5');
+  { mov x22, x5 - free list head = x5 (remainder Or found->next) }
+  WriteLn('    mov x22, x5');
 
   EmitLabel(done_lbl);
   { Mark as allocated: str xzr, [x2, #8] - next = 0 }
-  writeln('    str xzr, [x2, #8]');
+  WriteLn('    str xzr, [x2, #8]');
   { Return user pointer: add x0, x2, #16 }
-  writeln('    add x0, x2, #16');
+  WriteLn('    add x0, x2, #16');
   EmitAddSP(16);
   EmitLdp;
   EmitRet;
 
-  { Out of memory }
+  { Out Of memory }
   EmitLabel(oom_lbl);
   EmitMovX0(0);
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitFreeRuntime;
-begin
-  { Free memory back to free list }
-  { Input: x0 = pointer to user data }
+Procedure EmitFreeRuntime;
+Begin
+  { Free memory back To free list }
+  { Input: x0 = pointer To user data }
   EmitLabel(rt_free);
   { Get block header: sub x0, x0, #16 }
-  writeln('    sub x0, x0, #16');
+  WriteLn('    sub x0, x0, #16');
   { Link into free list: str x22, [x0, #8] - block->next = free_head }
-  writeln('    str x22, [x0, #8]');
+  WriteLn('    str x22, [x0, #8]');
   { Update free list head: mov x22, x0 }
-  writeln('    mov x22, x0');
+  WriteLn('    mov x22, x0');
   EmitRet
-end;
+End;
 
-procedure EmitStrCopyRuntime;
-var
-  loop_lbl, done_lbl: integer;
-begin
-  { Copy string from x1 (source) to x0 (dest) }
-  { Pascal strings: byte 0 = length, bytes 1..length = chars }
+Procedure EmitStrCopyRuntime;
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
+  { Copy String from x1 (source) To x0 (dest) }
+  { Pascal strings: byte 0 = Length, bytes 1..Length = chars }
   EmitLabel(rt_str_copy);
   EmitStp;
   EmitMovFP;
   EmitSubSP(32);
 
-  { Save dest and source addresses }
+  { Save dest And source addresses }
   { stur x0, [x29, #-8] - dest }
-  writeln('    stur x0, [x29, #-8]');
+  WriteLn('    stur x0, [x29, #-8]');
   { stur x1, [x29, #-16] - source }
-  writeln('    stur x1, [x29, #-16]');
+  WriteLn('    stur x1, [x29, #-16]');
 
-  { Load length from source [x1] into x2 }
-  writeln('    ldrb w2, [x1]');
-  { Store length to dest [x0] }
-  writeln('    strb w2, [x0]');
-  { Save length to [x29, #-24] }
-  writeln('    stur x2, [x29, #-24]');
+  { Load Length from source [x1] into x2 }
+  WriteLn('    ldrb w2, [x1]');
+  { Store Length To dest [x0] }
+  WriteLn('    strb w2, [x0]');
+  { Save Length To [x29, #-24] }
+  WriteLn('    stur x2, [x29, #-24]');
 
-  { Initialize index to 0 }
+  { Initialize index To 0 }
   EmitMovX0(0);
   EmitSturX0(-32);
 
-  { Loop: copy bytes 1..length }
+  { Loop: copy bytes 1..Length }
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
   EmitLabel(loop_lbl);
 
   { Load index }
   EmitLdurX0(-32);
-  { Load length }
-  writeln('    ldur x2, [x29, #-24]');
-  { cmp x0, x2 - if index >= length, done }
-  writeln('    cmp x0, x2');
+  { Load Length }
+  WriteLn('    ldur x2, [x29, #-24]');
+  { cmp x0, x2 - If index >= Length, done }
+  WriteLn('    cmp x0, x2');
   { b.ge done }
-  write('    b.ge L'); writeln(done_lbl);
+  Write('    b.ge L'); WriteLn(done_lbl);
 
-  { x3 = index + 1 (offset into string) }
-  writeln('    add x3, x0, #1');
+  { x3 = index + 1 (offset into String) }
+  WriteLn('    add x3, x0, #1');
 
-  { Load source char: ldrb w4, [x1, x3] where x1 = source }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w4, [x1, x3]');
+  { Load source Char: ldrb w4, [x1, x3] where x1 = source }
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w4, [x1, x3]');
 
-  { Store to dest char: strb w4, [x5, x3] where x5 = dest }
-  writeln('    ldur x5, [x29, #-8]');
-  writeln('    strb w4, [x5, x3]');
+  { Store To dest Char: strb w4, [x5, x3] where x5 = dest }
+  WriteLn('    ldur x5, [x29, #-8]');
+  WriteLn('    strb w4, [x5, x3]');
 
   { Increment index }
   EmitLdurX0(-32);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(loop_lbl);
 
@@ -2976,38 +2976,38 @@ begin
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrCompareRuntime;
-var
-  loop_lbl, not_equal_lbl, done_lbl: integer;
-begin
-  { Compare strings at x0 and x1, return 1 if equal, 0 if not equal in x0 }
+Procedure EmitStrCompareRuntime;
+Var
+  loop_lbl, not_equal_lbl, done_lbl: Integer;
+Begin
+  { Compare strings at x0 And x1, return 1 If equal, 0 If Not equal In x0 }
   EmitLabel(rt_str_compare);
   EmitStp;
   EmitMovFP;
   EmitSubSP(32);
 
   { Save addresses }
-  EmitSturX0(-8);  { string 1 }
+  EmitSturX0(-8);  { String 1 }
   { stur x1, [x29, #-16] }
-  writeln('    stur x1, [x29, #-16]');
+  WriteLn('    stur x1, [x29, #-16]');
 
   { Load lengths }
-  writeln('    ldrb w2, [x0]');
-  writeln('    ldrb w3, [x1]');
+  WriteLn('    ldrb w2, [x0]');
+  WriteLn('    ldrb w3, [x1]');
 
   { Compare lengths first }
   not_equal_lbl := NewLabel;
   done_lbl := NewLabel;
-  writeln('    cmp x2, x3');
+  WriteLn('    cmp x2, x3');
   { b.ne not_equal }
-  write('    b.ne L'); writeln(not_equal_lbl);
+  Write('    b.ne L'); WriteLn(not_equal_lbl);
 
-  { Save length to [x29, #-24] }
-  writeln('    stur x2, [x29, #-24]');
+  { Save Length To [x29, #-24] }
+  WriteLn('    stur x2, [x29, #-24]');
 
-  { Initialize index to 0 }
+  { Initialize index To 0 }
   EmitMovX0(0);
   EmitSturX0(-32);
 
@@ -3017,31 +3017,31 @@ begin
 
   { Load index }
   EmitLdurX0(-32);
-  { Load length }
-  writeln('    ldur x2, [x29, #-24]');
-  { cmp x0, x2 - if index >= length, all equal }
-  writeln('    cmp x0, x2');
+  { Load Length }
+  WriteLn('    ldur x2, [x29, #-24]');
+  { cmp x0, x2 - If index >= Length, all equal }
+  WriteLn('    cmp x0, x2');
   { b.ge equal (return 1) }
-  write('    b.ge L'); writeln(done_lbl);
+  Write('    b.ge L'); WriteLn(done_lbl);
 
   { x3 = index + 1 }
-  writeln('    add x3, x0, #1');
+  WriteLn('    add x3, x0, #1');
 
   { Load chars from both strings }
-  EmitLdurX0(-8);  { string 1 addr }
-  writeln('    ldrb w4, [x0, x3]');
+  EmitLdurX0(-8);  { String 1 addr }
+  WriteLn('    ldrb w4, [x0, x3]');
 
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w5, [x1, x3]');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w5, [x1, x3]');
 
   { Compare chars }
-  writeln('    cmp x4, x5');
+  WriteLn('    cmp x4, x5');
   { b.ne not_equal }
-  write('    b.ne L'); writeln(not_equal_lbl);
+  Write('    b.ne L'); WriteLn(not_equal_lbl);
 
   { Increment index }
-  writeln('    ldur x0, [x29, #-32]');
-  writeln('    add x0, x0, #1');
+  WriteLn('    ldur x0, [x29, #-32]');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(loop_lbl);
 
@@ -3059,14 +3059,14 @@ begin
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrConcatRuntime;
-var
-  loop1_lbl, loop2_lbl, done_lbl: integer;
-begin
+Procedure EmitStrConcatRuntime;
+Var
+  loop1_lbl, loop2_lbl, done_lbl: Integer;
+Begin
   { Concatenate strings: x0 = dest, x1 = string1, x2 = string2 }
-  { Result length = len1 + len2 (capped at 255) }
+  { Result Length = len1 + len2 (capped at 255) }
   EmitLabel(rt_str_concat);
   EmitStp;
   EmitMovFP;
@@ -3074,31 +3074,31 @@ begin
 
   { Save addresses }
   EmitSturX0(-8);   { dest }
-  { stur x1, [x29, #-16] - string 1 }
-  writeln('    stur x1, [x29, #-16]');
-  { stur x2, [x29, #-24] - string 2 }
-  writeln('    stur x2, [x29, #-24]');
+  { stur x1, [x29, #-16] - String 1 }
+  WriteLn('    stur x1, [x29, #-16]');
+  { stur x2, [x29, #-24] - String 2 }
+  WriteLn('    stur x2, [x29, #-24]');
 
   { Load lengths }
-  writeln('    ldrb w3, [x1]');
-  writeln('    ldrb w4, [x2]');
+  WriteLn('    ldrb w3, [x1]');
+  WriteLn('    ldrb w4, [x2]');
 
-  { Calculate total length (capped at 255) }
-  writeln('    add x5, x3, x4');
+  { Calculate total Length (capped at 255) }
+  WriteLn('    add x5, x3, x4');
   { cmp x5, #255 }
-  writeln('    cmp x5, #255');
-  { csel x5, x5, x6, le - if x5 <= 255, keep it; else use 255 }
-  writeln('    mov x6, #255');
-  writeln('    csel x5, x5, x6, le');
+  WriteLn('    cmp x5, #255');
+  { csel x5, x5, x6, le - If x5 <= 255, keep it; Else use 255 }
+  WriteLn('    mov x6, #255');
+  WriteLn('    csel x5, x5, x6, le');
 
-  { Store total length to dest }
+  { Store total Length To dest }
   EmitLdurX0(-8);  { dest }
-  writeln('    strb w5, [x0]');
+  WriteLn('    strb w5, [x0]');
 
-  { Save len1 to [x29, #-32] }
-  writeln('    stur x3, [x29, #-32]');
+  { Save len1 To [x29, #-32] }
+  WriteLn('    stur x3, [x29, #-32]');
 
-  { Initialize index to 0 }
+  { Initialize index To 0 }
   EmitMovX0(0);
   EmitSturX0(-40);
 
@@ -3108,93 +3108,93 @@ begin
   done_lbl := NewLabel;
   EmitLabel(loop1_lbl);
 
-  { Load index and len1 }
+  { Load index And len1 }
   EmitLdurX0(-40);
-  writeln('    ldur x3, [x29, #-32]');
+  WriteLn('    ldur x3, [x29, #-32]');
   { cmp x0, x3 }
-  writeln('    cmp x0, x3');
+  WriteLn('    cmp x0, x3');
   { b.ge loop2 }
-  write('    b.ge L'); writeln(loop2_lbl);
+  Write('    b.ge L'); WriteLn(loop2_lbl);
 
   { x7 = index + 1 }
-  writeln('    add x7, x0, #1');
+  WriteLn('    add x7, x0, #1');
 
-  { Load source1 char }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w8, [x1, x7]');
+  { Load source1 Char }
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w8, [x1, x7]');
 
-  { Store to dest }
+  { Store To dest }
   EmitLdurX0(-8);
-  writeln('    strb w8, [x0, x7]');
+  WriteLn('    strb w8, [x0, x7]');
 
   { Increment index }
   EmitLdurX0(-40);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(loop1_lbl);
 
   { Loop 2: copy string2 chars }
   EmitLabel(loop2_lbl);
-  { Reset index to 0 for string2 }
+  { Reset index To 0 For string2 }
   EmitMovX0(0);
   EmitSturX0(-40);
 
   { Load len2 into x4 }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    ldrb w4, [x2]');
-  { Save len2 to [x29, #-48] }
-  writeln('    stur x4, [x29, #-48]');
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    ldrb w4, [x2]');
+  { Save len2 To [x29, #-48] }
+  WriteLn('    stur x4, [x29, #-48]');
 
   { Loop 2 body label }
   EmitLabel(label_count);
   label_count := label_count + 1;
 
-  { Load index and len2 }
+  { Load index And len2 }
   EmitLdurX0(-40);
-  writeln('    ldur x4, [x29, #-48]');
+  WriteLn('    ldur x4, [x29, #-48]');
   { cmp x0, x4 }
-  writeln('    cmp x0, x4');
+  WriteLn('    cmp x0, x4');
   { b.ge done }
-  write('    b.ge L'); writeln(done_lbl);
+  Write('    b.ge L'); WriteLn(done_lbl);
 
   { x7 = index + 1 (source offset) }
-  writeln('    add x7, x0, #1');
+  WriteLn('    add x7, x0, #1');
 
-  { Load source2 char }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    ldrb w8, [x2, x7]');
+  { Load source2 Char }
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    ldrb w8, [x2, x7]');
 
   { Calculate dest offset: len1 + index + 1 }
   EmitLdurX0(-40);  { index }
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    add x7, x0, x3');
-  writeln('    add x7, x7, #1');
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    add x7, x0, x3');
+  WriteLn('    add x7, x7, #1');
 
-  { Store to dest }
+  { Store To dest }
   EmitLdurX0(-8);
-  writeln('    strb w8, [x0, x7]');
+  WriteLn('    strb w8, [x0, x7]');
 
   { Increment index }
   EmitLdurX0(-40);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(label_count - 1);
 
   EmitLabel(done_lbl);
-  { Return dest address in x0 }
+  { Return dest address In x0 }
   EmitLdurX0(-8);
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrCmpRuntime;
-{ Lexicographic string comparison - returns -1 if x0<x1, 0 if x0=x1, 1 if x0>x1 }
+Procedure EmitStrCmpRuntime;
+{ Lexicographic String comparison - returns -1 If x0<x1, 0 If x0=x1, 1 If x0>x1 }
 { Input: x0 = string1 addr, x1 = string2 addr }
 { Output: x0 = -1/0/1 }
-var
-  loop_lbl, done_lbl, less_lbl, greater_lbl, check_len_lbl: integer;
-begin
+Var
+  loop_lbl, done_lbl, less_lbl, greater_lbl, check_len_lbl: Integer;
+Begin
   EmitLabel(rt_str_cmp);
   EmitStp;
   EmitMovFP;
@@ -3202,7 +3202,7 @@ begin
   { stur x0, [x29, #-8]  - string1 }
   EmitSturX0(-8);
   { stur x1, [x29, #-16] - string2 }
-  writeln('    stur x1, [x29, #-16]');
+  WriteLn('    stur x1, [x29, #-16]');
 
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
@@ -3218,59 +3218,59 @@ begin
 
   { Load lengths }
   EmitLdurX0(-8);    { x0 = &s1 }
-  writeln('    ldrb w2, [x0]');
+  WriteLn('    ldrb w2, [x0]');
 
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w3, [x1]');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w3, [x1]');
 
   { Load index }
   EmitLdurX0(-24);   { x0 = index }
 
-  { if index >= min(len1, len2), check length }
-  writeln('    cmp x0, x2');
-  write('    b.ge L'); writeln(check_len_lbl);
-  writeln('    cmp x0, x3');
-  write('    b.ge L'); writeln(check_len_lbl);
+  { If index >= min(len1, len2), check Length }
+  WriteLn('    cmp x0, x2');
+  Write('    b.ge L'); WriteLn(check_len_lbl);
+  WriteLn('    cmp x0, x3');
+  Write('    b.ge L'); WriteLn(check_len_lbl);
 
   { Compare chars at index+1 }
   { x4 = index + 1 }
-  writeln('    add x4, x0, #1');
+  WriteLn('    add x4, x0, #1');
 
-  { Load char from s1 }
+  { Load Char from s1 }
   EmitLdurX0(-8);
-  writeln('    ldrb w5, [x0, x4]');
+  WriteLn('    ldrb w5, [x0, x4]');
 
-  { Load char from s2 }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w6, [x1, x4]');
+  { Load Char from s2 }
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w6, [x1, x4]');
 
   { Compare chars }
-  writeln('    cmp x5, x6');
-  write('    b.lt L'); writeln(less_lbl);
-  write('    b.gt L'); writeln(greater_lbl);
+  WriteLn('    cmp x5, x6');
+  Write('    b.lt L'); WriteLn(less_lbl);
+  Write('    b.gt L'); WriteLn(greater_lbl);
 
   { Chars equal, increment index }
   EmitLdurX0(-24);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(loop_lbl);
 
   { Check lengths when all compared chars are equal }
   EmitLabel(check_len_lbl);
   EmitLdurX0(-8);
-  writeln('    ldrb w2, [x0]');
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w3, [x1]');
-  writeln('    cmp x2, x3');
-  write('    b.lt L'); writeln(less_lbl);
-  write('    b.gt L'); writeln(greater_lbl);
+  WriteLn('    ldrb w2, [x0]');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w3, [x1]');
+  WriteLn('    cmp x2, x3');
+  Write('    b.lt L'); WriteLn(less_lbl);
+  Write('    b.gt L'); WriteLn(greater_lbl);
   { Equal }
   EmitMovX0(0);
   EmitBranchLabel(done_lbl);
 
   EmitLabel(less_lbl);
   EmitMovX0(0);
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(greater_lbl);
@@ -3280,22 +3280,22 @@ begin
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrPosRuntime;
-{ Find substring position - returns position (1-based) or 0 if not found }
-{ Input: x0 = substring addr, x1 = string addr }
-{ Output: x0 = position (1-based) or 0 }
-var
-  outer_lbl, inner_lbl, done_lbl, found_lbl, not_found_lbl, next_pos_lbl: integer;
-begin
+Procedure EmitStrPosRuntime;
+{ Find substring position - returns position (1-based) Or 0 If Not found }
+{ Input: x0 = substring addr, x1 = String addr }
+{ Output: x0 = position (1-based) Or 0 }
+Var
+  outer_lbl, inner_lbl, done_lbl, found_lbl, not_found_lbl, next_pos_lbl: Integer;
+Begin
   EmitLabel(rt_str_pos);
   EmitStp;
   EmitMovFP;
   EmitSubSP(48);
-  { [x29-8] = substr, [x29-16] = string, [x29-24] = outer idx, [x29-32] = inner idx }
+  { [x29-8] = substr, [x29-16] = String, [x29-24] = outer idx, [x29-32] = inner idx }
   EmitSturX0(-8);
-  writeln('    stur x1, [x29, #-16]');
+  WriteLn('    stur x1, [x29, #-16]');
 
   outer_lbl := NewLabel;
   inner_lbl := NewLabel;
@@ -3306,77 +3306,77 @@ begin
 
   { If substr is empty, return 1 }
   EmitLdurX0(-8);
-  writeln('    ldrb w2, [x0]');
-  write('    cbz x2, L'); writeln(found_lbl);
+  WriteLn('    ldrb w2, [x0]');
+  Write('    cbz x2, L'); WriteLn(found_lbl);
   { x2 = substr len }
-  writeln('    stur x2, [x29, #-40]');
+  WriteLn('    stur x2, [x29, #-40]');
 
-  { Load string length }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w3, [x1]');
-  { x3 = string len }
+  { Load String Length }
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w3, [x1]');
+  { x3 = String len }
 
   { outer_idx = 0 (will be 1-based position - 1) }
   EmitMovX0(0);
   EmitSturX0(-24);
 
   EmitLabel(outer_lbl);
-  { Check if outer_idx + substr_len > string_len }
+  { Check If outer_idx + substr_len > string_len }
   EmitLdurX0(-24);  { outer_idx }
-  writeln('    ldur x2, [x29, #-40]');
-  writeln('    add x4, x0, x2');
+  WriteLn('    ldur x2, [x29, #-40]');
+  WriteLn('    add x4, x0, x2');
   { x4 = outer_idx + substr_len }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w3, [x1]');
-  writeln('    cmp x4, x3');
-  write('    b.gt L'); writeln(not_found_lbl);
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w3, [x1]');
+  WriteLn('    cmp x4, x3');
+  Write('    b.gt L'); WriteLn(not_found_lbl);
 
   { inner_idx = 0 }
   EmitMovX0(0);
   EmitSturX0(-32);
 
   EmitLabel(inner_lbl);
-  { if inner_idx >= substr_len, found! }
+  { If inner_idx >= substr_len, found! }
   EmitLdurX0(-32);
-  writeln('    ldur x2, [x29, #-40]');
-  writeln('    cmp x0, x2');
-  write('    b.ge L'); writeln(found_lbl);
+  WriteLn('    ldur x2, [x29, #-40]');
+  WriteLn('    cmp x0, x2');
+  Write('    b.ge L'); WriteLn(found_lbl);
 
-  { Compare substr[inner_idx+1] with string[outer_idx+inner_idx+1] }
+  { Compare substr[inner_idx+1] With String[outer_idx+inner_idx+1] }
   EmitLdurX0(-8);  { substr addr }
-  writeln('    ldur x4, [x29, #-32]');
-  writeln('    add x4, x4, #1');
-  writeln('    ldrb w5, [x0, x4]');
+  WriteLn('    ldur x4, [x29, #-32]');
+  WriteLn('    add x4, x4, #1');
+  WriteLn('    ldrb w5, [x0, x4]');
   { x5 = substr[inner_idx+1] }
 
-  writeln('    ldur x1, [x29, #-16]');
+  WriteLn('    ldur x1, [x29, #-16]');
   EmitLdurX0(-24);  { outer_idx }
-  writeln('    ldur x4, [x29, #-32]');
-  writeln('    add x4, x0, x4');
-  writeln('    add x4, x4, #1');
-  writeln('    ldrb w6, [x1, x4]');
-  { x6 = string[outer_idx+inner_idx+1] }
+  WriteLn('    ldur x4, [x29, #-32]');
+  WriteLn('    add x4, x0, x4');
+  WriteLn('    add x4, x4, #1');
+  WriteLn('    ldrb w6, [x1, x4]');
+  { x6 = String[outer_idx+inner_idx+1] }
 
-  writeln('    cmp x5, x6');
-  write('    b.ne L'); writeln(next_pos_lbl);
+  WriteLn('    cmp x5, x6');
+  Write('    b.ne L'); WriteLn(next_pos_lbl);
 
   { Chars match, increment inner_idx }
   EmitLdurX0(-32);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(inner_lbl);
 
   EmitLabel(next_pos_lbl);
   { Chars don't match, try next outer position }
   EmitLdurX0(-24);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(outer_lbl);
 
   EmitLabel(found_lbl);
   { Return outer_idx + 1 (1-based position) }
   EmitLdurX0(-24);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(not_found_lbl);
@@ -3386,95 +3386,95 @@ begin
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrDeleteRuntime;
-{ Delete chars from string in place }
-{ Input: x0 = string addr, x1 = start (1-based), x2 = count }
-var
-  loop_lbl, done_lbl: integer;
-begin
+Procedure EmitStrDeleteRuntime;
+{ Delete chars from String In place }
+{ Input: x0 = String addr, x1 = start (1-based), x2 = count }
+Var
+  loop_lbl, done_lbl: Integer;
+Begin
   EmitLabel(rt_str_delete);
   EmitStp;
   EmitMovFP;
   EmitSubSP(48);
-  { [x29-8]=string, [x29-16]=start, [x29-24]=count, [x29-32]=len, [x29-40]=idx }
+  { [x29-8]=String, [x29-16]=start, [x29-24]=count, [x29-32]=len, [x29-40]=idx }
   EmitSturX0(-8);
-  writeln('    stur x1, [x29, #-16]');
-  writeln('    stur x2, [x29, #-24]');
+  WriteLn('    stur x1, [x29, #-16]');
+  WriteLn('    stur x2, [x29, #-24]');
 
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
 
-  { Load string length }
-  writeln('    ldrb w3, [x0]');
-  writeln('    stur x3, [x29, #-32]');
+  { Load String Length }
+  WriteLn('    ldrb w3, [x0]');
+  WriteLn('    stur x3, [x29, #-32]');
   { x3 = len }
 
   { idx = start }
-  writeln('    ldur x0, [x29, #-16]');
+  WriteLn('    ldur x0, [x29, #-16]');
   EmitSturX0(-40);
 
   EmitLabel(loop_lbl);
-  { if idx + count > len, done }
+  { If idx + count > len, done }
   EmitLdurX0(-40);  { idx }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    add x4, x0, x2');
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    cmp x4, x3');
-  write('    b.gt L'); writeln(done_lbl);
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    add x4, x0, x2');
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    cmp x4, x3');
+  Write('    b.gt L'); WriteLn(done_lbl);
 
-  { Copy char from idx+count to idx }
-  EmitLdurX0(-8);  { string addr }
+  { Copy Char from idx+count To idx }
+  EmitLdurX0(-8);  { String addr }
   EmitLdurX0(-40);  { idx }
-  { RELOAD string addr since we overwrote x0 }
-  writeln('    ldur x1, [x29, #-8]');
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    add x3, x0, x2');
+  { RELOAD String addr since we overwrote x0 }
+  WriteLn('    ldur x1, [x29, #-8]');
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    add x3, x0, x2');
   { x3 = idx + count (source position) }
-  { Load char from string[idx+count] }
-  writeln('    ldrb w4, [x1, x3]');
-  { Store to string[idx] }
-  writeln('    strb w4, [x1, x0]');
+  { Load Char from String[idx+count] }
+  WriteLn('    ldrb w4, [x1, x3]');
+  { Store To String[idx] }
+  WriteLn('    strb w4, [x1, x0]');
 
   { idx++ }
   EmitLdurX0(-40);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(loop_lbl);
 
   EmitLabel(done_lbl);
-  { Update string length: new_len = old_len - count }
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    sub x0, x3, x2');
+  { Update String Length: new_len = old_len - count }
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    sub x0, x3, x2');
   EmitLdurX0(-8);
-  { RELOAD x0 for store since we overwrote it }
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    sub x4, x3, x2');
-  writeln('    ldur x1, [x29, #-8]');
-  writeln('    strb w4, [x1]');
+  { RELOAD x0 For store since we overwrote it }
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    sub x4, x3, x2');
+  WriteLn('    ldur x1, [x29, #-8]');
+  WriteLn('    strb w4, [x1]');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitStrInsertRuntime;
-{ Insert string into another at position }
-{ Input: x0 = source string, x1 = dest string, x2 = position (1-based) }
-var
-  loop1_lbl, loop2_lbl, copy_lbl, done_lbl: integer;
-begin
+Procedure EmitStrInsertRuntime;
+{ Insert String into another at position }
+{ Input: x0 = source String, x1 = dest String, x2 = position (1-based) }
+Var
+  loop1_lbl, loop2_lbl, copy_lbl, done_lbl: Integer;
+Begin
   EmitLabel(rt_str_insert);
   EmitStp;
   EmitMovFP;
   EmitSubSP(64);
   { [x29-8]=source, [x29-16]=dest, [x29-24]=pos, [x29-32]=src_len, [x29-40]=dst_len, [x29-48]=idx }
   EmitSturX0(-8);
-  writeln('    stur x1, [x29, #-16]');
-  writeln('    stur x2, [x29, #-24]');
+  WriteLn('    stur x1, [x29, #-16]');
+  WriteLn('    stur x2, [x29, #-24]');
 
   loop1_lbl := NewLabel;
   loop2_lbl := NewLabel;
@@ -3482,82 +3482,82 @@ begin
   done_lbl := NewLabel;
 
   { Load lengths }
-  writeln('    ldrb w3, [x0]');
-  writeln('    stur x3, [x29, #-32]');
-  writeln('    ldrb w4, [x1]');
-  writeln('    stur x4, [x29, #-40]');
+  WriteLn('    ldrb w3, [x0]');
+  WriteLn('    stur x3, [x29, #-32]');
+  WriteLn('    ldrb w4, [x1]');
+  WriteLn('    stur x4, [x29, #-40]');
 
-  { Move existing chars from pos to end, shifting right by src_len }
+  { Move existing chars from pos To End, shifting right by src_len }
   { idx = dst_len }
-  writeln('    stur x4, [x29, #-48]');
+  WriteLn('    stur x4, [x29, #-48]');
 
   EmitLabel(loop1_lbl);
-  { if idx < pos, done moving }
+  { If idx < pos, done moving }
   EmitLdurX0(-48);  { idx }
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    cmp x0, x2');
-  write('    b.lt L'); writeln(loop2_lbl);
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    cmp x0, x2');
+  Write('    b.lt L'); WriteLn(loop2_lbl);
 
-  { Copy dest[idx] to dest[idx+src_len] }
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldrb w5, [x1, x0]');
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    add x6, x0, x3');
-  writeln('    strb w5, [x1, x6]');
+  { Copy dest[idx] To dest[idx+src_len] }
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldrb w5, [x1, x0]');
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    add x6, x0, x3');
+  WriteLn('    strb w5, [x1, x6]');
 
   { idx-- }
   EmitLdurX0(-48);
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitSturX0(-48);
   EmitBranchLabel(loop1_lbl);
 
   EmitLabel(loop2_lbl);
-  { Now copy source chars to position pos...pos+src_len-1 }
+  { Now copy source chars To position pos...pos+src_len-1 }
   { idx = 0 }
   EmitMovX0(0);
   EmitSturX0(-48);
 
   EmitLabel(copy_lbl);
-  { if idx >= src_len, done }
+  { If idx >= src_len, done }
   EmitLdurX0(-48);
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    cmp x0, x3');
-  write('    b.ge L'); writeln(done_lbl);
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    cmp x0, x3');
+  Write('    b.ge L'); WriteLn(done_lbl);
 
-  { Copy source[idx+1] to dest[pos+idx] }
-  writeln('    ldur x5, [x29, #-8]');
-  writeln('    add x6, x0, #1');
-  writeln('    ldrb w7, [x5, x6]');
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    ldur x2, [x29, #-24]');
-  writeln('    add x6, x2, x0');
-  writeln('    strb w7, [x1, x6]');
+  { Copy source[idx+1] To dest[pos+idx] }
+  WriteLn('    ldur x5, [x29, #-8]');
+  WriteLn('    add x6, x0, #1');
+  WriteLn('    ldrb w7, [x5, x6]');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    ldur x2, [x29, #-24]');
+  WriteLn('    add x6, x2, x0');
+  WriteLn('    strb w7, [x1, x6]');
 
   { idx++ }
   EmitLdurX0(-48);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-48);
   EmitBranchLabel(copy_lbl);
 
   EmitLabel(done_lbl);
-  { Update dest length: new_len = dst_len + src_len }
-  writeln('    ldur x3, [x29, #-32]');
-  writeln('    ldur x4, [x29, #-40]');
-  writeln('    add x0, x3, x4');
-  writeln('    ldur x1, [x29, #-16]');
-  writeln('    strb w0, [x1]');
+  { Update dest Length: new_len = dst_len + src_len }
+  WriteLn('    ldur x3, [x29, #-32]');
+  WriteLn('    ldur x4, [x29, #-40]');
+  WriteLn('    add x0, x3, x4');
+  WriteLn('    ldur x1, [x29, #-16]');
+  WriteLn('    strb w0, [x1]');
 
   EmitAddSP(64);
   EmitLdp;
   EmitRet
-end;
+End;
 
-{ EmitIntToStrRuntime - Convert integer to string }
-{ x0 = integer value, x1 = destination string address }
-procedure EmitIntToStrRuntime;
-var
-  done_lbl, neg_lbl, pos_lbl, loop_lbl, rev_lbl, rev_done_lbl: integer;
-begin
+{ EmitIntToStrRuntime - Convert Integer To String }
+{ x0 = Integer value, x1 = destination String address }
+Procedure EmitIntToStrRuntime;
+Var
+  done_lbl, neg_lbl, pos_lbl, loop_lbl, rev_lbl, rev_done_lbl: Integer;
+Begin
   EmitLabel(rt_int_to_str);
   EmitStp;
   EmitMovFP;
@@ -3570,96 +3570,96 @@ begin
   rev_lbl := NewLabel;
   rev_done_lbl := NewLabel;
 
-  { Save dest string address }
-  writeln('    stur x1, [x29, #-16]');
+  { Save dest String address }
+  WriteLn('    stur x1, [x29, #-16]');
 
   { x2 = digit count, x3 = is_negative }
-  writeln('    mov x2, #0');
-  writeln('    mov x3, #0');
+  WriteLn('    mov x2, #0');
+  WriteLn('    mov x3, #0');
 
-  { Check if value is negative }
-  writeln('    cmp x0, #0');
-  write('    b.lt L'); writeln(neg_lbl);
-  write('    b L'); writeln(pos_lbl);
+  { Check If value is negative }
+  WriteLn('    cmp x0, #0');
+  Write('    b.lt L'); WriteLn(neg_lbl);
+  Write('    b L'); WriteLn(pos_lbl);
 
   { Handle negative }
   EmitLabel(neg_lbl);
-  writeln('    neg x0, x0');
-  writeln('    mov x3, #1');
+  WriteLn('    neg x0, x0');
+  WriteLn('    mov x3, #1');
 
-  { Loop to extract digits (stored in reverse on stack) }
+  { Loop To extract digits (stored In reverse on stack) }
   EmitLabel(pos_lbl);
   EmitLabel(loop_lbl);
-  { x4 = x0 / 10, x5 = x0 mod 10 }
-  writeln('    mov x6, #10');
-  writeln('    udiv x4, x0, x6');
-  writeln('    msub x5, x4, x6, x0');
+  { x4 = x0 / 10, x5 = x0 Mod 10 }
+  WriteLn('    mov x6, #10');
+  WriteLn('    udiv x4, x0, x6');
+  WriteLn('    msub x5, x4, x6, x0');
 
-  { Convert digit to ASCII and store on stack }
-  writeln('    add x5, x5, #48');
+  { Convert digit To ASCII And store on stack }
+  WriteLn('    add x5, x5, #48');
 
   { Store digit at sp + x2 }
-  writeln('    strb w5, [sp, x2]');
+  WriteLn('    strb w5, [sp, x2]');
 
   { Increment digit count }
-  writeln('    add x2, x2, #1');
+  WriteLn('    add x2, x2, #1');
 
-  { x0 = x4 (quotient), continue if x0 > 0 }
-  writeln('    mov x0, x4');
-  writeln('    cmp x0, #0');
-  write('    b.ne L'); writeln(loop_lbl);
+  { x0 = x4 (quotient), Continue If x0 > 0 }
+  WriteLn('    mov x0, x4');
+  WriteLn('    cmp x0, #0');
+  Write('    b.ne L'); WriteLn(loop_lbl);
 
-  { Now reverse digits into destination string }
-  { x1 = dest string, x4 = write position (starts at 1 if no sign, 2 if negative) }
-  writeln('    ldur x1, [x29, #-16]');
+  { Now reverse digits into destination String }
+  { x1 = dest String, x4 = Write position (starts at 1 If no sign, 2 If negative) }
+  WriteLn('    ldur x1, [x29, #-16]');
 
   { If negative, store '-' at position 1, start digits at 2 }
-  writeln('    cmp x3, #0');
-  write('    b.eq L'); writeln(rev_lbl);
+  WriteLn('    cmp x3, #0');
+  Write('    b.eq L'); WriteLn(rev_lbl);
 
   { Store '-' sign }
-  writeln('    mov w5, #45');
-  writeln('    strb w5, [x1, #1]');
+  WriteLn('    mov w5, #45');
+  WriteLn('    strb w5, [x1, #1]');
 
-  { x4 = write position (1 for positive, 2 for negative start) }
+  { x4 = Write position (1 For positive, 2 For negative start) }
   EmitLabel(rev_lbl);
-  writeln('    add x4, x3, #1');
+  WriteLn('    add x4, x3, #1');
 
-  { x5 = read position (digit count - 1, reading backwards) }
-  writeln('    sub x5, x2, #1');
+  { x5 = Read position (digit count - 1, reading backwards) }
+  WriteLn('    sub x5, x2, #1');
 
   { Reverse copy loop }
   EmitLabel(rev_done_lbl);
-  writeln('    cmp x5, #0');
-  write('    b.lt L'); writeln(done_lbl);
+  WriteLn('    cmp x5, #0');
+  Write('    b.lt L'); WriteLn(done_lbl);
 
   { Load digit from stack at position x5 }
-  writeln('    ldrb w6, [sp, x5]');
+  WriteLn('    ldrb w6, [sp, x5]');
 
   { Store at dest position x4 }
-  writeln('    strb w6, [x1, x4]');
+  WriteLn('    strb w6, [x1, x4]');
 
-  writeln('    add x4, x4, #1');
-  writeln('    sub x5, x5, #1');
-  write('    b L'); writeln(rev_done_lbl);
+  WriteLn('    add x4, x4, #1');
+  WriteLn('    sub x5, x5, #1');
+  Write('    b L'); WriteLn(rev_done_lbl);
 
-  { Store length (x2 + x3 = digit count + sign) }
+  { Store Length (x2 + x3 = digit count + sign) }
   EmitLabel(done_lbl);
-  writeln('    add x0, x2, x3');
-  writeln('    strb w0, [x1]');
+  WriteLn('    add x0, x2, x3');
+  WriteLn('    strb w0, [x1]');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-{ EmitStrToIntRuntime - Convert string to integer }
-{ x0 = source string address }
-{ Returns: x0 = integer value, x1 = error code (0 = success, position of error otherwise) }
-procedure EmitStrToIntRuntime;
-var
-  done_lbl, error_lbl, loop_lbl, neg_lbl, pos_lbl, skip_sign_lbl, exit_lbl: integer;
-begin
+{ EmitStrToIntRuntime - Convert String To Integer }
+{ x0 = source String address }
+{ Returns: x0 = Integer value, x1 = error code (0 = success, position Of error otherwise) }
+Procedure EmitStrToIntRuntime;
+Var
+  done_lbl, error_lbl, loop_lbl, neg_lbl, pos_lbl, skip_sign_lbl, exit_lbl: Integer;
+Begin
   EmitLabel(rt_str_to_int);
   EmitStp;
   EmitMovFP;
@@ -3673,182 +3673,182 @@ begin
   skip_sign_lbl := NewLabel;
   exit_lbl := NewLabel;
 
-  { x1 = length, x2 = index (starts at 1), x3 = result, x4 = is_negative }
-  writeln('    ldrb w1, [x0]');
-  writeln('    mov x2, #1');
-  writeln('    mov x3, #0');
-  writeln('    mov x4, #0');
+  { x1 = Length, x2 = index (starts at 1), x3 = result, x4 = is_negative }
+  WriteLn('    ldrb w1, [x0]');
+  WriteLn('    mov x2, #1');
+  WriteLn('    mov x3, #0');
+  WriteLn('    mov x4, #0');
 
-  { Check if empty string }
-  writeln('    cmp x1, #0');
-  write('    b.eq L'); writeln(error_lbl);
+  { Check If empty String }
+  WriteLn('    cmp x1, #0');
+  Write('    b.eq L'); WriteLn(error_lbl);
 
-  { Check first char for sign }
-  writeln('    ldrb w5, [x0, #1]');
+  { Check first Char For sign }
+  WriteLn('    ldrb w5, [x0, #1]');
 
-  { Check for '-' (45) }
-  writeln('    cmp x5, #45');
-  write('    b.eq L'); writeln(neg_lbl);
+  { Check For '-' (45) }
+  WriteLn('    cmp x5, #45');
+  Write('    b.eq L'); WriteLn(neg_lbl);
 
-  { Check for '+' (43) }
-  writeln('    cmp x5, #43');
-  write('    b.eq L'); writeln(pos_lbl);
-  write('    b L'); writeln(loop_lbl);
+  { Check For '+' (43) }
+  WriteLn('    cmp x5, #43');
+  Write('    b.eq L'); WriteLn(pos_lbl);
+  Write('    b L'); WriteLn(loop_lbl);
 
   EmitLabel(neg_lbl);
-  writeln('    mov x4, #1');
+  WriteLn('    mov x4, #1');
   EmitLabel(pos_lbl);
-  writeln('    add x2, x2, #1');
+  WriteLn('    add x2, x2, #1');
 
   { Main loop }
   EmitLabel(loop_lbl);
-  writeln('    cmp x2, x1');
-  write('    b.gt L'); writeln(done_lbl);
+  WriteLn('    cmp x2, x1');
+  Write('    b.gt L'); WriteLn(done_lbl);
 
-  { Load char at position x2 }
-  writeln('    ldrb w5, [x0, x2]');
+  { Load Char at position x2 }
+  WriteLn('    ldrb w5, [x0, x2]');
 
-  { Check if digit (48-57) }
-  writeln('    cmp x5, #48');
-  write('    b.lt L'); writeln(error_lbl);
-  writeln('    cmp x5, #57');
-  write('    b.gt L'); writeln(error_lbl);
+  { Check If digit (48-57) }
+  WriteLn('    cmp x5, #48');
+  Write('    b.lt L'); WriteLn(error_lbl);
+  WriteLn('    cmp x5, #57');
+  Write('    b.gt L'); WriteLn(error_lbl);
 
   { result = result * 10 + digit }
-  writeln('    mov x6, #10');
-  writeln('    mul x3, x3, x6');
-  writeln('    sub x5, x5, #48');
-  writeln('    add x3, x3, x5');
+  WriteLn('    mov x6, #10');
+  WriteLn('    mul x3, x3, x6');
+  WriteLn('    sub x5, x5, #48');
+  WriteLn('    add x3, x3, x5');
 
   { x2 := x2 + 1 }
-  writeln('    add x2, x2, #1');
-  write('    b L'); writeln(loop_lbl);
+  WriteLn('    add x2, x2, #1');
+  Write('    b L'); WriteLn(loop_lbl);
 
   { Success }
   EmitLabel(done_lbl);
-  { Apply sign if negative }
-  writeln('    cmp x4, #0');
-  write('    b.eq L'); writeln(skip_sign_lbl);
-  writeln('    neg x3, x3');
+  { Apply sign If negative }
+  WriteLn('    cmp x4, #0');
+  Write('    b.eq L'); WriteLn(skip_sign_lbl);
+  WriteLn('    neg x3, x3');
 
   EmitLabel(skip_sign_lbl);
-  writeln('    mov x0, x3');
-  writeln('    mov x1, #0');
-  write('    b L'); writeln(exit_lbl);
+  WriteLn('    mov x0, x3');
+  WriteLn('    mov x1, #0');
+  Write('    b L'); WriteLn(exit_lbl);
 
-  { Error - return position in x1 }
+  { Error - return position In x1 }
   EmitLabel(error_lbl);
-  writeln('    mov x0, #0');
-  writeln('    mov x1, x2');
+  WriteLn('    mov x0, #0');
+  WriteLn('    mov x1, x2');
 
   EmitLabel(exit_lbl);
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-{ EmitStrLtrimRuntime - Remove leading whitespace from string }
-{ Input: x0 = source string addr }
-{ Output: x0 = new trimmed string addr (allocated from heap) }
-procedure EmitStrLtrimRuntime;
-var
-  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: integer;
-begin
+{ EmitStrLtrimRuntime - Remove leading whitespace from String }
+{ Input: x0 = source String addr }
+{ Output: x0 = New trimmed String addr (allocated from heap) }
+Procedure EmitStrLtrimRuntime;
+Var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: Integer;
+Begin
   EmitLabel(rt_str_ltrim);
   EmitStp;
   EmitSubSP(32);
 
-  { x1 = source addr, x2 = source length, x3 = skip count }
+  { x1 = source addr, x2 = source Length, x3 = skip count }
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
   copy_lbl := NewLabel;
   copy_done_lbl := NewLabel;
 
   { Save source addr }
-  writeln('    mov x1, x0');
+  WriteLn('    mov x1, x0');
 
-  { x2 = source length }
-  writeln('    ldrb w2, [x1]');
+  { x2 = source Length }
+  WriteLn('    ldrb w2, [x1]');
 
   { x3 = 0 (skip count) }
-  writeln('    mov x3, #0');
+  WriteLn('    mov x3, #0');
 
   { Loop: skip leading whitespace }
   EmitLabel(loop_lbl);
-  { if x3 >= x2, done }
-  writeln('    cmp x3, x2');
-  write('    b.ge L'); writeln(done_lbl);
+  { If x3 >= x2, done }
+  WriteLn('    cmp x3, x2');
+  Write('    b.ge L'); WriteLn(done_lbl);
 
-  { x4 = char at [x1 + x3 + 1] }
-  writeln('    add x4, x3, #1');
-  writeln('    ldrb w4, [x1, x4]');
+  { x4 = Char at [x1 + x3 + 1] }
+  WriteLn('    add x4, x3, #1');
+  WriteLn('    ldrb w4, [x1, x4]');
 
-  { if char = 32 (space), skip }
-  writeln('    cmp x4, #32');
-  write('    b.eq L'); writeln(label_count);
+  { If Char = 32 (space), skip }
+  WriteLn('    cmp x4, #32');
+  Write('    b.eq L'); WriteLn(label_count);
 
-  { if char = 9 (tab), skip }
-  writeln('    cmp x4, #9');
-  write('    b.ne L'); writeln(done_lbl);
+  { If Char = 9 (tab), skip }
+  WriteLn('    cmp x4, #9');
+  Write('    b.ne L'); WriteLn(done_lbl);
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { x3 := x3 + 1 }
-  writeln('    add x3, x3, #1');
-  write('    b L'); writeln(loop_lbl);
+  WriteLn('    add x3, x3, #1');
+  Write('    b L'); WriteLn(loop_lbl);
 
-  { Done scanning: x3 = number to skip, x2 = length }
+  { Done scanning: x3 = number To skip, x2 = Length }
   EmitLabel(done_lbl);
 
-  { Allocate new string from heap: x0 = x21 }
-  writeln('    mov x0, x21');
-  writeln('    add x21, x21, #256');
+  { Allocate New String from heap: x0 = x21 }
+  WriteLn('    mov x0, x21');
+  WriteLn('    add x21, x21, #256');
 
-  { x5 = new length = x2 - x3 }
-  writeln('    sub x5, x2, x3');
+  { x5 = New Length = x2 - x3 }
+  WriteLn('    sub x5, x2, x3');
 
-  { Store new length }
-  writeln('    strb w5, [x0]');
+  { Store New Length }
+  WriteLn('    strb w5, [x0]');
 
-  { x6 = copy index (0 to x5-1) }
-  writeln('    mov x6, #0');
+  { x6 = copy index (0 To x5-1) }
+  WriteLn('    mov x6, #0');
 
   { Copy loop }
   EmitLabel(copy_lbl);
-  writeln('    cmp x6, x5');
-  write('    b.ge L'); writeln(copy_done_lbl);
+  WriteLn('    cmp x6, x5');
+  Write('    b.ge L'); WriteLn(copy_done_lbl);
 
   { x7 = x3 + x6 + 1 (source index) }
-  writeln('    add x7, x3, x6');
-  writeln('    add x7, x7, #1');
+  WriteLn('    add x7, x3, x6');
+  WriteLn('    add x7, x7, #1');
 
-  { Load char }
-  writeln('    ldrb w8, [x1, x7]');
+  { Load Char }
+  WriteLn('    ldrb w8, [x1, x7]');
 
   { x7 = x6 + 1 (dest index) }
-  writeln('    add x7, x6, #1');
+  WriteLn('    add x7, x6, #1');
 
-  { Store char }
-  writeln('    strb w8, [x0, x7]');
+  { Store Char }
+  WriteLn('    strb w8, [x0, x7]');
 
   { x6 := x6 + 1 }
-  writeln('    add x6, x6, #1');
-  write('    b L'); writeln(copy_lbl);
+  WriteLn('    add x6, x6, #1');
+  Write('    b L'); WriteLn(copy_lbl);
 
   EmitLabel(copy_done_lbl);
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-{ EmitStrRtrimRuntime - Remove trailing whitespace from string }
-{ Input: x0 = source string addr }
-{ Output: x0 = new trimmed string addr (allocated from heap) }
-procedure EmitStrRtrimRuntime;
-var
-  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: integer;
-begin
+{ EmitStrRtrimRuntime - Remove trailing whitespace from String }
+{ Input: x0 = source String addr }
+{ Output: x0 = New trimmed String addr (allocated from heap) }
+Procedure EmitStrRtrimRuntime;
+Var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl: Integer;
+Begin
   EmitLabel(rt_str_rtrim);
   EmitStp;
   EmitSubSP(32);
@@ -3859,80 +3859,80 @@ begin
   copy_done_lbl := NewLabel;
 
   { x1 = source addr }
-  writeln('    mov x1, x0');
+  WriteLn('    mov x1, x0');
 
-  { x2 = source length }
-  writeln('    ldrb w2, [x1]');
+  { x2 = source Length }
+  WriteLn('    ldrb w2, [x1]');
 
-  { x3 = x2 (scan from end) }
-  writeln('    mov x3, x2');
+  { x3 = x2 (scan from End) }
+  WriteLn('    mov x3, x2');
 
   { Loop: find last non-whitespace }
   EmitLabel(loop_lbl);
-  { if x3 <= 0, done }
-  writeln('    cmp x3, #0');
-  write('    b.le L'); writeln(done_lbl);
+  { If x3 <= 0, done }
+  WriteLn('    cmp x3, #0');
+  Write('    b.le L'); WriteLn(done_lbl);
 
-  { x4 = char at [x1 + x3] }
-  writeln('    ldrb w4, [x1, x3]');
+  { x4 = Char at [x1 + x3] }
+  WriteLn('    ldrb w4, [x1, x3]');
 
-  { if char = 32 (space), continue }
-  writeln('    cmp x4, #32');
-  write('    b.eq L'); writeln(label_count);
+  { If Char = 32 (space), Continue }
+  WriteLn('    cmp x4, #32');
+  Write('    b.eq L'); WriteLn(label_count);
 
-  { if char = 9 (tab), continue }
-  writeln('    cmp x4, #9');
-  write('    b.ne L'); writeln(done_lbl);
+  { If Char = 9 (tab), Continue }
+  WriteLn('    cmp x4, #9');
+  Write('    b.ne L'); WriteLn(done_lbl);
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { x3 := x3 - 1 }
-  writeln('    sub x3, x3, #1');
-  write('    b L'); writeln(loop_lbl);
+  WriteLn('    sub x3, x3, #1');
+  Write('    b L'); WriteLn(loop_lbl);
 
-  { Done: x3 = new length }
+  { Done: x3 = New Length }
   EmitLabel(done_lbl);
 
-  { Allocate new string from heap }
-  writeln('    mov x0, x21');
-  writeln('    add x21, x21, #256');
+  { Allocate New String from heap }
+  WriteLn('    mov x0, x21');
+  WriteLn('    add x21, x21, #256');
 
-  { Store new length }
-  writeln('    strb w3, [x0]');
+  { Store New Length }
+  WriteLn('    strb w3, [x0]');
 
-  { x5 = copy index (0 to x3-1) }
-  writeln('    mov x5, #0');
+  { x5 = copy index (0 To x3-1) }
+  WriteLn('    mov x5, #0');
 
   { Copy loop }
   EmitLabel(copy_lbl);
-  writeln('    cmp x5, x3');
-  write('    b.ge L'); writeln(copy_done_lbl);
+  WriteLn('    cmp x5, x3');
+  Write('    b.ge L'); WriteLn(copy_done_lbl);
 
   { x6 = x5 + 1 (index) }
-  writeln('    add x6, x5, #1');
+  WriteLn('    add x6, x5, #1');
 
-  { Load char from source }
-  writeln('    ldrb w7, [x1, x6]');
+  { Load Char from source }
+  WriteLn('    ldrb w7, [x1, x6]');
 
-  { Store char to dest }
-  writeln('    strb w7, [x0, x6]');
+  { Store Char To dest }
+  WriteLn('    strb w7, [x0, x6]');
 
   { x5 := x5 + 1 }
-  writeln('    add x5, x5, #1');
-  write('    b L'); writeln(copy_lbl);
+  WriteLn('    add x5, x5, #1');
+  Write('    b L'); WriteLn(copy_lbl);
 
   EmitLabel(copy_done_lbl);
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-{ EmitStrTrimRuntime - Remove both leading and trailing whitespace }
-{ Input: x0 = source string addr }
-{ Output: x0 = new trimmed string addr }
-procedure EmitStrTrimRuntime;
-begin
+{ EmitStrTrimRuntime - Remove both leading And trailing whitespace }
+{ Input: x0 = source String addr }
+{ Output: x0 = New trimmed String addr }
+Procedure EmitStrTrimRuntime;
+Begin
   EmitLabel(rt_str_trim);
   EmitStp;
   EmitSubSP(16);
@@ -3946,25 +3946,25 @@ begin
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
 { ----- Screen/Terminal Control Routines ----- }
 
-procedure EmitStrbAtOffset(offset: integer);
-{ Emit: sturb w0, [x29, #offset] - stores low byte of w0 at x29+offset }
-begin
-  write('    sturb w0, [x29, #'); write(offset); writeln(']');
-end;
+Procedure EmitStrbAtOffset(offset: Integer);
+{ Emit: sturb w0, [x29, #offset] - stores low byte Of w0 at x29+offset }
+Begin
+  Write('    sturb w0, [x29, #'); Write(offset); WriteLn(']');
+End;
 
-procedure EmitClrScrRuntime;
-{ Emits code to clear screen and home cursor: ESC[2J ESC[H }
-begin
+Procedure EmitClrScrRuntime;
+{ Emits code To clear screen And home cursor: ESC[2J ESC[H }
+Begin
   EmitLabel(rt_clrscr);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
   { Store escape sequence on stack: ESC[2J ESC[H = 27,91,50,74,27,91,72 }
-  { Use sturb to store individual bytes }
+  { Use sturb To store individual bytes }
   EmitMovX0(27);       { ESC }
   EmitStrbAtOffset(-15);
   EmitMovX0(91);       { [ }
@@ -3980,110 +3980,110 @@ begin
   EmitMovX0(72);       { H }
   EmitStrbAtOffset(-9);
   { Write syscall: x0=fd, x1=buf, x2=count }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #15 }
-  writeln('    sub x1, x29, #15');
+  WriteLn('    sub x1, x29, #15');
   { mov x2, #7 }
-  writeln('    mov x2, #7');
+  WriteLn('    mov x2, #7');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitGotoXYRuntime;
-{ Emits code to move cursor: ESC[y;xH }
+Procedure EmitGotoXYRuntime;
+{ Emits code To move cursor: ESC[y;xH }
 { x1=x (column), x0=y (row) }
-var
-  loop1, done1, loop2, done2, end_lbl: integer;
-begin
+Var
+  loop1, done1, loop2, done2, end_lbl: Integer;
+Begin
   EmitLabel(rt_gotoxy);
   EmitStp;
   EmitMovFP;
   EmitSubSP(48);
-  { Save x and y to registers first to avoid memory corruption }
-  { x11 = y (row), x12 = x (column) - using higher regs to avoid conflicts with division }
-  writeln('    mov x11, x0');
-  writeln('    mov x12, x1');
-  { Build escape sequence at stack offset -20 onwards (leave room for digits) }
+  { Save x And y To registers first To avoid memory corruption }
+  { x11 = y (row), x12 = x (column) - using higher regs To avoid conflicts With division }
+  WriteLn('    mov x11, x0');
+  WriteLn('    mov x12, x1');
+  { Build escape sequence at stack offset -20 onwards (leave room For digits) }
   { Format: ESC [ y ; x H }
   EmitMovX0(27);  { ESC }
   EmitStrbAtOffset(-20);
   EmitMovX0(91);  { [ }
   EmitStrbAtOffset(-19);
-  { x8 = pointer to next byte (start at -18) }
-  writeln('    sub x8, x29, #18');
-  { Convert y to decimal digits (y is in x11) }
+  { x8 = pointer To next byte (start at -18) }
+  WriteLn('    sub x8, x29, #18');
+  { Convert y To decimal digits (y is In x11) }
   { mov x0, x11 }
-  writeln('    mov x0, x11');
+  WriteLn('    mov x0, x11');
   { If y >= 10, output tens digit }
   loop1 := NewLabel;
   done1 := NewLabel;
-  writeln('    cmp x0, #10');
-  write('    b.lt L'); writeln(done1);
-  { Divide by 10: x1 = x0 / 10, x2 = x0 mod 10 }
-  writeln('    mov x9, #10');
-  writeln('    udiv x1, x0, x9');
-  writeln('    msub x0, x1, x9, x0');
+  WriteLn('    cmp x0, #10');
+  Write('    b.lt L'); WriteLn(done1);
+  { Divide by 10: x1 = x0 / 10, x2 = x0 Mod 10 }
+  WriteLn('    mov x9, #10');
+  WriteLn('    udiv x1, x0, x9');
+  WriteLn('    msub x0, x1, x9, x0');
   { x1=tens, x0=units - store tens digit }
-  writeln('    add x1, x1, #48');
+  WriteLn('    add x1, x1, #48');
   { strb w1, [x8], #1 }
-  writeln('    strb w1, [x8], #1');
+  WriteLn('    strb w1, [x8], #1');
   EmitLabel(done1);
   { Store units digit }
-  writeln('    add x0, x0, #48');
+  WriteLn('    add x0, x0, #48');
   { strb w0, [x8], #1 }
-  writeln('    strb w0, [x8], #1');
+  WriteLn('    strb w0, [x8], #1');
   { Store semicolon }
   EmitMovX0(59);  { ; }
   { strb w0, [x8], #1 }
-  writeln('    strb w0, [x8], #1');
-  { Convert x to decimal digits (x is in x12) }
+  WriteLn('    strb w0, [x8], #1');
+  { Convert x To decimal digits (x is In x12) }
   { mov x0, x12 }
-  writeln('    mov x0, x12');
+  WriteLn('    mov x0, x12');
   done2 := NewLabel;
-  writeln('    cmp x0, #10');
-  write('    b.lt L'); writeln(done2);
+  WriteLn('    cmp x0, #10');
+  Write('    b.lt L'); WriteLn(done2);
   { Divide by 10 }
-  writeln('    mov x9, #10');
-  writeln('    udiv x1, x0, x9');
-  writeln('    msub x0, x1, x9, x0');
+  WriteLn('    mov x9, #10');
+  WriteLn('    udiv x1, x0, x9');
+  WriteLn('    msub x0, x1, x9, x0');
   { Store tens digit }
-  writeln('    add x1, x1, #48');
+  WriteLn('    add x1, x1, #48');
   { strb w1, [x8], #1 }
-  writeln('    strb w1, [x8], #1');
+  WriteLn('    strb w1, [x8], #1');
   EmitLabel(done2);
   { Store units digit }
-  writeln('    add x0, x0, #48');
+  WriteLn('    add x0, x0, #48');
   { strb w0, [x8], #1 }
-  writeln('    strb w0, [x8], #1');
+  WriteLn('    strb w0, [x8], #1');
   { Store H terminator }
   EmitMovX0(72);  { H }
   { strb w0, [x8] }
-  writeln('    strb w0, [x8]');
-  { Calculate length: x8 points past last byte, buffer starts at x29-20 }
+  WriteLn('    strb w0, [x8]');
+  { Calculate Length: x8 points past last byte, buffer starts at x29-20 }
   { add x8, x8, #1 (point past H) }
-  writeln('    add x8, x8, #1');
+  WriteLn('    add x8, x8, #1');
   { x2 = x8 - (x29-20) = x8 - x29 + 20 }
   { sub x2, x8, x29 }
-  writeln('    sub x2, x8, x29');
+  WriteLn('    sub x2, x8, x29');
   { add x2, x2, #20 }
-  writeln('    add x2, x2, #20');
+  WriteLn('    add x2, x2, #20');
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #20 }
-  writeln('    sub x1, x29, #20');
+  WriteLn('    sub x1, x29, #20');
   EmitSvc;
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitClrEolRuntime;
-{ Emits code to clear to end of line: ESC[K }
-begin
+Procedure EmitClrEolRuntime;
+{ Emits code To clear To End Of line: ESC[K }
+Begin
   EmitLabel(rt_clreol);
   EmitStp;
   EmitMovFP;
@@ -4096,27 +4096,27 @@ begin
   EmitMovX0(75);  { K }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #11 }
-  writeln('    sub x1, x29, #11');
+  WriteLn('    sub x1, x29, #11');
   { mov x2, #3 }
-  writeln('    mov x2, #3');
+  WriteLn('    mov x2, #3');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitTextColorRuntime;
-{ Emits code to set foreground color: ESC[3Xm where X=x0 (0-7) }
-begin
+Procedure EmitTextColorRuntime;
+{ Emits code To Set foreground color: ESC[3Xm where X=x0 (0-7) }
+Begin
   EmitLabel(rt_textcolor);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  { Save color parameter (x0) to x9 }
-  writeln('    mov x9, x0');
+  { Save color parameter (x0) To x9 }
+  WriteLn('    mov x9, x0');
   { Store ESC[3Xm = 27,91,51,X,109 (5 bytes) }
   EmitMovX0(27);  { ESC }
   EmitStrbAtOffset(-13);
@@ -4125,33 +4125,33 @@ begin
   EmitMovX0(51);  { 3 }
   EmitStrbAtOffset(-11);
   { Store color digit: x9 + 48 }
-  writeln('    add x0, x9, #48');
+  WriteLn('    add x0, x9, #48');
   EmitStrbAtOffset(-10);
   { Store 'm' }
   EmitMovX0(109);  { m }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #13 }
-  writeln('    sub x1, x29, #13');
+  WriteLn('    sub x1, x29, #13');
   { mov x2, #5 }
-  writeln('    mov x2, #5');
+  WriteLn('    mov x2, #5');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitTextBackgroundRuntime;
-{ Emits code to set background color: ESC[4Xm where X=x0 (0-7) }
-begin
+Procedure EmitTextBackgroundRuntime;
+{ Emits code To Set background color: ESC[4Xm where X=x0 (0-7) }
+Begin
   EmitLabel(rt_textbackground);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  { Save color parameter (x0) to x9 }
-  writeln('    mov x9, x0');
+  { Save color parameter (x0) To x9 }
+  WriteLn('    mov x9, x0');
   { Store ESC[4Xm = 27,91,52,X,109 (5 bytes) }
   EmitMovX0(27);  { ESC }
   EmitStrbAtOffset(-13);
@@ -4160,27 +4160,27 @@ begin
   EmitMovX0(52);  { 4 }
   EmitStrbAtOffset(-11);
   { Store color digit: x9 + 48 }
-  writeln('    add x0, x9, #48');
+  WriteLn('    add x0, x9, #48');
   EmitStrbAtOffset(-10);
   { Store 'm' }
   EmitMovX0(109);  { m }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #13 }
-  writeln('    sub x1, x29, #13');
+  WriteLn('    sub x1, x29, #13');
   { mov x2, #5 }
-  writeln('    mov x2, #5');
+  WriteLn('    mov x2, #5');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitNormVideoRuntime;
-{ Emits code to reset attributes: ESC[0m }
-begin
+Procedure EmitNormVideoRuntime;
+{ Emits code To reset attributes: ESC[0m }
+Begin
   EmitLabel(rt_normvideo);
   EmitStp;
   EmitMovFP;
@@ -4195,21 +4195,21 @@ begin
   EmitMovX0(109); { m }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  writeln('    sub x1, x29, #12');
+  WriteLn('    sub x1, x29, #12');
   { mov x2, #4 }
-  writeln('    mov x2, #4');
+  WriteLn('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitHighVideoRuntime;
-{ Emits code to enable bold: ESC[1m }
-begin
+Procedure EmitHighVideoRuntime;
+{ Emits code To enable bold: ESC[1m }
+Begin
   EmitLabel(rt_highvideo);
   EmitStp;
   EmitMovFP;
@@ -4224,21 +4224,21 @@ begin
   EmitMovX0(109); { m }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  writeln('    sub x1, x29, #12');
+  WriteLn('    sub x1, x29, #12');
   { mov x2, #4 }
-  writeln('    mov x2, #4');
+  WriteLn('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitLowVideoRuntime;
-{ Emits code to enable dim: ESC[2m }
-begin
+Procedure EmitLowVideoRuntime;
+{ Emits code To enable dim: ESC[2m }
+Begin
   EmitLabel(rt_lowvideo);
   EmitStp;
   EmitMovFP;
@@ -4253,21 +4253,21 @@ begin
   EmitMovX0(109); { m }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  writeln('    sub x1, x29, #12');
+  WriteLn('    sub x1, x29, #12');
   { mov x2, #4 }
-  writeln('    mov x2, #4');
+  WriteLn('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitHideCursorRuntime;
-{ Emits code to hide cursor: ESC[?25l }
-begin
+Procedure EmitHideCursorRuntime;
+{ Emits code To hide cursor: ESC[?25l }
+Begin
   EmitLabel(rt_hidecursor);
   EmitStp;
   EmitMovFP;
@@ -4286,21 +4286,21 @@ begin
   EmitMovX0(108); { l }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #14 }
-  writeln('    sub x1, x29, #14');
+  WriteLn('    sub x1, x29, #14');
   { mov x2, #6 }
-  writeln('    mov x2, #6');
+  WriteLn('    mov x2, #6');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitShowCursorRuntime;
-{ Emits code to show cursor: ESC[?25h }
-begin
+Procedure EmitShowCursorRuntime;
+{ Emits code To show cursor: ESC[?25h }
+Begin
   EmitLabel(rt_showcursor);
   EmitStp;
   EmitMovFP;
@@ -4319,187 +4319,187 @@ begin
   EmitMovX0(104); { h }
   EmitStrbAtOffset(-9);
   { Write syscall }
-  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitMovX16(33554436);  { 0x2000004 = Write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #14 }
-  writeln('    sub x1, x29, #14');
+  WriteLn('    sub x1, x29, #14');
   { mov x2, #6 }
-  writeln('    mov x2, #6');
+  WriteLn('    mov x2, #6');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitSleepRuntime;
-{ Emits code to sleep for x0 milliseconds using select syscall }
+Procedure EmitSleepRuntime;
+{ Emits code To sleep For x0 milliseconds using select syscall }
 { x0 = milliseconds }
-{ select(0, NULL, NULL, NULL, &timeval) with nfds=0, all fd_sets=NULL }
+{ select(0, NULL, NULL, NULL, &timeval) With nfds=0, all fd_sets=NULL }
 { struct timeval: tv_sec (8 bytes), tv_usec (8 bytes) }
-begin
+Begin
   EmitLabel(rt_sleep);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(32);  { 16 bytes for timeval + alignment }
+  EmitSubSP(32);  { 16 bytes For timeval + alignment }
 
   { x10 = ms (save original) }
-  writeln('    mov x10, x0');
+  WriteLn('    mov x10, x0');
 
   { x11 = 1000 }
-  writeln('    mov x11, #1000');
+  WriteLn('    mov x11, #1000');
 
   { x0 = ms / 1000 (seconds) }
-  writeln('    udiv x0, x10, x11');
+  WriteLn('    udiv x0, x10, x11');
 
-  { x1 = ms mod 1000 (remainder): msub x1, x0, x11, x10 = x10 - (x0 * x11) }
-  writeln('    msub x1, x0, x11, x10');
+  { x1 = ms Mod 1000 (remainder): msub x1, x0, x11, x10 = x10 - (x0 * x11) }
+  WriteLn('    msub x1, x0, x11, x10');
 
-  { x1 = x1 * 1000 (microseconds, not nanoseconds for timeval) }
-  writeln('    mul x1, x1, x11');
+  { x1 = x1 * 1000 (microseconds, Not nanoseconds For timeval) }
+  WriteLn('    mul x1, x1, x11');
 
   { Store timeval at sp: [sp] = tv_sec, [sp+8] = tv_usec }
-  writeln('    str x0, [sp]');
+  WriteLn('    str x0, [sp]');
 
-  writeln('    str x1, [sp, #8]');
+  WriteLn('    str x1, [sp, #8]');
 
   { select(nfds=0, readfds=NULL, writefds=NULL, exceptfds=NULL, timeout=sp) }
   { x0 = 0 (nfds) }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
   { x1 = NULL }
-  writeln('    mov x1, #0');
+  WriteLn('    mov x1, #0');
 
   { x2 = NULL }
-  writeln('    mov x2, #0');
+  WriteLn('    mov x2, #0');
 
   { x3 = NULL }
-  writeln('    mov x3, #0');
+  WriteLn('    mov x3, #0');
 
-  { x4 = pointer to timeval (sp) }
-  writeln('    mov x4, sp');
+  { x4 = pointer To timeval (sp) }
+  WriteLn('    mov x4, sp');
 
-  { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
+  { x16 = syscall number For select: 0x2000000 + 93 = 33554525 }
   EmitMovX16(33554525);
   EmitSvc;
 
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitKeyPressedRuntime;
-{ Check if a key is available on stdin using select with 0 timeout }
-{ Returns 1 in x0 if key available, 0 otherwise }
-begin
+Procedure EmitKeyPressedRuntime;
+{ Check If a key is available on stdin using select With 0 timeout }
+{ Returns 1 In x0 If key available, 0 otherwise }
+Begin
   EmitLabel(rt_keypressed);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(48);  { 8 bytes for fd_set + 16 bytes for timeval + padding }
+  EmitSubSP(48);  { 8 bytes For fd_set + 16 bytes For timeval + padding }
 
   { Clear the fd_set at sp }
-  writeln('    mov x0, #0');
-  writeln('    str x0, [sp]');
+  WriteLn('    mov x0, #0');
+  WriteLn('    str x0, [sp]');
 
-  { Set bit 0 in fd_set for stdin (fd 0) }
-  writeln('    mov x0, #1');
-  writeln('    str x0, [sp]');
+  { Set bit 0 In fd_set For stdin (fd 0) }
+  WriteLn('    mov x0, #1');
+  WriteLn('    str x0, [sp]');
 
-  { Set timeval to 0,0 (no wait) at sp+16 }
-  writeln('    mov x0, #0');
-  writeln('    str x0, [sp, #16]');
-  writeln('    str x0, [sp, #24]');
+  { Set timeval To 0,0 (no wait) at sp+16 }
+  WriteLn('    mov x0, #0');
+  WriteLn('    str x0, [sp, #16]');
+  WriteLn('    str x0, [sp, #24]');
 
   { select(nfds=1, readfds=sp, writefds=NULL, exceptfds=NULL, timeout=sp+16) }
   { x0 = 1 (nfds) }
-  writeln('    mov x0, #1');
+  WriteLn('    mov x0, #1');
 
   { x1 = sp (readfds) }
-  writeln('    mov x1, sp');
+  WriteLn('    mov x1, sp');
 
   { x2 = NULL }
-  writeln('    mov x2, #0');
+  WriteLn('    mov x2, #0');
 
   { x3 = NULL }
-  writeln('    mov x3, #0');
+  WriteLn('    mov x3, #0');
 
   { x4 = sp + 16 (timeout) }
-  writeln('    add x4, sp, #16');
+  WriteLn('    add x4, sp, #16');
 
-  { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
+  { x16 = syscall number For select: 0x2000000 + 93 = 33554525 }
   EmitMovX16(33554525);
   EmitSvc;
 
-  { select returns number of ready fds in x0, or -1 on error }
-  { If x0 > 0, key is available; convert to 0 or 1 }
-  writeln('    cmp x0, #0');
-  writeln('    cset x0, gt');
+  { select returns number Of ready fds In x0, Or -1 on error }
+  { If x0 > 0, key is available; convert To 0 Or 1 }
+  WriteLn('    cmp x0, #0');
+  WriteLn('    cset x0, gt');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitInitKeyboardRuntime;
-{ Set terminal to raw mode for immediate key reading }
-{ Uses ioctl TIOCGETA to get, then TIOCSETA to set with ICANON and ECHO cleared }
-begin
+Procedure EmitInitKeyboardRuntime;
+{ Set terminal To raw mode For immediate key reading }
+{ Uses ioctl TIOCGETA To get, Then TIOCSETA To Set With ICANON And ECHO cleared }
+Begin
   EmitLabel(rt_initkeyboard);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(80);  { Space for termios structure (72 bytes aligned to 80) }
+  EmitSubSP(80);  { Space For termios structure (72 bytes aligned To 80) }
 
   { First get current terminal settings: ioctl(0, TIOCGETA, sp) }
   { x0 = 0 (stdin) }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
   { x1 = TIOCGETA = 0x40487413 }
   { movz x1, #0x7413 }
-  writeln('    movz x1, #0x7413');
+  WriteLn('    movz x1, #0x7413');
   { movk x1, #0x4048, lsl #16 }
-  writeln('    movk x1, #0x4048, lsl #16');
+  WriteLn('    movk x1, #0x4048, lsl #16');
 
-  { x2 = sp (pointer to termios buffer) }
-  writeln('    mov x2, sp');
+  { x2 = sp (pointer To termios buffer) }
+  WriteLn('    mov x2, sp');
 
   { ioctl syscall: 0x2000000 + 54 = 33554486 }
   EmitMovX16(33554486);
   EmitSvc;
 
-  { Save original c_lflag (at offset 24) to x23 (callee-saved) for later restore }
-  writeln('    ldr x23, [sp, #24]');
+  { Save original c_lflag (at offset 24) To x23 (callee-saved) For later restore }
+  WriteLn('    ldr x23, [sp, #24]');
 
-  { Clear ICANON (0x100 = 256) and ECHO (0x8) from c_lflag }
+  { Clear ICANON (0x100 = 256) And ECHO (0x8) from c_lflag }
   { Load current c_lflag into x10 }
-  writeln('    mov x10, x23');
+  WriteLn('    mov x10, x23');
 
   { x11 = 0x108 (ICANON | ECHO) }
-  writeln('    mov x11, #0x108');
+  WriteLn('    mov x11, #0x108');
 
   { bic x10, x10, x11 (clear bits) }
-  writeln('    bic x10, x10, x11');
+  WriteLn('    bic x10, x10, x11');
 
   { Store modified c_lflag back }
-  writeln('    str x10, [sp, #24]');
+  WriteLn('    str x10, [sp, #24]');
 
-  { Set VMIN (c_cc[16]) to 1 and VTIME (c_cc[17]) to 0 }
+  { Set VMIN (c_cc[16]) To 1 And VTIME (c_cc[17]) To 0 }
   { c_cc starts at offset 32, so VMIN is at 32+16=48, VTIME at 32+17=49 }
-  writeln('    mov x10, #1');
-  writeln('    strb w10, [sp, #48]');
-  writeln('    mov x10, #0');
-  writeln('    strb w10, [sp, #49]');
+  WriteLn('    mov x10, #1');
+  WriteLn('    strb w10, [sp, #48]');
+  WriteLn('    mov x10, #0');
+  WriteLn('    strb w10, [sp, #49]');
 
-  { Now set the modified settings: ioctl(0, TIOCSETA, sp) }
+  { Now Set the modified settings: ioctl(0, TIOCSETA, sp) }
   { x0 = 0 (stdin) }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
   { x1 = TIOCSETA = 0x80487414 }
   { movz x1, #0x7414 }
-  writeln('    movz x1, #0x7414');
+  WriteLn('    movz x1, #0x7414');
   { movk x1, #0x8048, lsl #16 }
-  writeln('    movk x1, #0x8048, lsl #16');
+  WriteLn('    movk x1, #0x8048, lsl #16');
 
   { x2 = sp }
-  writeln('    mov x2, sp');
+  WriteLn('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
@@ -4507,39 +4507,39 @@ begin
   EmitAddSP(80);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitDoneKeyboardRuntime;
-{ Restore terminal to normal (cooked) mode }
-begin
+Procedure EmitDoneKeyboardRuntime;
+{ Restore terminal To normal (cooked) mode }
+Begin
   EmitLabel(rt_donekeyboard);
   EmitStp;
   EmitMovFP;
   EmitSubSP(80);
 
   { Get current settings first }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
   { x1 = TIOCGETA = 0x40487413 }
-  writeln('    movz x1, #0x7413');
-  writeln('    movk x1, #0x4048, lsl #16');
+  WriteLn('    movz x1, #0x7413');
+  WriteLn('    movk x1, #0x4048, lsl #16');
 
-  writeln('    mov x2, sp');
+  WriteLn('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
 
   { Restore original c_lflag from x23 }
-  writeln('    str x23, [sp, #24]');
+  WriteLn('    str x23, [sp, #24]');
 
   { Set the restored settings }
-  writeln('    mov x0, #0');
+  WriteLn('    mov x0, #0');
 
   { x1 = TIOCSETA = 0x80487414 }
-  writeln('    movz x1, #0x7414');
-  writeln('    movk x1, #0x8048, lsl #16');
+  WriteLn('    movz x1, #0x7414');
+  WriteLn('    movk x1, #0x8048, lsl #16');
 
-  writeln('    mov x2, sp');
+  WriteLn('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
@@ -4547,10 +4547,10 @@ begin
   EmitAddSP(80);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitSinRuntime;
-begin
+Procedure EmitSinRuntime;
+Begin
   { sin(x) using Taylor series: x - x³/6 + x⁵/120 - x⁷/5040 + x⁹/362880 - x¹¹/39916800 }
   { Input: d0 = x, Output: d0 = sin(x) }
   EmitLabel(rt_sin);
@@ -4558,83 +4558,83 @@ begin
   EmitMovFP;
   EmitSubSP(48);
 
-  { Save x to [x29, #-16] }
+  { Save x To [x29, #-16] }
   EmitSturD0(-16);
 
-  { Compute x² and save to [x29, #-24] }
+  { Compute x² And save To [x29, #-24] }
   { fmul d1, d0, d0 }
-  writeln('    fmul d1, d0, d0');
+  WriteLn('    fmul d1, d0, d0');
   { stur d1, [x29, #-24] }
-  writeln('    stur d1, [x29, #-24]');
+  WriteLn('    stur d1, [x29, #-24]');
 
   { result = x (d0 already has x) }
   { Compute x³ = x² * x into d2 }
   { fmul d2, d1, d0 }
-  writeln('    fmul d2, d1, d0');
+  WriteLn('    fmul d2, d1, d0');
 
   { Term 2: -x³/6 }
   EmitMovX0(6);
   EmitScvtfD0X0;
   { fdiv d3, d2, d0 - d3 = x³/6 }
-  writeln('    fdiv d3, d2, d0');
+  WriteLn('    fdiv d3, d2, d0');
   { Load x into d0 }
   EmitLdurD0(-16);
   { fsub d0, d0, d3 - result = x - x³/6 }
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
   { Save result }
   EmitSturD0(-32);
 
   { Term 3: +x⁵/120 - multiply d3 by x², divide by 20 }
   { ldur d1, [x29, #-24] - reload x² }
-  writeln('    ldur d1, [x29, #-24]');
+  WriteLn('    ldur d1, [x29, #-24]');
   { fmul d3, d3, d1 - d3 = x⁵/6 }
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(20);
   EmitScvtfD0X0;
   { fdiv d3, d3, d0 }
-  writeln('    fdiv d3, d3, d0');
-  { Load result and add }
+  WriteLn('    fdiv d3, d3, d0');
+  { Load result And add }
   EmitLdurD0(-32);
   { fadd d0, d0, d3 }
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 4: -x⁷/5040 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(42);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 5: +x⁹/362880 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(72);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 6: -x¹¹/39916800 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(110);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitCosRuntime;
-begin
+Procedure EmitCosRuntime;
+Begin
   { cos(x) using Taylor series: 1 - x²/2 + x⁴/24 - x⁶/720 + x⁸/40320 - x¹⁰/3628800 }
   { Input: d0 = x, Output: d0 = cos(x) }
   EmitLabel(rt_cos);
@@ -4642,81 +4642,81 @@ begin
   EmitMovFP;
   EmitSubSP(48);
 
-  { Save x to [x29, #-16] }
+  { Save x To [x29, #-16] }
   EmitSturD0(-16);
 
-  { Compute x² and save to [x29, #-24] }
+  { Compute x² And save To [x29, #-24] }
   { fmul d1, d0, d0 }
-  writeln('    fmul d1, d0, d0');
+  WriteLn('    fmul d1, d0, d0');
   { stur d1, [x29, #-24] }
-  writeln('    stur d1, [x29, #-24]');
+  WriteLn('    stur d1, [x29, #-24]');
 
-  { Start with result = 1.0 }
+  { Start With result = 1.0 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { d3 = x² (current term numerator starts as x²) }
   { fmov d3, d1 }
-  writeln('    fmov d3, d1');
+  WriteLn('    fmov d3, d1');
 
   { Term 2: -x²/2 }
   EmitPushD0;
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fdiv d3, d3, d0 }
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitPopD0;
   { fsub d0, d0, d3 }
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 3: +x⁴/24 }
   { ldur d1, [x29, #-24] }
-  writeln('    ldur d1, [x29, #-24]');
+  WriteLn('    ldur d1, [x29, #-24]');
   { fmul d3, d3, d1 }
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(12);  { 24/2 = 12 }
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 4: -x⁶/720 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(30);  { 720/24 = 30 }
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 5: +x⁸/40320 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(56);  { 40320/720 = 56 }
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 6: -x¹⁰/3628800 }
-  writeln('    ldur d1, [x29, #-24]');
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    ldur d1, [x29, #-24]');
+  WriteLn('    fmul d3, d3, d1');
   EmitMovX0(90);  { 3628800/40320 = 90 }
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  writeln('    fsub d0, d0, d3');
+  WriteLn('    fsub d0, d0, d3');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitTanRuntime;
-begin
+Procedure EmitTanRuntime;
+Begin
   { tan(x) = sin(x) / cos(x) }
   { Input: d0 = x, Output: d0 = tan(x) }
   EmitLabel(rt_tan);
@@ -4737,21 +4737,21 @@ begin
   { Call cos(x) }
   EmitBL(rt_cos);
 
-  { d0 = cos(x), load sin(x) to d1 }
-  writeln('    ldur d1, [x29, #-24]');
+  { d0 = cos(x), load sin(x) To d1 }
+  WriteLn('    ldur d1, [x29, #-24]');
 
   { fdiv d0, d1, d0 - tan = sin/cos }
-  writeln('    fdiv d0, d1, d0');
+  WriteLn('    fdiv d0, d1, d0');
 
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitExpRuntime;
-var
-  pos_lbl, neg_lbl, scale_lbl, scale_done_lbl, done_lbl: integer;
-begin
+Procedure EmitExpRuntime;
+Var
+  pos_lbl, neg_lbl, scale_lbl, scale_done_lbl, done_lbl: Integer;
+Begin
   { exp(x) using range reduction + Taylor series }
   { Input: d0 = x, Output: d0 = exp(x) }
   { Range reduction: exp(x) = 2^n * exp(r) where n = round(x/ln(2)), r = x - n*ln(2) }
@@ -4760,175 +4760,175 @@ begin
   EmitMovFP;
   EmitSubSP(64);
 
-  { Save x to [x29, #-16] }
+  { Save x To [x29, #-16] }
   EmitSturD0(-16);
-  { [x29, #-24] = n (integer), [x29, #-32] = r (reduced x), [x29, #-40] = result }
+  { [x29, #-24] = n (Integer), [x29, #-32] = r (reduced x), [x29, #-40] = result }
 
   { Load 1/ln(2) = 1.4426950408889634 into d1 }
   { IEEE 754: 0x3FF71547652B82FE }
   { movz x0, #0x82FE }
-  writeln('    movz x0, #0x82FE');
+  WriteLn('    movz x0, #0x82FE');
   { movk x0, #0x652B, lsl #16 }
-  writeln('    movk x0, #0x652B, lsl #16');
+  WriteLn('    movk x0, #0x652B, lsl #16');
   { movk x0, #0x7154, lsl #32 }
-  writeln('    movk x0, #0x7154, lsl #32');
+  WriteLn('    movk x0, #0x7154, lsl #32');
   { movk x0, #0x3FF7, lsl #48 }
-  writeln('    movk x0, #0x3FF7, lsl #48');
+  WriteLn('    movk x0, #0x3FF7, lsl #48');
   { fmov d1, x0 }
-  writeln('    fmov d1, x0');
+  WriteLn('    fmov d1, x0');
 
   { d0 = x, d1 = 1/ln(2) }
   { d0 = x / ln(2) = x * (1/ln(2)) }
   EmitLdurD0(-16);
-  writeln('    fmul d0, d0, d1');
+  WriteLn('    fmul d0, d0, d1');
 
-  { n = round(x/ln(2)) using fcvtas (round to nearest) }
+  { n = round(x/ln(2)) using fcvtas (round To nearest) }
   { fcvtas x0, d0 }
-  writeln('    fcvtas x0, d0');
+  WriteLn('    fcvtas x0, d0');
   EmitSturX0(-24);
 
   { Load ln(2) into d1 }
   { IEEE 754: 0x3FE62E42FEFA39EF }
   { movz x1, #0x39EF }
-  writeln('    movz x1, #0x39EF');
+  WriteLn('    movz x1, #0x39EF');
   { movk x1, #0xFEFA, lsl #16 }
-  writeln('    movk x1, #0xFEFA, lsl #16');
+  WriteLn('    movk x1, #0xFEFA, lsl #16');
   { movk x1, #0x62E4, lsl #32 }
-  writeln('    movk x1, #0x62E4, lsl #32');
+  WriteLn('    movk x1, #0x62E4, lsl #32');
   { movk x1, #0x3FE6, lsl #48 }
-  writeln('    movk x1, #0x3FE6, lsl #48');
+  WriteLn('    movk x1, #0x3FE6, lsl #48');
   { fmov d1, x1 }
-  writeln('    fmov d1, x1');
+  WriteLn('    fmov d1, x1');
 
   { r = x - n * ln(2) }
-  { scvtf d0, x0 - convert n to float }
+  { scvtf d0, x0 - convert n To float }
   EmitScvtfD0X0;
   { fmul d0, d0, d1 - d0 = n * ln(2) }
-  writeln('    fmul d0, d0, d1');
-  { fmov d2, d0 - save n*ln(2) in d2 }
-  writeln('    fmov d2, d0');
+  WriteLn('    fmul d0, d0, d1');
+  { fmov d2, d0 - save n*ln(2) In d2 }
+  WriteLn('    fmov d2, d0');
   { d0 = x }
   EmitLdurD0(-16);
   { fsub d0, d0, d2 - r = x - n*ln(2) }
-  writeln('    fsub d0, d0, d2');
-  { Save r to [x29, #-32] }
-  writeln('    stur d0, [x29, #-32]');
+  WriteLn('    fsub d0, d0, d2');
+  { Save r To [x29, #-32] }
+  WriteLn('    stur d0, [x29, #-32]');
 
   { Now compute exp(r) using Taylor series }
   { r is small (|r| < ln(2)/2 ≈ 0.35), so series converges fast }
   { exp(r) = 1 + r + r²/2 + r³/6 + r⁴/24 + r⁵/120 + r⁶/720 + r⁷/5040 + r⁸/40320 }
   { d3 = current term, d0 = r }
   { fmov d3, d0 }
-  writeln('    fmov d3, d0');
+  WriteLn('    fmov d3, d0');
   { d0 = 1.0 }
   EmitPushD0;
   EmitMovX0(1);
   EmitScvtfD0X0;
   EmitPopD1;
   { fadd d0, d0, d1 - result = 1 + r }
-  writeln('    fadd d0, d0, d1');
+  WriteLn('    fadd d0, d0, d1');
   EmitSturD0(-40);
 
   { Term 3: r²/2 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
+  WriteLn('    ldur d0, [x29, #-32]');
   { fmul d3, d3, d0 }
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(2);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 4: r³/6 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(3);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 5: r⁴/24 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(4);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 6: r⁵/120 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(5);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 7: r⁶/720 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(6);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 8: r⁷/5040 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(7);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 9: r⁸/40320 }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
-  writeln('    fmul d3, d3, d0');
+  WriteLn('    ldur d0, [x29, #-32]');
+  WriteLn('    fmul d3, d3, d0');
   EmitMovX0(8);
   EmitScvtfD0X0;
-  writeln('    fdiv d3, d3, d0');
+  WriteLn('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d3');
+  WriteLn('    fadd d0, d0, d3');
 
   { d0 = exp(r), now multiply by 2^n }
-  { Store exp(r) in [x29, #-48] temporarily }
-  writeln('    stur d0, [x29, #-48]');
+  { Store exp(r) In [x29, #-48] temporarily }
+  WriteLn('    stur d0, [x29, #-48]');
 
   { Load n }
   EmitLdurX0(-24);
   { If n = 0, skip scaling }
-  writeln('    cmp x0, #0');
+  WriteLn('    cmp x0, #0');
   done_lbl := NewLabel;
   pos_lbl := NewLabel;
   scale_lbl := NewLabel;
-  write('    b.eq L'); writeln(done_lbl);
+  Write('    b.eq L'); WriteLn(done_lbl);
   { If n > 0, multiply by 2 repeatedly }
-  write('    b.gt L'); writeln(pos_lbl);
+  Write('    b.gt L'); WriteLn(pos_lbl);
   { n < 0, divide by 2 repeatedly }
   { neg x0, x0 }
-  writeln('    neg x0, x0');
+  WriteLn('    neg x0, x0');
   EmitSturX0(-56);
   { Load 0.5 into d1 }
-  { IEEE 754 for 0.5 = 0x3FE0000000000000 }
-  writeln('    movz x1, #0x3FE0, lsl #48');
+  { IEEE 754 For 0.5 = 0x3FE0000000000000 }
+  WriteLn('    movz x1, #0x3FE0, lsl #48');
   { fmov d1, x1 }
-  writeln('    fmov d1, x1');
+  WriteLn('    fmov d1, x1');
   EmitBranchLabel(scale_lbl);
 
   EmitLabel(pos_lbl);
@@ -4937,38 +4937,38 @@ begin
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  writeln('    fmov d1, d0');
+  WriteLn('    fmov d1, d0');
 
   EmitLabel(scale_lbl);
-  { d1 = scale factor (2.0 or 0.5), [x29, #-56] = count, [x29, #-48] = result }
+  { d1 = scale factor (2.0 Or 0.5), [x29, #-56] = count, [x29, #-48] = result }
   { Load result }
-  writeln('    ldur d0, [x29, #-48]');
+  WriteLn('    ldur d0, [x29, #-48]');
 
   EmitLdurX0(-56);
-  writeln('    cmp x0, #0');
-  write('    b.eq L'); writeln(done_lbl);
+  WriteLn('    cmp x0, #0');
+  Write('    b.eq L'); WriteLn(done_lbl);
   { fmul d0, d0, d1 }
-  writeln('    fmul d0, d0, d1');
+  WriteLn('    fmul d0, d0, d1');
   { Store result }
-  writeln('    stur d0, [x29, #-48]');
+  WriteLn('    stur d0, [x29, #-48]');
   { Decrement count }
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitSturX0(-56);
   EmitBranchLabel(scale_lbl);
 
   EmitLabel(done_lbl);
   { Load final result }
-  writeln('    ldur d0, [x29, #-48]');
+  WriteLn('    ldur d0, [x29, #-48]');
 
   EmitAddSP(64);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitLnRuntime;
-var
-  loop_lbl, done_lbl, reduce_lbl, reduce_up_lbl, iter_lbl, iter_done_lbl: integer;
-begin
+Procedure EmitLnRuntime;
+Var
+  loop_lbl, done_lbl, reduce_lbl, reduce_up_lbl, iter_lbl, iter_done_lbl: Integer;
+Begin
   { ln(x) using range reduction + Newton-Raphson }
   { Input: d0 = x, Output: d0 = ln(x) }
   { Range reduction: x = 2^n * m where 1 <= m < 2, so ln(x) = n*ln(2) + ln(m) }
@@ -4977,7 +4977,7 @@ begin
   EmitMovFP;
   EmitSubSP(64);
 
-  { Save original x to [x29, #-16] }
+  { Save original x To [x29, #-16] }
   EmitSturD0(-16);
   { [x29, #-24] = count n (signed), [x29, #-32] = reduced x, [x29, #-40] = y estimate }
   { [x29, #-48] = iteration counter, [x29, #-56] = exp(y) temp }
@@ -4988,64 +4988,64 @@ begin
 
   { Load x into d0 }
   EmitLdurD0(-16);
-  { fmov d3, d0 - d3 = working copy of x }
-  writeln('    fmov d3, d0');
+  { fmov d3, d0 - d3 = working copy Of x }
+  WriteLn('    fmov d3, d0');
 
-  { Load 2.0 into d1 and 1.0 into d2 for comparisons }
+  { Load 2.0 into d1 And 1.0 into d2 For comparisons }
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  writeln('    fmov d1, d0');
+  WriteLn('    fmov d1, d0');
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d2, d0 }
-  writeln('    fmov d2, d0');
+  WriteLn('    fmov d2, d0');
   { d1 = 2.0, d2 = 1.0, d3 = x }
 
-  { Reduce while d3 >= 2: d3 = d3 / 2, count++ }
+  { Reduce While d3 >= 2: d3 = d3 / 2, count++ }
   reduce_lbl := NewLabel;
   reduce_up_lbl := NewLabel;
   done_lbl := NewLabel;
   EmitLabel(reduce_lbl);
   { fcmp d3, d1 }
-  writeln('    fcmp d3, d1');
-  { b.lt reduce_up_lbl - if d3 < 2, check if < 1 }
-  write('    b.lt L'); writeln(reduce_up_lbl);
+  WriteLn('    fcmp d3, d1');
+  { b.lt reduce_up_lbl - If d3 < 2, check If < 1 }
+  Write('    b.lt L'); WriteLn(reduce_up_lbl);
   { d3 >= 2: divide by 2 }
   { fdiv d3, d3, d1 }
-  writeln('    fdiv d3, d3, d1');
+  WriteLn('    fdiv d3, d3, d1');
   { count++ }
   EmitLdurX0(-24);
-  writeln('    add x0, x0, #1');
+  WriteLn('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(reduce_lbl);
 
-  { Check if d3 < 1: multiply by 2, count-- }
+  { Check If d3 < 1: multiply by 2, count-- }
   EmitLabel(reduce_up_lbl);
   { fcmp d3, d2 }
-  writeln('    fcmp d3, d2');
-  { b.ge done_lbl - if d3 >= 1, we're in [1, 2) }
-  write('    b.ge L'); writeln(done_lbl);
+  WriteLn('    fcmp d3, d2');
+  { b.ge done_lbl - If d3 >= 1, we're In [1, 2) }
+  Write('    b.ge L'); WriteLn(done_lbl);
   { d3 < 1: multiply by 2 }
   { fmul d3, d3, d1 }
-  writeln('    fmul d3, d3, d1');
+  WriteLn('    fmul d3, d3, d1');
   { count-- }
   EmitLdurX0(-24);
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(reduce_up_lbl);
 
   EmitLabel(done_lbl);
-  { Now d3 is in [1, 2), count is in [x29, #-24] }
-  { Save reduced x to [x29, #-32] }
-  writeln('    stur d3, [x29, #-32]');
+  { Now d3 is In [1, 2), count is In [x29, #-24] }
+  { Save reduced x To [x29, #-32] }
+  WriteLn('    stur d3, [x29, #-32]');
 
-  { Initial guess: y = d3 - 1 (will be in [0, 1)) }
+  { Initial guess: y = d3 - 1 (will be In [0, 1)) }
   { fsub d0, d3, d2 }
-  writeln('    fsub d0, d3, d2');
+  WriteLn('    fsub d0, d3, d2');
   EmitSturD0(-40);
 
-  { Iterate 15 times for convergence }
+  { Iterate 15 times For convergence }
   EmitMovX0(15);
   EmitSturX0(-48);
 
@@ -5056,44 +5056,44 @@ begin
   { Check counter }
   EmitLdurX0(-48);
   { cmp x0, #0 }
-  writeln('    cmp x0, #0');
+  WriteLn('    cmp x0, #0');
   { b.eq iter_done }
-  write('    b.eq L'); writeln(iter_done_lbl);
+  Write('    b.eq L'); WriteLn(iter_done_lbl);
 
   { Decrement counter }
-  writeln('    sub x0, x0, #1');
+  WriteLn('    sub x0, x0, #1');
   EmitSturX0(-48);
 
   { Load y }
   EmitLdurD0(-40);
   { Calculate exp(y) }
   EmitBL(rt_exp);
-  { Save exp(y) to [x29, #-56] }
-  writeln('    stur d0, [x29, #-56]');
+  { Save exp(y) To [x29, #-56] }
+  WriteLn('    stur d0, [x29, #-56]');
 
   { d0 = reduced x, d1 = exp(y) }
   { ldur d0, [x29, #-32] }
-  writeln('    ldur d0, [x29, #-32]');
+  WriteLn('    ldur d0, [x29, #-32]');
   { ldur d1, [x29, #-56] }
-  writeln('    ldur d1, [x29, #-56]');
+  WriteLn('    ldur d1, [x29, #-56]');
 
   { d2 = x - exp(y) }
-  writeln('    fsub d2, d0, d1');
+  WriteLn('    fsub d2, d0, d1');
 
   { d3 = x + exp(y) }
-  writeln('    fadd d3, d0, d1');
+  WriteLn('    fadd d3, d0, d1');
 
   { d2 = d2 / d3 = (x - exp(y))/(x + exp(y)) }
-  writeln('    fdiv d2, d2, d3');
+  WriteLn('    fdiv d2, d2, d3');
 
   { d2 = 2 * d2 }
   EmitMovX0(2);
   EmitScvtfD0X0;
-  writeln('    fmul d2, d2, d0');
+  WriteLn('    fmul d2, d2, d0');
 
   { y = y + d2 }
   EmitLdurD0(-40);
-  writeln('    fadd d0, d0, d2');
+  WriteLn('    fadd d0, d0, d2');
   EmitSturD0(-40);
 
   { Loop }
@@ -5109,126 +5109,126 @@ begin
 
   { Load ln(2) into d1 }
   { movz x0, #0x39EF }
-  writeln('    movz x0, #0x39EF');
+  WriteLn('    movz x0, #0x39EF');
   { movk x0, #0xFEFA, lsl #16 }
-  writeln('    movk x0, #0xFEFA, lsl #16');
+  WriteLn('    movk x0, #0xFEFA, lsl #16');
   { movk x0, #0x62E4, lsl #32 }
-  writeln('    movk x0, #0x62E4, lsl #32');
+  WriteLn('    movk x0, #0x62E4, lsl #32');
   { movk x0, #0x3FE6, lsl #48 }
-  writeln('    movk x0, #0x3FE6, lsl #48');
+  WriteLn('    movk x0, #0x3FE6, lsl #48');
   { fmov d1, x0 }
-  writeln('    fmov d1, x0');
+  WriteLn('    fmov d1, x0');
 
-  { Load count into d0, convert to float }
+  { Load count into d0, convert To float }
   EmitLdurX0(-24);
   { scvtf d0, x0 }
   EmitScvtfD0X0;
 
   { d0 = count * ln(2) }
   { fmul d0, d0, d1 }
-  writeln('    fmul d0, d0, d1');
+  WriteLn('    fmul d0, d0, d1');
 
   { d0 = count*ln(2) + ln(reduced_x) }
   EmitPopD1;
-  writeln('    fadd d0, d0, d1');
+  WriteLn('    fadd d0, d0, d1');
 
   EmitAddSP(64);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitRandomRuntime;
-begin
-  { random - return random 64-bit integer in x0 using LCG PRNG }
+Procedure EmitRandomRuntime;
+Begin
+  { random - return random 64-bit Integer In x0 using LCG PRNG }
   { Uses x27 as seed (preserved across calls) }
   { LCG: seed = seed * 6364136223846793005 + 1442695040888963407 }
-  { Output: x0 = random integer }
+  { Output: x0 = random Integer }
   EmitLabel(rt_random);
   EmitStp;
   EmitMovFP;
 
   { Load seed from x27 }
-  writeln('    mov x0, x27');
+  WriteLn('    mov x0, x27');
 
-  { If seed is 0, initialize with a default value }
+  { If seed is 0, initialize With a default value }
   { cbnz x0, Lxxx }
-  write('    cbnz x0, L'); writeln(label_count);
-  { Initialize seed to 0x5DEECE66D }
-  writeln('    movz x0, #0xE66D');
-  writeln('    movk x0, #0xECE5, lsl #16');
-  writeln('    movk x0, #0xDE, lsl #32');
-  writeln('    movk x0, #0x5, lsl #48');
+  Write('    cbnz x0, L'); WriteLn(label_count);
+  { Initialize seed To 0x5DEECE66D }
+  WriteLn('    movz x0, #0xE66D');
+  WriteLn('    movk x0, #0xECE5, lsl #16');
+  WriteLn('    movk x0, #0xDE, lsl #32');
+  WriteLn('    movk x0, #0x5, lsl #48');
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { Load multiplier 6364136223846793005 = 0x5851F42D4C957F2D into x1 }
-  writeln('    movz x1, #0x7F2D');
-  writeln('    movk x1, #0x4C95, lsl #16');
-  writeln('    movk x1, #0xF42D, lsl #32');
-  writeln('    movk x1, #0x5851, lsl #48');
+  WriteLn('    movz x1, #0x7F2D');
+  WriteLn('    movk x1, #0x4C95, lsl #16');
+  WriteLn('    movk x1, #0xF42D, lsl #32');
+  WriteLn('    movk x1, #0x5851, lsl #48');
 
   { mul x0, x0, x1 }
-  writeln('    mul x0, x0, x1');
+  WriteLn('    mul x0, x0, x1');
 
   { Load increment 1442695040888963407 = 0x14057B7EF767814F into x1 }
-  writeln('    movz x1, #0x814F');
-  writeln('    movk x1, #0x7677, lsl #16');
-  writeln('    movk x1, #0x7B7E, lsl #32');
-  writeln('    movk x1, #0x1405, lsl #48');
+  WriteLn('    movz x1, #0x814F');
+  WriteLn('    movk x1, #0x7677, lsl #16');
+  WriteLn('    movk x1, #0x7B7E, lsl #32');
+  WriteLn('    movk x1, #0x1405, lsl #48');
 
   { add x0, x0, x1 }
-  writeln('    add x0, x0, x1');
+  WriteLn('    add x0, x0, x1');
 
-  { Store new seed in x27 }
-  writeln('    mov x27, x0');
+  { Store New seed In x27 }
+  WriteLn('    mov x27, x0');
 
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitArctanRuntime;
-var
-  use_identity_lbl, neg_lbl, done_lbl, compute_lbl: integer;
-begin
-  { arctan(x) using Taylor series for |x| <= 1 }
-  { For |x| > 1: arctan(x) = pi/2 - arctan(1/x) if x > 0 }
-  {              arctan(x) = -pi/2 - arctan(1/x) if x < 0 }
+Procedure EmitArctanRuntime;
+Var
+  use_identity_lbl, neg_lbl, done_lbl, compute_lbl: Integer;
+Begin
+  { arctan(x) using Taylor series For |x| <= 1 }
+  { For |x| > 1: arctan(x) = pi/2 - arctan(1/x) If x > 0 }
+  {              arctan(x) = -pi/2 - arctan(1/x) If x < 0 }
   { Input: d0 = x, Output: d0 = arctan(x) }
   EmitLabel(rt_arctan);
   EmitStp;
   EmitMovFP;
   EmitSubSP(48);
 
-  { Save x to [x29, #-16] }
+  { Save x To [x29, #-16] }
   EmitSturD0(-16);
 
-  { Check if |x| > 1 }
+  { Check If |x| > 1 }
   { fabs d1, d0 }
-  writeln('    fabs d1, d0');
+  WriteLn('    fabs d1, d0');
   { Load 1.0 into d2 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d2, d0 }
-  writeln('    fmov d2, d0');
+  WriteLn('    fmov d2, d0');
   { fcmp d1, d2 }
-  writeln('    fcmp d1, d2');
+  WriteLn('    fcmp d1, d2');
 
   use_identity_lbl := NewLabel;
   compute_lbl := NewLabel;
   done_lbl := NewLabel;
 
-  { b.le compute - if |x| <= 1, use direct Taylor series }
-  write('    b.le L'); writeln(compute_lbl);
+  { b.le compute - If |x| <= 1, use direct Taylor series }
+  Write('    b.le L'); WriteLn(compute_lbl);
 
   { |x| > 1: use identity arctan(x) = sign(x)*pi/2 - arctan(1/x) }
   { Compute 1/x }
   EmitLdurD0(-16);  { x }
   { fdiv d0, d2, d0 - d0 = 1/x (d2 still has 1.0) }
-  writeln('    fdiv d0, d2, d0');
-  { Save 1/x to [x29, #-24] }
+  WriteLn('    fdiv d0, d2, d0');
+  { Save 1/x To [x29, #-24] }
   EmitSturD0(-24);
-  { Now compute arctan(1/x) recursively - but we're already in arctan! }
+  { Now compute arctan(1/x) recursively - but we're already In arctan! }
   { Let's just use Taylor series on 1/x since |1/x| < 1 }
   EmitBranchLabel(compute_lbl);
 
@@ -5237,73 +5237,73 @@ begin
   { Use d0=x, d3=current term, d4=x², d5=result }
   EmitLdurD0(-16);  { x }
 
-  { Check if we used identity (|x| > 1), then use 1/x instead }
-  { Actually, let's simplify - compute arctan using the argument already in d0 }
+  { Check If we used identity (|x| > 1), Then use 1/x instead }
+  { Actually, let's simplify - compute arctan using the argument already In d0 }
   { If we came from the identity path, d0 has 1/x }
-  { For now, just compute Taylor series on whatever is in d0 }
+  { For now, just compute Taylor series on whatever is In d0 }
 
-  { Save x to d5 as running result }
+  { Save x To d5 as running result }
   { fmov d5, d0 }
-  writeln('    fmov d5, d0');
+  WriteLn('    fmov d5, d0');
 
   { d4 = x² }
-  writeln('    fmul d4, d0, d0');
+  WriteLn('    fmul d4, d0, d0');
 
   { d3 = x (current power) }
   { fmov d3, d0 }
-  writeln('    fmov d3, d0');
+  WriteLn('    fmov d3, d0');
 
   { Term 2: -x³/3 }
   { d3 = d3 * d4 = x³ }
-  writeln('    fmul d3, d3, d4');
+  WriteLn('    fmul d3, d3, d4');
   EmitMovX0(3);
   EmitScvtfD0X0;
   { fdiv d6, d3, d0 }
-  writeln('    fdiv d6, d3, d0');
+  WriteLn('    fdiv d6, d3, d0');
   { d5 = d5 - d6 }
-  writeln('    fsub d5, d5, d6');
+  WriteLn('    fsub d5, d5, d6');
 
   { Term 3: +x⁵/5 }
-  writeln('    fmul d3, d3, d4');
+  WriteLn('    fmul d3, d3, d4');
   EmitMovX0(5);
   EmitScvtfD0X0;
-  writeln('    fdiv d6, d3, d0');
-  writeln('    fadd d5, d5, d6');
+  WriteLn('    fdiv d6, d3, d0');
+  WriteLn('    fadd d5, d5, d6');
 
   { Term 4: -x⁷/7 }
-  writeln('    fmul d3, d3, d4');
+  WriteLn('    fmul d3, d3, d4');
   EmitMovX0(7);
   EmitScvtfD0X0;
-  writeln('    fdiv d6, d3, d0');
-  writeln('    fsub d5, d5, d6');
+  WriteLn('    fdiv d6, d3, d0');
+  WriteLn('    fsub d5, d5, d6');
 
   { Term 5: +x⁹/9 }
-  writeln('    fmul d3, d3, d4');
+  WriteLn('    fmul d3, d3, d4');
   EmitMovX0(9);
   EmitScvtfD0X0;
-  writeln('    fdiv d6, d3, d0');
-  writeln('    fadd d5, d5, d6');
+  WriteLn('    fdiv d6, d3, d0');
+  WriteLn('    fadd d5, d5, d6');
 
   { Term 6: -x¹¹/11 }
-  writeln('    fmul d3, d3, d4');
+  WriteLn('    fmul d3, d3, d4');
   EmitMovX0(11);
   EmitScvtfD0X0;
-  writeln('    fdiv d6, d3, d0');
-  writeln('    fsub d5, d5, d6');
+  WriteLn('    fdiv d6, d3, d0');
+  WriteLn('    fsub d5, d5, d6');
 
-  { Result in d5, move to d0 }
+  { Result In d5, move To d0 }
   { fmov d0, d5 }
-  writeln('    fmov d0, d5');
+  WriteLn('    fmov d0, d5');
 
   EmitAddSP(48);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitArcsinRuntime;
-var
-  pos_one_lbl, neg_one_lbl, normal_lbl, done_lbl: integer;
-begin
+Procedure EmitArcsinRuntime;
+Var
+  pos_one_lbl, neg_one_lbl, normal_lbl, done_lbl: Integer;
+Begin
   { arcsin(x) = arctan(x / sqrt(1 - x²)) }
   { Special cases: arcsin(1) = pi/2, arcsin(-1) = -pi/2 }
   { Input: d0 = x, Output: d0 = arcsin(x) }
@@ -5312,7 +5312,7 @@ begin
   EmitMovFP;
   EmitSubSP(32);
 
-  { Save x to [x29, #-16] }
+  { Save x To [x29, #-16] }
   EmitSturD0(-16);
 
   pos_one_lbl := NewLabel;
@@ -5320,69 +5320,69 @@ begin
   normal_lbl := NewLabel;
   done_lbl := NewLabel;
 
-  { Check for x = 1 or x = -1 }
+  { Check For x = 1 Or x = -1 }
   { Load 1.0 into d1 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  writeln('    fmov d1, d0');
+  WriteLn('    fmov d1, d0');
   { Load x back }
   EmitLdurD0(-16);
-  { fcmp d0, d1 - compare x with 1.0 }
-  writeln('    fcmp d0, d1');
+  { fcmp d0, d1 - compare x With 1.0 }
+  WriteLn('    fcmp d0, d1');
   { b.eq pos_one_lbl }
-  write('    b.eq L'); writeln(pos_one_lbl);
+  Write('    b.eq L'); WriteLn(pos_one_lbl);
   { fneg d1, d1 - d1 = -1.0 }
-  writeln('    fneg d1, d1');
-  { fcmp d0, d1 - compare x with -1.0 }
-  writeln('    fcmp d0, d1');
+  WriteLn('    fneg d1, d1');
+  { fcmp d0, d1 - compare x With -1.0 }
+  WriteLn('    fcmp d0, d1');
   { b.eq neg_one_lbl }
-  write('    b.eq L'); writeln(neg_one_lbl);
-  { Fall through to normal case }
+  Write('    b.eq L'); WriteLn(neg_one_lbl);
+  { Fall through To normal Case }
   EmitBranchLabel(normal_lbl);
 
   { x = 1: return pi/2 }
   EmitLabel(pos_one_lbl);
   { Load pi/2 = 1.5707963267948966 }
   { IEEE 754: 0x3FF921FB54442D18 }
-  writeln('    movz x0, #0x2D18');
-  writeln('    movk x0, #0x5444, lsl #16');
-  writeln('    movk x0, #0x21FB, lsl #32');
-  writeln('    movk x0, #0x3FF9, lsl #48');
+  WriteLn('    movz x0, #0x2D18');
+  WriteLn('    movk x0, #0x5444, lsl #16');
+  WriteLn('    movk x0, #0x21FB, lsl #32');
+  WriteLn('    movk x0, #0x3FF9, lsl #48');
   { fmov d0, x0 }
-  writeln('    fmov d0, x0');
+  WriteLn('    fmov d0, x0');
   EmitBranchLabel(done_lbl);
 
   { x = -1: return -pi/2 }
   EmitLabel(neg_one_lbl);
   { Load -pi/2 = -1.5707963267948966 }
   { IEEE 754: 0xBFF921FB54442D18 }
-  writeln('    movz x0, #0x2D18');
-  writeln('    movk x0, #0x5444, lsl #16');
-  writeln('    movk x0, #0x21FB, lsl #32');
-  writeln('    movk x0, #0xBFF9, lsl #48');
+  WriteLn('    movz x0, #0x2D18');
+  WriteLn('    movk x0, #0x5444, lsl #16');
+  WriteLn('    movk x0, #0x21FB, lsl #32');
+  WriteLn('    movk x0, #0xBFF9, lsl #48');
   { fmov d0, x0 }
-  writeln('    fmov d0, x0');
+  WriteLn('    fmov d0, x0');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(normal_lbl);
-  { Normal case: arcsin(x) = arctan(x / sqrt(1 - x²)) }
+  { Normal Case: arcsin(x) = arctan(x / sqrt(1 - x²)) }
   EmitLdurD0(-16);
   { Compute 1 - x² }
   { d1 = x² }
-  writeln('    fmul d1, d0, d0');
+  WriteLn('    fmul d1, d0, d0');
   { Load 1.0 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { d0 = 1 - x² }
-  writeln('    fsub d0, d0, d1');
+  WriteLn('    fsub d0, d0, d1');
 
   { d0 = sqrt(1 - x²) }
-  writeln('    fsqrt d0, d0');
+  WriteLn('    fsqrt d0, d0');
 
   { d0 = x / sqrt(1 - x²) }
-  writeln('    ldur d1, [x29, #-16]');
-  writeln('    fdiv d0, d1, d0');
+  WriteLn('    ldur d1, [x29, #-16]');
+  WriteLn('    fdiv d0, d1, d0');
 
   { d0 = arctan(x / sqrt(1 - x²)) }
   EmitBL(rt_arctan);
@@ -5391,10 +5391,10 @@ begin
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitArccosRuntime;
-begin
+Procedure EmitArccosRuntime;
+Begin
   { arccos(x) = pi/2 - arcsin(x) }
   { Input: d0 = x, Output: d0 = arccos(x) }
   EmitLabel(rt_arccos);
@@ -5409,48 +5409,48 @@ begin
 
   { Load pi/2 = 1.5707963267948966 }
   { IEEE 754: 0x3FF921FB54442D18 }
-  writeln('    movz x0, #0x2D18');
-  writeln('    movk x0, #0x5444, lsl #16');
-  writeln('    movk x0, #0x21FB, lsl #32');
-  writeln('    movk x0, #0x3FF9, lsl #48');
+  WriteLn('    movz x0, #0x2D18');
+  WriteLn('    movk x0, #0x5444, lsl #16');
+  WriteLn('    movk x0, #0x21FB, lsl #32');
+  WriteLn('    movk x0, #0x3FF9, lsl #48');
   EmitFmovD0X0;
 
   { d0 = pi/2 - arcsin(x) }
   EmitLdurD0(-16);
-  writeln('    fmov d1, d0');
+  WriteLn('    fmov d1, d0');
   { Reload pi/2 }
-  writeln('    movz x0, #0x2D18');
-  writeln('    movk x0, #0x5444, lsl #16');
-  writeln('    movk x0, #0x21FB, lsl #32');
-  writeln('    movk x0, #0x3FF9, lsl #48');
+  WriteLn('    movz x0, #0x2D18');
+  WriteLn('    movk x0, #0x5444, lsl #16');
+  WriteLn('    movk x0, #0x21FB, lsl #32');
+  WriteLn('    movk x0, #0x3FF9, lsl #48');
   EmitFmovD0X0;
   { fsub d0, d0, d1 }
-  writeln('    fsub d0, d0, d1');
+  WriteLn('    fsub d0, d0, d1');
 
   EmitAddSP(16);
   EmitLdp;
   EmitRet
-end;
+End;
 
-procedure EmitParamStrRuntime;
-var
-  loop_lbl, done_lbl, copy_lbl, copy_done_lbl, empty_lbl: integer;
-begin
-  { paramstr(n) - convert argv[n] to Pascal string }
+Procedure EmitParamStrRuntime;
+Var
+  loop_lbl, done_lbl, copy_lbl, copy_done_lbl, empty_lbl: Integer;
+Begin
+  { paramstr(n) - convert argv[n] To Pascal String }
   { Input: x0 = n (index into argv) }
-  { Output: x0 = pointer to Pascal string allocated from heap }
-  { Uses x25 = argc, x26 = argv (saved at program start) }
-  { Uses x21 = heap pointer for allocation }
+  { Output: x0 = pointer To Pascal String allocated from heap }
+  { Uses x25 = argc, x26 = argv (saved at Program start) }
+  { Uses x21 = heap pointer For allocation }
   EmitLabel(rt_paramstr);
   EmitStp;
   EmitMovFP;
   EmitSubSP(32);
 
-  { Allocate string buffer from heap: x8 = x21, x21 += 256 }
-  { Save dest addr in x8 }
-  writeln('    mov x8, x21');
+  { Allocate String buffer from heap: x8 = x21, x21 += 256 }
+  { Save dest addr In x8 }
+  WriteLn('    mov x8, x21');
   { Advance heap pointer }
-  writeln('    add x21, x21, #256');
+  WriteLn('    add x21, x21, #256');
 
   done_lbl := NewLabel;
   empty_lbl := NewLabel;
@@ -5458,123 +5458,123 @@ begin
   copy_lbl := NewLabel;
   copy_done_lbl := NewLabel;
 
-  { Check bounds: if n >= argc, return empty string }
+  { Check bounds: If n >= argc, return empty String }
   { cmp x0, x25 }
-  writeln('    cmp x0, x25');
+  WriteLn('    cmp x0, x25');
   { b.ge empty }
-  write('    b.ge L'); writeln(empty_lbl);
+  Write('    b.ge L'); WriteLn(empty_lbl);
 
-  { Check for negative index }
+  { Check For negative index }
   { cmp x0, #0 }
-  writeln('    cmp x0, #0');
+  WriteLn('    cmp x0, #0');
   { b.lt empty }
-  write('    b.lt L'); writeln(empty_lbl);
+  Write('    b.lt L'); WriteLn(empty_lbl);
 
   { Load argv[n] pointer: x1 = argv[n] = *(x26 + n*8) }
   { ldr x1, [x26, x0, lsl #3] }
-  writeln('    ldr x1, [x26, x0, lsl #3]');
+  WriteLn('    ldr x1, [x26, x0, lsl #3]');
 
-  { Check if argv[n] is null }
+  { Check If argv[n] is null }
   { cbz x1, empty }
-  write('    cbz x1, L'); writeln(empty_lbl);
+  Write('    cbz x1, L'); WriteLn(empty_lbl);
 
-  { x1 = pointer to C string, x8 = dest buffer }
-  { First count length (max 255) }
-  { mov x2, #0 - length counter }
-  writeln('    mov x2, #0');
-  { mov x3, x1 - save string pointer }
-  writeln('    mov x3, x1');
+  { x1 = pointer To C String, x8 = dest buffer }
+  { First count Length (max 255) }
+  { mov x2, #0 - Length counter }
+  WriteLn('    mov x2, #0');
+  { mov x3, x1 - save String pointer }
+  WriteLn('    mov x3, x1');
 
   EmitLabel(loop_lbl);
-  { ldrb w4, [x1], #1 - load byte and increment }
-  writeln('    ldrb w4, [x1], #1');
-  { cbz w4, copy_start - if null terminator, start copying }
-  write('    cbz w4, L'); writeln(copy_lbl);
-  { add x2, x2, #1 - increment length }
-  writeln('    add x2, x2, #1');
-  { cmp x2, #255 - max length }
-  writeln('    cmp x2, #255');
+  { ldrb w4, [x1], #1 - load byte And increment }
+  WriteLn('    ldrb w4, [x1], #1');
+  { cbz w4, copy_start - If null terminator, start copying }
+  Write('    cbz w4, L'); WriteLn(copy_lbl);
+  { add x2, x2, #1 - increment Length }
+  WriteLn('    add x2, x2, #1');
+  { cmp x2, #255 - max Length }
+  WriteLn('    cmp x2, #255');
   { b.lt loop }
-  write('    b.lt L'); writeln(loop_lbl);
+  Write('    b.lt L'); WriteLn(loop_lbl);
 
   EmitLabel(copy_lbl);
-  { x2 = length, x3 = source pointer, x8 = dest buffer }
-  { Store length byte at [x8] }
+  { x2 = Length, x3 = source pointer, x8 = dest buffer }
+  { Store Length byte at [x8] }
   { strb w2, [x8] }
-  writeln('    strb w2, [x8]');
-  { x0 = x8 + 1 (dest for chars), x1 = x3 (source) }
-  writeln('    add x0, x8, #1');
+  WriteLn('    strb w2, [x8]');
+  { x0 = x8 + 1 (dest For chars), x1 = x3 (source) }
+  WriteLn('    add x0, x8, #1');
   { mov x1, x3 - restore source pointer }
-  writeln('    mov x1, x3');
+  WriteLn('    mov x1, x3');
 
   { Copy loop }
   EmitLabel(copy_done_lbl);
-  { cbz x2, done - if count = 0, done }
-  write('    cbz x2, L'); writeln(done_lbl);
+  { cbz x2, done - If count = 0, done }
+  Write('    cbz x2, L'); WriteLn(done_lbl);
   { ldrb w4, [x1], #1 }
-  writeln('    ldrb w4, [x1], #1');
+  WriteLn('    ldrb w4, [x1], #1');
   { strb w4, [x0], #1 }
-  writeln('    strb w4, [x0], #1');
+  WriteLn('    strb w4, [x0], #1');
   { sub x2, x2, #1 }
-  writeln('    sub x2, x2, #1');
+  WriteLn('    sub x2, x2, #1');
   EmitBranchLabel(copy_done_lbl);
 
-  { Empty string: store length 0 }
+  { Empty String: store Length 0 }
   EmitLabel(empty_lbl);
-  writeln('    strb wzr, [x8]');
+  WriteLn('    strb wzr, [x8]');
 
   EmitLabel(done_lbl);
-  { Return pointer to string buffer (x8) }
+  { Return pointer To String buffer (x8) }
   { mov x0, x8 }
-  writeln('    mov x0, x8');
+  WriteLn('    mov x0, x8');
 
   EmitAddSP(32);
   EmitLdp;
   EmitRet
-end;
+End;
 
 
 { ----- Parser ----- }
 
-procedure ParseExpression; forward;
-procedure ParseStatement; forward;
+Procedure ParseExpression; Forward;
+Procedure ParseStatement; Forward;
 
-procedure Expect(t: integer);
-begin
-  if tok_type <> t then
+Procedure Expect(t: Integer);
+Begin
+  If tok_type <> t Then
     Error(2);
   NextToken
-end;
+End;
 
-function Match(t: integer): integer;
-begin
-  if tok_type = t then
-  begin
+Function Match(t: Integer): Integer;
+Begin
+  If tok_type = t Then
+  Begin
     NextToken;
     Match := 1
-  end
-  else
+  End
+  Else
     Match := 0
-end;
+End;
 
-procedure ParseFactor;
-var
-  idx, arg_count, i, lbl1, lbl2: integer;
-  var_flags, var_arg_idx: integer;
-begin
-  if tok_type = TOK_INTEGER then
-  begin
+Procedure ParseFactor;
+Var
+  idx, arg_count, i, lbl1, lbl2: Integer;
+  var_flags, var_arg_idx: Integer;
+Begin
+  If tok_type = TOK_INTEGER Then
+  Begin
     EmitMovX0(tok_int);
     expr_type := TYPE_INTEGER;
     NextToken
-  end
-  else if tok_type = TOK_FLOAT_LITERAL then
-  begin
+  End
+  Else If tok_type = TOK_FLOAT_LITERAL Then
+  Begin
     { Construct float at runtime: int_part + frac_part/1000000 }
-    { Load integer part and convert to float }
+    { Load Integer part And convert To float }
     EmitMovX0(tok_float_int);
     EmitScvtfD0X0;
-    { Load fractional part and convert to float }
+    { Load fractional part And convert To float }
     EmitPushD0;
     EmitMovX0(tok_float_frac);
     EmitScvtfD0X0;
@@ -5584,1038 +5584,1038 @@ begin
     EmitScvtfD0X0;
     EmitPopD1;
     EmitFDiv;  { d0 = d1 / d0 = frac / 1000000 }
-    { Add integer part }
+    { Add Integer part }
     EmitPopD1;
     EmitFAdd;  { d0 = d1 + d0 = int + frac }
     expr_type := TYPE_REAL;
     NextToken
-  end
-  else if tok_type = TOK_TRUE then
-  begin
+  End
+  Else If tok_type = TOK_TRUE Then
+  Begin
     EmitMovX0(1);
     expr_type := TYPE_INTEGER;
     NextToken
-  end
-  else if tok_type = TOK_FALSE then
-  begin
+  End
+  Else If tok_type = TOK_FALSE Then
+  Begin
     EmitMovX0(0);
     expr_type := TYPE_INTEGER;
     NextToken
-  end
-  else if tok_type = TOK_LPAREN then
-  begin
+  End
+  Else If tok_type = TOK_LPAREN Then
+  Begin
     NextToken;
     ParseExpression;
     Expect(TOK_RPAREN)
-    { expr_type is already set by ParseExpression }
-  end
-  else if tok_type = TOK_NOT then
-  begin
+    { expr_type is already Set by ParseExpression }
+  End
+  Else If tok_type = TOK_NOT Then
+  Begin
     NextToken;
     ParseFactor;
     EmitEorX0(1);
-    expr_type := TYPE_INTEGER  { not always returns boolean/int }
-  end
-  else if tok_type = TOK_LBRACKET then
-  begin
-    { Set constructor: [1, 3, 5] or [1..5] or ['a'..'z'] }
+    expr_type := TYPE_INTEGER  { Not always returns Boolean/int }
+  End
+  Else If tok_type = TOK_LBRACKET Then
+  Begin
+    { Set constructor: [1, 3, 5] Or [1..5] Or ['a'..'z'] }
     NextToken;
-    EmitMovX0(0);  { start with empty set }
-    if tok_type <> TOK_RBRACKET then
-    begin
-      repeat
-        if tok_type = TOK_COMMA then NextToken;
-        { Save set so far }
+    EmitMovX0(0);  { start With empty Set }
+    If tok_type <> TOK_RBRACKET Then
+    Begin
+      Repeat
+        If tok_type = TOK_COMMA Then NextToken;
+        { Save Set so far }
         EmitPushX0;
         { Parse first value }
         ParseExpression;
-        if tok_type = TOK_DOTDOT then
-        begin
-          { Range: lo..hi - create mask for all bits from lo to hi }
+        If tok_type = TOK_DOTDOT Then
+        Begin
+          { Range: lo..hi - create mask For all bits from lo To hi }
           EmitPushX0;  { save lo }
           NextToken;
-          ParseExpression;  { hi in x0 }
-          { x0 = hi, need to set bits from lo to hi inclusive }
-          { Algorithm: create mask with bits set from lo to hi }
-          { For simplicity, use a loop: for i := lo to hi do set |= (1 << i) }
-          writeln('    mov x2, x0');
+          ParseExpression;  { hi In x0 }
+          { x0 = hi, need To Set bits from lo To hi inclusive }
+          { Algorithm: create mask With bits Set from lo To hi }
+          { For simplicity, use a loop: For i := lo To hi Do Set |= (1 << i) }
+          WriteLn('    mov x2, x0');
           EmitPopX1;  { x1 = lo }
-          EmitPopX0;  { x0 = set so far }
-          { Loop: while x1 <= x2 do x0 |= (1 << x1); x1++ }
+          EmitPopX0;  { x0 = Set so far }
+          { Loop: While x1 <= x2 Do x0 |= (1 << x1); x1++ }
           lbl1 := NewLabel;
           lbl2 := NewLabel;
           EmitLabel(lbl1);
           { cmp x1, x2 }
-          writeln('    cmp x1, x2');
+          WriteLn('    cmp x1, x2');
           { b.gt done }
-          write('    b.gt L'); writeln(lbl2);
+          Write('    b.gt L'); WriteLn(lbl2);
           { x3 = 1 << x1 }
-          writeln('    mov x3, #1');
-          writeln('    lsl x3, x3, x1');
+          WriteLn('    mov x3, #1');
+          WriteLn('    lsl x3, x3, x1');
           { x0 |= x3 }
-          writeln('    orr x0, x0, x3');
+          WriteLn('    orr x0, x0, x3');
           { x1++ }
-          writeln('    add x1, x1, #1');
+          WriteLn('    add x1, x1, #1');
           EmitBranchLabel(lbl1);
           EmitLabel(lbl2)
-        end
-        else
-        begin
-          { Single element: set the bit }
-          { x0 has the element value, stack has set so far }
-          { mask = 1 << x0, then OR with saved set }
-          writeln('    mov x1, #1');
-          writeln('    lsl x1, x1, x0');
-          EmitPopX0;  { saved set }
-          EmitOrrX0X1  { set | (1 << element) }
-        end
-      until tok_type = TOK_RBRACKET
-    end;
+        End
+        Else
+        Begin
+          { Single element: Set the bit }
+          { x0 has the element value, stack has Set so far }
+          { mask = 1 << x0, Then Or With saved Set }
+          WriteLn('    mov x1, #1');
+          WriteLn('    lsl x1, x1, x0');
+          EmitPopX0;  { saved Set }
+          EmitOrrX0X1  { Set | (1 << element) }
+        End
+      Until tok_type = TOK_RBRACKET
+    End;
     NextToken;
     expr_type := TYPE_SET
-  end
-  else if tok_type = TOK_NIL then
-  begin
-    EmitMovX0(0);  { nil = 0 }
+  End
+  Else If tok_type = TOK_NIL Then
+  Begin
+    EmitMovX0(0);  { Nil = 0 }
     expr_type := TYPE_POINTER;
     NextToken
-  end
-  else if tok_type = TOK_STRING then
-  begin
-    { String literal in expression }
-    if tok_len = 1 then
-    begin
-      { Single character - treat as char/integer }
+  End
+  Else If tok_type = TOK_STRING Then
+  Begin
+    { String literal In expression }
+    If tok_len = 1 Then
+    Begin
+      { Single character - treat as Char/Integer }
       EmitMovX0(tok_str[0]);
       expr_type := TYPE_CHAR
-    end
-    else
-    begin
-      { Multi-char string - allocate temp from heap and store string }
-      { mov x8, x21 ; store string base to x8 }
-      writeln('    mov x8, x21');
-      { Store length byte }
+    End
+    Else
+    Begin
+      { Multi-Char String - allocate temp from heap And store String }
+      { mov x8, x21 ; store String base To x8 }
+      WriteLn('    mov x8, x21');
+      { Store Length byte }
       EmitMovX0(tok_len);
-      writeln('    strb w0, [x8]');
+      WriteLn('    strb w0, [x8]');
       { Store each character }
-      for i := 0 to tok_len - 1 do
-      begin
+      For i := 0 To tok_len - 1 Do
+      Begin
         EmitMovX0(tok_str[i]);
-        write('    strb w0, [x8, #'); write(i + 1); writeln(']');
-      end;
-      { mov x0, x21 ; return string address }
-      writeln('    mov x0, x21');
+        Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
+      End;
+      { mov x0, x21 ; return String address }
+      WriteLn('    mov x0, x21');
       { add x21, x21, #256 ; advance heap pointer }
-      writeln('    add x21, x21, #256');
+      WriteLn('    add x21, x21, #256');
       expr_type := TYPE_STRING
-    end;
+    End;
     NextToken
-  end
-  else if tok_type = TOK_AT then
-  begin
+  End
+  Else If tok_type = TOK_AT Then
+  Begin
     NextToken;
-    if tok_type <> TOK_IDENT then
+    If tok_type <> TOK_IDENT Then
       Error(6);  { expected identifier }
     idx := SymLookup;
-    if idx < 0 then
+    If idx < 0 Then
       Error(3);  { undefined identifier }
     NextToken;
-    if (sym_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-    begin
-      { Address of array element: @arr[index] }
+    If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+    Begin
+      { Address Of Array element: @arr[index] }
       NextToken;  { consume '[' }
-      ParseExpression;  { index in x0 }
+      ParseExpression;  { index In x0 }
       Expect(TOK_RBRACKET);
       { Subtract low bound }
       EmitPushX0;
       EmitMovX0(sym_const_val[idx]);  { low bound }
       EmitPopX1;
       { x0 = x1 - x0 = index - low_bound }
-      writeln('    sub x0, x1, x0');
+      WriteLn('    sub x0, x1, x0');
       { Multiply by 8 (element size) using lsl #3 }
-      writeln('    lsl x0, x0, #3');
+      WriteLn('    lsl x0, x0, #3');
       { Get base address }
-      if sym_level[idx] < scope_level then
-      begin
+      If sym_level[idx] < scope_level Then
+      Begin
         EmitFollowChain(sym_level[idx], scope_level);
         EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
-      end
-      else
+      End
+      Else
         EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
       { Address = base - element_offset }
-      writeln('    sub x0, x1, x0');
-    end
-    else
+      WriteLn('    sub x0, x1, x0');
+    End
+    Else
       EmitVarAddr(idx, scope_level);
     expr_type := TYPE_POINTER;
     ptr_base_type := sym_type[idx]
-  end
-  else if tok_type = TOK_IDENT then
-  begin
-    { Check for built-in functions: readchar, keypressed, ord, chr }
-    { readchar = 114,101,97,100,99,104,97,114 }
-    if TokIs8(114, 101, 97, 100, 99, 104, 97, 114) = 1 then
-    begin
+  End
+  Else If tok_type = TOK_IDENT Then
+  Begin
+    { Check For built-In functions: ReadChar, keypressed, Ord, Chr }
+    { ReadChar = 114,101,97,100,99,104,97,114 }
+    If TokIs8(114, 101, 97, 100, 99, 104, 97, 114) = 1 Then
+    Begin
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
         Expect(TOK_RPAREN)
-      end;
+      End;
       EmitBL(rt_readchar);
       expr_type := TYPE_INTEGER
-    end
+    End
     { getinputfd = 103,101,116,105,110,112,117,116,102,100 (10 chars) }
-    else if (tok_len = 10) and (ToLower(tok_str[0]) = 103) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 105) and (ToLower(tok_str[4]) = 110) and
-            (ToLower(tok_str[5]) = 112) and (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 116) and
-            (ToLower(tok_str[8]) = 102) and (ToLower(tok_str[9]) = 100) then
-    begin
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 103) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 110) And
+            (ToLower(tok_str[5]) = 112) And (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 116) And
+            (ToLower(tok_str[8]) = 102) And (ToLower(tok_str[9]) = 100) Then
+    Begin
       { getinputfd - returns current input file descriptor (x19) }
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
         Expect(TOK_RPAREN)
-      end;
+      End;
       { mov x0, x19 }
-      writeln('    mov x0, x19');
+      WriteLn('    mov x0, x19');
       expr_type := TYPE_INTEGER
-    end
+    End
     { getoutputfd = 103,101,116,111,117,116,112,117,116,102,100 (11 chars) }
-    else if (tok_len = 11) and (ToLower(tok_str[0]) = 103) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 111) and (ToLower(tok_str[4]) = 117) and
-            (ToLower(tok_str[5]) = 116) and (ToLower(tok_str[6]) = 112) and (ToLower(tok_str[7]) = 117) and
-            (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 102) and (ToLower(tok_str[10]) = 100) then
-    begin
+    Else If (tok_len = 11) And (ToLower(tok_str[0]) = 103) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 111) And (ToLower(tok_str[4]) = 117) And
+            (ToLower(tok_str[5]) = 116) And (ToLower(tok_str[6]) = 112) And (ToLower(tok_str[7]) = 117) And
+            (ToLower(tok_str[8]) = 116) And (ToLower(tok_str[9]) = 102) And (ToLower(tok_str[10]) = 100) Then
+    Begin
       { getoutputfd - returns current output file descriptor (x20) }
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
         Expect(TOK_RPAREN)
-      end;
+      End;
       { mov x0, x20 }
-      writeln('    mov x0, x20');
+      WriteLn('    mov x0, x20');
       expr_type := TYPE_INTEGER
-    end
+    End
     { readfd = 114,101,97,100,102,100 (6 chars) }
-    else if (tok_len = 6) and (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) and (ToLower(tok_str[4]) = 102) and
-            (ToLower(tok_str[5]) = 100) then
-    begin
-      { readfd(fd) - read one char from fd, returns char or -1 for EOF }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) And (ToLower(tok_str[4]) = 102) And
+            (ToLower(tok_str[5]) = 100) Then
+    Begin
+      { readfd(fd) - Read one Char from fd, returns Char Or -1 For EOF }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { x0 = fd, save it then do read syscall }
-      { sub sp, sp, #16; str x0, [sp] - allocate buffer and save fd }
-      writeln('    sub sp, sp, #16');
+      { x0 = fd, save it Then Do Read syscall }
+      { sub sp, sp, #16; str x0, [sp] - allocate buffer And save fd }
+      WriteLn('    sub sp, sp, #16');
       { mov x1, sp - buffer on stack }
-      writeln('    mov x1, sp');
-      { mov x2, #1 - read 1 byte }
-      writeln('    mov x2, #1');
-      { read syscall: x16 = 0x2000003 }
-      writeln('    movz x16, #3');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    mov x1, sp');
+      { mov x2, #1 - Read 1 byte }
+      WriteLn('    mov x2, #1');
+      { Read syscall: x16 = 0x2000003 }
+      WriteLn('    movz x16, #3');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { Check if read returned >= 1 }
+      { Check If Read returned >= 1 }
       { cmp x0, #1; b.ge got_char; mov x0, #-1; b done; got_char: ldrb w0, [sp]; done: }
-      writeln('    cmp x0, #1');
-      write('    b.ge L'); writeln(label_count);
+      WriteLn('    cmp x0, #1');
+      Write('    b.ge L'); WriteLn(label_count);
       EmitMovX0(-1);
       EmitBranchLabel(label_count + 1);
       EmitLabel(label_count);
       label_count := label_count + 1;
       { ldrb w0, [sp] }
-      writeln('    ldrb w0, [sp]');
+      WriteLn('    ldrb w0, [sp]');
       EmitLabel(label_count);
       label_count := label_count + 1;
       { add sp, sp, #16 - restore stack }
-      writeln('    add sp, sp, #16');
+      WriteLn('    add sp, sp, #16');
       expr_type := TYPE_INTEGER
-    end
+    End
     { openfile = 111,112,101,110,102,105,108,101 (8 chars) }
-    else if TokIs8(111, 112, 101, 110, 102, 105, 108, 101) = 1 then
-    begin
-      { openfile(filename) - open file for reading, returns fd or -1 on error }
+    Else If TokIs8(111, 112, 101, 110, 102, 105, 108, 101) = 1 Then
+    Begin
+      { openfile(filename) - open file For reading, returns fd Or -1 on error }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { x0 = Pascal string address, need to skip length byte for C string }
+      { x0 = Pascal String address, need To skip Length byte For C String }
       { add x0, x0, #1 }
-      writeln('    add x0, x0, #1');
+      WriteLn('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #0');
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #0');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      writeln('    movz x16, #5');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #5');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { On macOS, carry flag set on error - convert errno to -1 }
+      { On macOS, carry flag Set on error - convert errno To -1 }
       { b.cc skip; mov x0, #-1; skip: }
-      write('    b.cc L'); writeln(label_count);
+      Write('    b.cc L'); WriteLn(label_count);
       EmitMovX0(-1);
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_INTEGER
-    end
+    End
     { createfile = 99,114,101,97,116,101,102,105,108,101 (10 chars) }
-    else if (tok_len = 10) and (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 114) and
-            (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 97) and (ToLower(tok_str[4]) = 116) and
-            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 102) and (ToLower(tok_str[7]) = 105) and
-            (ToLower(tok_str[8]) = 108) and (ToLower(tok_str[9]) = 101) then
-    begin
-      { createfile(filename) - create/open file for writing, returns fd or -1 }
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 97) And (ToLower(tok_str[4]) = 116) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 102) And (ToLower(tok_str[7]) = 105) And
+            (ToLower(tok_str[8]) = 108) And (ToLower(tok_str[9]) = 101) Then
+    Begin
+      { createfile(filename) - create/open file For writing, returns fd Or -1 }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { x0 = Pascal string address, need to skip length byte for C string }
+      { x0 = Pascal String address, need To skip Length byte For C String }
       { add x0, x0, #1 }
-      writeln('    add x0, x0, #1');
+      WriteLn('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420=0644) }
       { mov x1, #1537 }
-      writeln('    mov x1, #1537');
+      WriteLn('    mov x1, #1537');
       { mov x2, #420 }
-      writeln('    mov x2, #420');
+      WriteLn('    mov x2, #420');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      writeln('    movz x16, #5');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #5');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { On macOS, carry flag set on error - convert errno to -1 }
-      write('    b.cc L'); writeln(label_count);
+      { On macOS, carry flag Set on error - convert errno To -1 }
+      Write('    b.cc L'); WriteLn(label_count);
       EmitMovX0(-1);
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_INTEGER
-    end
+    End
     { keypressed = 107,101,121,112,114,101,115,115,101,100 (10 chars) }
-    else if (tok_len = 10) and (ToLower(tok_str[0]) = 107) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 121) and (ToLower(tok_str[3]) = 112) and (ToLower(tok_str[4]) = 114) and
-            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 115) and (ToLower(tok_str[7]) = 115) and
-            (ToLower(tok_str[8]) = 101) and (ToLower(tok_str[9]) = 100) then
-    begin
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 107) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 121) And (ToLower(tok_str[3]) = 112) And (ToLower(tok_str[4]) = 114) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 115) And (ToLower(tok_str[7]) = 115) And
+            (ToLower(tok_str[8]) = 101) And (ToLower(tok_str[9]) = 100) Then
+    Begin
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
         Expect(TOK_RPAREN)
-      end;
+      End;
       EmitBL(rt_keypressed);
       expr_type := TYPE_BOOLEAN
-    end
-    { ord = 111,114,100 }
-    else if TokIs8(111, 114, 100, 0, 0, 0, 0, 0) = 1 then
-    begin
+    End
+    { Ord = 111,114,100 }
+    Else If TokIs8(111, 114, 100, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { ord() is identity for integers/chars }
+      { Ord() is identity For integers/chars }
       expr_type := TYPE_INTEGER
-    end
-    { chr = 99,104,114 }
-    else if TokIs8(99, 104, 114, 0, 0, 0, 0, 0) = 1 then
-    begin
+    End
+    { Chr = 99,104,114 }
+    Else If TokIs8(99, 104, 114, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { chr() is identity for integers/chars }
+      { Chr() is identity For integers/chars }
       expr_type := TYPE_INTEGER
-    end
+    End
     { abs = 97,98,115 }
-    else if TokIs8(97, 98, 115, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(97, 98, 115, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { If x < 0, negate it }
       { cmp x0, #0; b.ge skip; neg x0, x0; skip: }
-      writeln('    cmp x0, #0');
-      write('    b.ge L'); writeln(label_count);
-      writeln('    neg x0, x0');
+      WriteLn('    cmp x0, #0');
+      Write('    b.ge L'); WriteLn(label_count);
+      WriteLn('    neg x0, x0');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_INTEGER
-    end
+    End
     { odd = 111,100,100 }
-    else if TokIs8(111, 100, 100, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(111, 100, 100, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { Return x AND 1 }
-      writeln('    and x0, x0, #1');
+      { Return x And 1 }
+      WriteLn('    And x0, x0, #1');
       expr_type := TYPE_BOOLEAN
-    end
+    End
     { sqr = 115,113,114 }
-    else if TokIs8(115, 113, 114, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(115, 113, 114, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x * x }
-      writeln('    mul x0, x0, x0');
+      WriteLn('    mul x0, x0, x0');
       expr_type := TYPE_INTEGER
-    end
+    End
     { sqrt = 115,113,114,116 }
-    else if TokIs8(115, 113, 114, 116, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(115, 113, 114, 116, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { Convert to real if integer }
-      if expr_type <> TYPE_REAL then
+      { Convert To Real If Integer }
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { fsqrt d0, d0 }
-      writeln('    fsqrt d0, d0');
+      WriteLn('    fsqrt d0, d0');
       expr_type := TYPE_REAL
-    end
+    End
     { round = 114,111,117,110,100 }
-    else if (tok_len = 5) and (tok_str[0] = 114) and (tok_str[1] = 111) and
-            (tok_str[2] = 117) and (tok_str[3] = 110) and (tok_str[4] = 100) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 110) And (ToLower(tok_str[4]) = 100) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { Convert to real if integer }
-      if expr_type <> TYPE_REAL then
+      { Convert To Real If Integer }
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
-      { fcvtas x0, d0 - round to nearest with ties to away }
-      writeln('    fcvtas x0, d0');
+      { fcvtas x0, d0 - round To nearest With ties To away }
+      WriteLn('    fcvtas x0, d0');
       expr_type := TYPE_INTEGER
-    end
+    End
     { trunc = 116,114,117,110,99 }
-    else if (tok_len = 5) and (tok_str[0] = 116) and (tok_str[1] = 114) and
-            (tok_str[2] = 117) and (tok_str[3] = 110) and (tok_str[4] = 99) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 117) And (ToLower(tok_str[3]) = 110) And (ToLower(tok_str[4]) = 99) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { Convert to real if integer }
-      if expr_type <> TYPE_REAL then
+      { Convert To Real If Integer }
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { fcvtzs x0, d0 - truncate toward zero }
-      writeln('    fcvtzs x0, d0');
+      WriteLn('    fcvtzs x0, d0');
       expr_type := TYPE_INTEGER
-    end
+    End
     { sin = 115,105,110 }
-    else if TokIs8(115, 105, 110, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(115, 105, 110, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_sin);
       expr_type := TYPE_REAL
-    end
+    End
     { cos = 99,111,115 }
-    else if TokIs8(99, 111, 115, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(99, 111, 115, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_cos);
       expr_type := TYPE_REAL
-    end
+    End
     { tan = 116,97,110 }
-    else if TokIs8(116, 97, 110, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(116, 97, 110, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_tan);
       expr_type := TYPE_REAL
-    end
+    End
     { exp = 101,120,112 }
-    else if TokIs8(101, 120, 112, 0, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(101, 120, 112, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_exp);
       expr_type := TYPE_REAL
-    end
+    End
     { ln = 108,110 }
-    else if (tok_len = 2) and (tok_str[0] = 108) and (tok_str[1] = 110) then
-    begin
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 110) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_ln);
       expr_type := TYPE_REAL
-    end
+    End
     { random = 114,97,110,100,111,109 }
-    else if (tok_len = 6) and (tok_str[0] = 114) and (tok_str[1] = 97) and
-            (tok_str[2] = 110) and (tok_str[3] = 100) and (tok_str[4] = 111) and
-            (tok_str[5] = 109) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 97) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 100) And (ToLower(tok_str[4]) = 111) And
+            (ToLower(tok_str[5]) = 109) Then
+    Begin
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         { random(n) - returns 0..n-1 }
         NextToken;
-        if tok_type <> TOK_RPAREN then
-        begin
+        If tok_type <> TOK_RPAREN Then
+        Begin
           ParseExpression;
           EmitPushX0;
           EmitBL(rt_random);
           EmitPopX1;
-          { x0 mod x1 using udiv and msub }
-          writeln('    udiv x2, x0, x1');
-          writeln('    msub x0, x2, x1, x0');
-        end
-        else
-        begin
-          { random() with no arg - return real 0.0..1.0 }
+          { x0 Mod x1 using udiv And msub }
+          WriteLn('    udiv x2, x0, x1');
+          WriteLn('    msub x0, x2, x1, x0');
+        End
+        Else
+        Begin
+          { random() With no arg - return Real 0.0..1.0 }
           EmitBL(rt_random);
-          { Convert to real and divide by 2^64 }
+          { Convert To Real And divide by 2^64 }
           EmitScvtfD0X0;
           { Load 2^63 as divisor (since signed, use 2^63) }
-          writeln('    movz x1, #0x8000, lsl #48');
-          writeln('    scvtf d1, x1');
-          writeln('    fdiv d0, d0, d1');
+          WriteLn('    movz x1, #0x8000, lsl #48');
+          WriteLn('    scvtf d1, x1');
+          WriteLn('    fdiv d0, d0, d1');
           { Make positive by using fabs }
-          writeln('    fabs d0, d0');
+          WriteLn('    fabs d0, d0');
           expr_type := TYPE_REAL
-        end;
+        End;
         Expect(TOK_RPAREN)
-      end
-      else
-      begin
-        { random with no parens - return real 0.0..1.0 }
+      End
+      Else
+      Begin
+        { random With no parens - return Real 0.0..1.0 }
         EmitBL(rt_random);
         EmitScvtfD0X0;
-        writeln('    movz x1, #0x8000, lsl #48');
-        writeln('    scvtf d1, x1');
-        writeln('    fdiv d0, d0, d1');
-        writeln('    fabs d0, d0');
+        WriteLn('    movz x1, #0x8000, lsl #48');
+        WriteLn('    scvtf d1, x1');
+        WriteLn('    fdiv d0, d0, d1');
+        WriteLn('    fabs d0, d0');
         expr_type := TYPE_REAL
-      end;
-      if expr_type <> TYPE_REAL then
+      End;
+      If expr_type <> TYPE_REAL Then
         expr_type := TYPE_INTEGER
-    end
+    End
     { pi = 112,105 - returns 3.14159265358979 }
-    else if (tok_len = 2) and (tok_str[0] = 112) and (tok_str[1] = 105) then
-    begin
+    Else If (tok_len = 2) And (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 105) Then
+    Begin
       NextToken;
       { Load pi = 3.14159265358979323846 into d0 }
       { IEEE 754 double: 0x400921FB54442D18 }
-      writeln('    movz x0, #0x2D18');
-      writeln('    movk x0, #0x5444, lsl #16');
-      writeln('    movk x0, #0x21FB, lsl #32');
-      writeln('    movk x0, #0x4009, lsl #48');
+      WriteLn('    movz x0, #0x2D18');
+      WriteLn('    movk x0, #0x5444, lsl #16');
+      WriteLn('    movk x0, #0x21FB, lsl #32');
+      WriteLn('    movk x0, #0x4009, lsl #48');
       EmitFmovD0X0;
       expr_type := TYPE_REAL
-    end
+    End
     { frac = 102,114,97,99 - fractional part }
-    else if TokIs8(102, 114, 97, 99, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(102, 114, 97, 99, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { frac(x) = x - trunc(x) }
-      { Save x to stack }
+      { Save x To stack }
       EmitPushD0;
-      { Truncate to integer }
+      { Truncate To Integer }
       EmitFcvtzsX0D0;
-      { Convert back to float }
+      { Convert back To float }
       EmitScvtfD0X0;
       { Pop original, now d1 = trunc(x) }
-      writeln('    fmov d1, d0');
+      WriteLn('    fmov d1, d0');
       EmitPopD0;
       { d0 = x - trunc(x) }
-      writeln('    fsub d0, d0, d1');
+      WriteLn('    fsub d0, d0, d1');
       expr_type := TYPE_REAL
-    end
-    { int = 105,110,116 - integer part as real (different from trunc) }
-    else if TokIs8(105, 110, 116, 0, 0, 0, 0, 0) = 1 then
-    begin
+    End
+    { int = 105,110,116 - Integer part as Real (different from trunc) }
+    Else If TokIs8(105, 110, 116, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { int(x) = trunc(x) as float }
       { frintz d0, d0 - round toward zero (truncate) }
-      writeln('    frintz d0, d0');
+      WriteLn('    frintz d0, d0');
       expr_type := TYPE_REAL
-    end
+    End
     { arctan = 97,114,99,116,97,110 }
-    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
-            (tok_str[2] = 99) and (tok_str[3] = 116) and (tok_str[4] = 97) and
-            (tok_str[5] = 110) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 97) And
+            (ToLower(tok_str[5]) = 110) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_arctan);
       expr_type := TYPE_REAL
-    end
+    End
     { arcsin = 97,114,99,115,105,110 }
-    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
-            (tok_str[2] = 99) and (tok_str[3] = 115) and (tok_str[4] = 105) and
-            (tok_str[5] = 110) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 115) And (ToLower(tok_str[4]) = 105) And
+            (ToLower(tok_str[5]) = 110) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_arcsin);
       expr_type := TYPE_REAL
-    end
+    End
     { arccos = 97,114,99,99,111,115 }
-    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 114) and
-            (tok_str[2] = 99) and (tok_str[3] = 99) and (tok_str[4] = 111) and
-            (tok_str[5] = 115) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 99) And (ToLower(tok_str[4]) = 111) And
+            (ToLower(tok_str[5]) = 115) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitBL(rt_arccos);
       expr_type := TYPE_REAL
-    end
+    End
     { log10 = 108,111,103,49,48 }
-    else if (tok_len = 5) and (tok_str[0] = 108) and (tok_str[1] = 111) and
-            (tok_str[2] = 103) and (tok_str[3] = 49) and (tok_str[4] = 48) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 103) And (ToLower(tok_str[3]) = 49) And (ToLower(tok_str[4]) = 48) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { log10(x) = ln(x) / ln(10) }
       EmitBL(rt_ln);
       EmitPushD0;
       { Load ln(10) = 2.302585... into d0 }
-      writeln('    movz x0, #0x634A');
-      writeln('    movk x0, #0x9BFE, lsl #16');
-      writeln('    movk x0, #0x66D3, lsl #32');
-      writeln('    movk x0, #0x4002, lsl #48');
+      WriteLn('    movz x0, #0x634A');
+      WriteLn('    movk x0, #0x9BFE, lsl #16');
+      WriteLn('    movk x0, #0x66D3, lsl #32');
+      WriteLn('    movk x0, #0x4002, lsl #48');
       EmitFmovD0X0;
       EmitPopD1;
       { d0 = ln(x) / ln(10) }
-      writeln('    fdiv d0, d1, d0');
+      WriteLn('    fdiv d0, d1, d0');
       expr_type := TYPE_REAL
-    end
+    End
     { log2 = 108,111,103,50 }
-    else if TokIs8(108, 111, 103, 50, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(108, 111, 103, 50, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { log2(x) = ln(x) / ln(2) }
       EmitBL(rt_ln);
       EmitPushD0;
       { Load ln(2) = 0.693147... into d0 }
-      writeln('    movz x0, #0x39EF');
-      writeln('    movk x0, #0xFEFA, lsl #16');
-      writeln('    movk x0, #0x2E42, lsl #32');
-      writeln('    movk x0, #0x3FE6, lsl #48');
+      WriteLn('    movz x0, #0x39EF');
+      WriteLn('    movk x0, #0xFEFA, lsl #16');
+      WriteLn('    movk x0, #0x2E42, lsl #32');
+      WriteLn('    movk x0, #0x3FE6, lsl #48');
       EmitFmovD0X0;
       EmitPopD1;
       { d0 = ln(x) / ln(2) }
-      writeln('    fdiv d0, d1, d0');
+      WriteLn('    fdiv d0, d1, d0');
       expr_type := TYPE_REAL
-    end
+    End
     { power = 112,111,119,101,114 }
-    else if (tok_len = 5) and (tok_str[0] = 112) and (tok_str[1] = 111) and
-            (tok_str[2] = 119) and (tok_str[3] = 101) and (tok_str[4] = 114) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 119) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 114) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;  { base }
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       EmitPushD0;
       Expect(TOK_COMMA);
       ParseExpression;  { exponent }
-      if expr_type <> TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
         EmitScvtfD0X0;
       { d0 = exp, stack has base }
       { power(b, e) = exp(e * ln(b)) }
-      { Move exp to d1, get base to d0, save exp on stack }
+      { Move exp To d1, get base To d0, save exp on stack }
       EmitPushD0;       { stack = [exp, base] }
       EmitPopD1;        { d1 = exp, stack = [base] }
       EmitPopD0;        { d0 = base, stack = [] }
-      { Push d1 (exp) to stack - str d1, [sp, #-16]! }
-      writeln('    str d1, [sp, #-16]!');
+      { Push d1 (exp) To stack - str d1, [sp, #-16]! }
+      WriteLn('    str d1, [sp, #-16]!');
       { d0 = base, stack = [exp] }
       EmitBL(rt_ln);    { d0 = ln(base), stack = [exp] }
       EmitPopD1;        { d1 = exp, stack = [] }
       { fmul d0, d0, d1 - d0 = ln(base) * exp }
-      writeln('    fmul d0, d0, d1');
+      WriteLn('    fmul d0, d0, d1');
       EmitBL(rt_exp);   { d0 = exp(ln(base) * exp) = base^exp }
       Expect(TOK_RPAREN);
       expr_type := TYPE_REAL
-    end
+    End
     { succ = 115,117,99,99 }
-    else if TokIs8(115, 117, 99, 99, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(115, 117, 99, 99, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x + 1 }
-      writeln('    add x0, x0, #1');
+      WriteLn('    add x0, x0, #1');
       expr_type := TYPE_INTEGER
-    end
+    End
     { pred = 112,114,101,100 }
-    else if TokIs8(112, 114, 101, 100, 0, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(112, 114, 101, 100, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x - 1 }
-      writeln('    sub x0, x0, #1');
+      WriteLn('    sub x0, x0, #1');
       expr_type := TYPE_INTEGER
-    end
-    { sizeof = 115,105,122,101,111,102 }
-    else if (tok_len = 6) and (tok_str[0] = 115) and (tok_str[1] = 105) and
-            (tok_str[2] = 122) and (tok_str[3] = 101) and (tok_str[4] = 111) and
-            (tok_str[5] = 102) then
-    begin
+    End
+    { SizeOf = 115,105,122,101,111,102 }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 122) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 111) And
+            (ToLower(tok_str[5]) = 102) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      { Check for type name or variable }
-      if tok_type = TOK_INTEGER_TYPE then
-      begin
+      { Check For Type name Or variable }
+      If tok_type = TOK_INTEGER_TYPE Then
+      Begin
         EmitMovX0(8);
         NextToken
-      end
-      else if tok_type = TOK_CHAR_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_CHAR_TYPE Then
+      Begin
         EmitMovX0(1);
         NextToken
-      end
-      else if tok_type = TOK_BOOLEAN_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_BOOLEAN_TYPE Then
+      Begin
         EmitMovX0(1);
         NextToken
-      end
-      else if tok_type = TOK_REAL_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_REAL_TYPE Then
+      Begin
         EmitMovX0(8);
         NextToken
-      end
-      else if tok_type = TOK_STRING_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_STRING_TYPE Then
+      Begin
         EmitMovX0(256);
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Look up identifier - could be variable or type name }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Look up identifier - could be variable Or Type name }
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_kind[idx] = SYM_TYPEDEF then
-        begin
-          { Type definition - get size from sym_label (record size) }
+        If sym_kind[idx] = SYM_TYPEDEF Then
+        Begin
+          { Type definition - get size from sym_label (Record size) }
           EmitMovX0(sym_label[idx])
-        end
-        else if sym_type[idx] = TYPE_INTEGER then
+        End
+        Else If sym_type[idx] = TYPE_INTEGER Then
           EmitMovX0(8)
-        else if sym_type[idx] = TYPE_CHAR then
-          EmitMovX0(1)  { Logical size, not storage size }
-        else if sym_type[idx] = TYPE_BOOLEAN then
-          EmitMovX0(1)  { Logical size, not storage size }
-        else if sym_type[idx] = TYPE_REAL then
+        Else If sym_type[idx] = TYPE_CHAR Then
+          EmitMovX0(1)  { Logical size, Not storage size }
+        Else If sym_type[idx] = TYPE_BOOLEAN Then
+          EmitMovX0(1)  { Logical size, Not storage size }
+        Else If sym_type[idx] = TYPE_REAL Then
           EmitMovX0(8)
-        else if sym_type[idx] = TYPE_STRING then
+        Else If sym_type[idx] = TYPE_STRING Then
           EmitMovX0(256)
-        else if sym_type[idx] = TYPE_POINTER then
+        Else If sym_type[idx] = TYPE_POINTER Then
           EmitMovX0(8)
-        else if sym_type[idx] = TYPE_ARRAY then
-        begin
-          { Array: sym_label already contains total size in bytes }
+        Else If sym_type[idx] = TYPE_ARRAY Then
+        Begin
+          { Array: sym_label already contains total size In bytes }
           EmitMovX0(sym_label[idx])
-        end
-        else if sym_type[idx] = TYPE_RECORD then
-        begin
+        End
+        Else If sym_type[idx] = TYPE_RECORD Then
+        Begin
           { Record: sym_const_val has typedef index, get size from typedef's sym_label }
           EmitMovX0(sym_label[sym_const_val[idx]])
-        end
-        else
-          EmitMovX0(8);  { Default to 8 bytes }
+        End
+        Else
+          EmitMovX0(8);  { Default To 8 bytes }
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RPAREN);
       expr_type := TYPE_INTEGER
-    end
+    End
     { upcase = 117,112,99,97,115,101 }
-    else if (tok_len = 6) and (tok_str[0] = 117) and (tok_str[1] = 112) and
-            (tok_str[2] = 99) and (tok_str[3] = 97) and (tok_str[4] = 115) and
-            (tok_str[5] = 101) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 117) And (ToLower(tok_str[1]) = 112) And
+            (ToLower(tok_str[2]) = 99) And (ToLower(tok_str[3]) = 97) And (ToLower(tok_str[4]) = 115) And
+            (ToLower(tok_str[5]) = 101) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { If char is 'a'-'z' (97-122), subtract 32 }
+      { If Char is 'a'-'z' (97-122), subtract 32 }
       { cmp x0, #97; b.lt skip; cmp x0, #122; b.gt skip; sub x0, x0, #32; skip: }
-      writeln('    cmp x0, #97');
-      write('    b.lt L'); writeln(label_count);
-      writeln('    cmp x0, #122');
-      write('    b.gt L'); writeln(label_count);
-      writeln('    sub x0, x0, #32');
+      WriteLn('    cmp x0, #97');
+      Write('    b.lt L'); WriteLn(label_count);
+      WriteLn('    cmp x0, #122');
+      Write('    b.gt L'); WriteLn(label_count);
+      WriteLn('    sub x0, x0, #32');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_CHAR
-    end
+    End
     { lowercase = 108,111,119,101,114,99,97,115,101 }
-    else if (tok_len = 9) and (tok_str[0] = 108) and (tok_str[1] = 111) and
-            (tok_str[2] = 119) and (tok_str[3] = 101) and (tok_str[4] = 114) and
-            (tok_str[5] = 99) and (tok_str[6] = 97) and (tok_str[7] = 115) and
-            (tok_str[8] = 101) then
-    begin
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 119) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 114) And
+            (ToLower(tok_str[5]) = 99) And (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 115) And
+            (ToLower(tok_str[8]) = 101) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { If char is 'A'-'Z' (65-90), add 32 }
+      { If Char is 'A'-'Z' (65-90), add 32 }
       { cmp x0, #65; b.lt skip; cmp x0, #90; b.gt skip; add x0, x0, #32; skip: }
-      writeln('    cmp x0, #65');
-      write('    b.lt L'); writeln(label_count);
-      writeln('    cmp x0, #90');
-      write('    b.gt L'); writeln(label_count);
-      writeln('    add x0, x0, #32');
+      WriteLn('    cmp x0, #65');
+      Write('    b.lt L'); WriteLn(label_count);
+      WriteLn('    cmp x0, #90');
+      Write('    b.gt L'); WriteLn(label_count);
+      WriteLn('    add x0, x0, #32');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_CHAR
-    end
-    { length = 108,101,110,103,116,104 }
-    else if (tok_len = 6) and (tok_str[0] = 108) and (tok_str[1] = 101) and
-            (tok_str[2] = 110) and (tok_str[3] = 103) and (tok_str[4] = 116) and
-            (tok_str[5] = 104) then
-    begin
+    End
+    { Length = 108,101,110,103,116,104 }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 103) And (ToLower(tok_str[4]) = 116) And
+            (ToLower(tok_str[5]) = 104) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type = TOK_STRING then
-      begin
-        { String literal - emit constant length }
+      If tok_type = TOK_STRING Then
+      Begin
+        { String literal - emit constant Length }
         EmitMovX0(tok_len);
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Must be a string variable }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Must be a String variable }
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
-        { Load string address }
+        { Load String address }
         EmitVarAddr(idx, scope_level);
-        { Load length byte from [x0] }
-        writeln('    ldrb w0, [x0]');
-      end
-      else
+        { Load Length byte from [x0] }
+        WriteLn('    ldrb w0, [x0]');
+      End
+      Else
         Error(9);
       Expect(TOK_RPAREN);
       expr_type := TYPE_INTEGER
-    end
+    End
     { eof = 101,111,102 }
-    else if (tok_len = 3) and (tok_str[0] = 101) and (tok_str[1] = 111) and
-            (tok_str[2] = 102) then
-    begin
-      { eof(f) - check if at end of file }
-      { Uses lseek to compare current position with file size }
+    Else If (tok_len = 3) And (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 102) Then
+    Begin
+      { eof(f) - check If at End Of file }
+      { Uses lseek To compare current position With file size }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Get file fd and save for later }
+      { Get file fd And save For later }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      writeln('    ldr x0, [x0]');
-      { Save fd to x23 (callee-saved) }
-      writeln('    mov x23, x0');
-      { lseek(fd, 0, SEEK_CUR=1) to get current position }
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #1');
+      WriteLn('    ldr x0, [x0]');
+      { Save fd To x23 (callee-saved) }
+      WriteLn('    mov x23, x0');
+      { lseek(fd, 0, SEEK_CUR=1) To get current position }
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { x0 = current position, save to x24 }
-      writeln('    mov x24, x0');
-      { lseek(fd, 0, SEEK_END=2) to get file size }
-      writeln('    mov x0, x23');
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #2');
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      { x0 = current position, save To x24 }
+      WriteLn('    mov x24, x0');
+      { lseek(fd, 0, SEEK_END=2) To get file size }
+      WriteLn('    mov x0, x23');
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #2');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = file size, x24 = current position }
       { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
-      writeln('    mov x25, x0');
-      writeln('    mov x0, x23');
-      writeln('    mov x1, x24');
-      writeln('    mov x2, #0');
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    mov x25, x0');
+      WriteLn('    mov x0, x23');
+      WriteLn('    mov x1, x24');
+      WriteLn('    mov x2, #0');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Compare: x24 = current_pos, x25 = file_size }
       { cmp x24, x25 }
-      writeln('    cmp x24, x25');
-      { cset x0, ge - x0 = 1 if current_pos >= file_size }
-      writeln('    cset x0, ge');
+      WriteLn('    cmp x24, x25');
+      { cset x0, ge - x0 = 1 If current_pos >= file_size }
+      WriteLn('    cset x0, ge');
       expr_type := TYPE_BOOLEAN
-    end
+    End
     { filepos = 102,105,108,101,112,111,115 }
-    else if (tok_len = 7) and (tok_str[0] = 102) and (tok_str[1] = 105) and
-            (tok_str[2] = 108) and (tok_str[3] = 101) and (tok_str[4] = 112) and
-            (tok_str[5] = 111) and (tok_str[6] = 115) then
-    begin
-      { filepos(f) - get current position in file }
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 112) And
+            (ToLower(tok_str[5]) = 111) And (ToLower(tok_str[6]) = 115) Then
+    Begin
+      { filepos(f) - get current position In file }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
       { Get file fd }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      writeln('    ldr x0, [x0]');
-      { lseek(fd, 0, SEEK_CUR=1) to get current position }
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #1');
+      WriteLn('    ldr x0, [x0]');
+      { lseek(fd, 0, SEEK_CUR=1) To get current position }
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = current position }
       expr_type := TYPE_INTEGER
-    end
+    End
     { filesize = 102,105,108,101,115,105,122,101 }
-    else if (tok_len = 8) and (tok_str[0] = 102) and (tok_str[1] = 105) and
-            (tok_str[2] = 108) and (tok_str[3] = 101) and (tok_str[4] = 115) and
-            (tok_str[5] = 105) and (tok_str[6] = 122) and (tok_str[7] = 101) then
-    begin
+    Else If (tok_len = 8) And (ToLower(tok_str[0]) = 102) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 115) And
+            (ToLower(tok_str[5]) = 105) And (ToLower(tok_str[6]) = 122) And (ToLower(tok_str[7]) = 101) Then
+    Begin
       { filesize(f) - get file size }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Get file fd and save for later }
+      { Get file fd And save For later }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      writeln('    ldr x0, [x0]');
-      { Save fd to x23 }
-      writeln('    mov x23, x0');
-      { lseek(fd, 0, SEEK_CUR=1) to get current position (to restore later) }
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #1');
+      WriteLn('    ldr x0, [x0]');
+      { Save fd To x23 }
+      WriteLn('    mov x23, x0');
+      { lseek(fd, 0, SEEK_CUR=1) To get current position (To restore later) }
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { x0 = current position, save to x24 }
-      writeln('    mov x24, x0');
-      { lseek(fd, 0, SEEK_END=2) to get file size }
-      writeln('    mov x0, x23');
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #2');
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      { x0 = current position, save To x24 }
+      WriteLn('    mov x24, x0');
+      { lseek(fd, 0, SEEK_END=2) To get file size }
+      WriteLn('    mov x0, x23');
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #2');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { x0 = file size, save to x25 }
-      writeln('    mov x25, x0');
+      { x0 = file size, save To x25 }
+      WriteLn('    mov x25, x0');
       { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
-      writeln('    mov x0, x23');
-      writeln('    mov x1, x24');
-      writeln('    mov x2, #0');
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    mov x0, x23');
+      WriteLn('    mov x1, x24');
+      WriteLn('    mov x2, #0');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { Move file size to x0 as return value }
-      writeln('    mov x0, x25');
+      { Move file size To x0 as return value }
+      WriteLn('    mov x0, x25');
       expr_type := TYPE_INTEGER
-    end
+    End
     { copy = 99,111,112,121 }
-    else if (tok_len = 4) and (tok_str[0] = 99) and (tok_str[1] = 111) and
-            (tok_str[2] = 112) and (tok_str[3] = 121) then
-    begin
+    Else If (tok_len = 4) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 112) And (ToLower(tok_str[3]) = 121) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      { First arg: source string }
-      if tok_type = TOK_IDENT then
-      begin
+      { First arg: source String }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
-        EmitVarAddr(idx, scope_level);  { source addr in x0 }
+        EmitVarAddr(idx, scope_level);  { source addr In x0 }
         EmitPushX0
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_COMMA);
       { Second arg: start index }
@@ -6623,578 +6623,578 @@ begin
       EmitPushX0;
       Expect(TOK_COMMA);
       { Third arg: count }
-      ParseExpression;  { count in x0 }
+      ParseExpression;  { count In x0 }
       { x0 = count, x1 = start, x2 = source addr }
-      writeln('    mov x3, x0');
+      WriteLn('    mov x3, x0');
       EmitPopX1;  { start }
       EmitPopX0;  { source addr -> x2 }
-      writeln('    mov x2, x0');
-      { Allocate temp string from heap: x0 = x21, x21 += 256 }
-      writeln('    mov x0, x21');
-      writeln('    add x21, x21, #256');
+      WriteLn('    mov x2, x0');
+      { Allocate temp String from heap: x0 = x21, x21 += 256 }
+      WriteLn('    mov x0, x21');
+      WriteLn('    add x21, x21, #256');
       { Save dest addr }
       EmitPushX0;
-      { Inline copy logic: copy from source[start] to dest, count bytes }
+      { Inline copy logic: copy from source[start] To dest, count bytes }
       { x0 = dest, x1 = start, x2 = source, x3 = count }
-      { Store count as length at dest[0] }
-      writeln('    strb w3, [x0]');
-      { Loop: copy count bytes from source[start+i] to dest[1+i] }
+      { Store count as Length at dest[0] }
+      WriteLn('    strb w3, [x0]');
+      { Loop: copy count bytes from source[start+i] To dest[1+i] }
       lbl1 := NewLabel;
-      writeln('    mov x4, #0');
+      WriteLn('    mov x4, #0');
       EmitLabel(lbl1);
       { cmp x4, x3 }
-      writeln('    cmp x4, x3');
+      WriteLn('    cmp x4, x3');
       { b.ge done }
-      write('    b.ge L'); writeln(label_count);
+      Write('    b.ge L'); WriteLn(label_count);
       { x5 = start + x4 (source index) }
-      writeln('    add x5, x1, x4');
+      WriteLn('    add x5, x1, x4');
       { ldrb w6, [x2, x5] }
-      writeln('    ldrb w6, [x2, x5]');
+      WriteLn('    ldrb w6, [x2, x5]');
       { x5 = x4 + 1 (dest index) }
-      writeln('    add x5, x4, #1');
+      WriteLn('    add x5, x4, #1');
       { strb w6, [x0, x5] }
-      writeln('    strb w6, [x0, x5]');
+      WriteLn('    strb w6, [x0, x5]');
       { x4 = x4 + 1 }
-      writeln('    add x4, x4, #1');
+      WriteLn('    add x4, x4, #1');
       EmitBranchLabel(lbl1);
       EmitLabel(label_count);
       label_count := label_count + 1;
-      { Restore dest addr to x0 }
+      { Restore dest addr To x0 }
       EmitPopX0;
       Expect(TOK_RPAREN);
       expr_type := TYPE_STRING
-    end
+    End
     { concat = 99,111,110,99,97,116 }
-    else if (tok_len = 6) and (tok_str[0] = 99) and (tok_str[1] = 111) and
-            (tok_str[2] = 110) and (tok_str[3] = 99) and (tok_str[4] = 97) and
-            (tok_str[5] = 116) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 99) And (ToLower(tok_str[4]) = 97) And
+            (ToLower(tok_str[5]) = 116) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      { First string }
-      if tok_type = TOK_IDENT then
-      begin
+      { First String }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
-        EmitVarAddr(idx, scope_level);  { string1 addr in x0 }
+        EmitVarAddr(idx, scope_level);  { string1 addr In x0 }
         EmitPushX0
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_COMMA);
-      { Second string }
-      if tok_type = TOK_IDENT then
-      begin
+      { Second String }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
-        EmitVarAddr(idx, scope_level);  { string2 addr in x0 }
+        EmitVarAddr(idx, scope_level);  { string2 addr In x0 }
         { x0 = string2, stack top = string1 }
-        writeln('    mov x2, x0');
+        WriteLn('    mov x2, x0');
         EmitPopX1;  { string1 }
-      end
-      else
+      End
+      Else
         Error(9);
-      { Allocate temp string from heap: x0 = x21, x21 += 256 }
-      writeln('    mov x0, x21');
-      writeln('    add x21, x21, #256');
+      { Allocate temp String from heap: x0 = x21, x21 += 256 }
+      WriteLn('    mov x0, x21');
+      WriteLn('    add x21, x21, #256');
       { Call rt_str_concat(x0=dest, x1=str1, x2=str2) }
       EmitBL(rt_str_concat);
       Expect(TOK_RPAREN);
       expr_type := TYPE_STRING
-    end
+    End
     { trim = 116,114,105,109 }
-    else if (tok_len = 4) and (tok_str[0] = 116) and (tok_str[1] = 114) and
-            (tok_str[2] = 105) and (tok_str[3] = 109) then
-    begin
+    Else If (tok_len = 4) And (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 109) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type = TOK_IDENT then
-      begin
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level)
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RPAREN);
       EmitBL(rt_str_trim);
       expr_type := TYPE_STRING
-    end
+    End
     { ltrim = 108,116,114,105,109 }
-    else if (tok_len = 5) and (tok_str[0] = 108) and (tok_str[1] = 116) and
-            (tok_str[2] = 114) and (tok_str[3] = 105) and (tok_str[4] = 109) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 108) And (ToLower(tok_str[1]) = 116) And
+            (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 109) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type = TOK_IDENT then
-      begin
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level)
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RPAREN);
       EmitBL(rt_str_ltrim);
       expr_type := TYPE_STRING
-    end
+    End
     { rtrim = 114,116,114,105,109 }
-    else if (tok_len = 5) and (tok_str[0] = 114) and (tok_str[1] = 116) and
-            (tok_str[2] = 114) and (tok_str[3] = 105) and (tok_str[4] = 109) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 116) And
+            (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 109) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type = TOK_IDENT then
-      begin
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level)
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RPAREN);
       EmitBL(rt_str_rtrim);
       expr_type := TYPE_STRING
-    end
+    End
     { pos = 112,111,115 }
-    else if (tok_len = 3) and (tok_str[0] = 112) and (tok_str[1] = 111) and
-            (tok_str[2] = 115) then
-    begin
+    Else If (tok_len = 3) And (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 115) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       { First arg: substring }
-      if tok_type = TOK_IDENT then
-      begin
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level);
         EmitPushX0
-      end
-      else if tok_type = TOK_STRING then
-      begin
+      End
+      Else If tok_type = TOK_STRING Then
+      Begin
         { String literal - allocate temp on heap }
-        writeln('    mov x8, x21');
+        WriteLn('    mov x8, x21');
         EmitMovX0(tok_len);
-        writeln('    strb w0, [x8]');
-        for i := 0 to tok_len - 1 do
-        begin
+        WriteLn('    strb w0, [x8]');
+        For i := 0 To tok_len - 1 Do
+        Begin
           EmitMovX0(tok_str[i]);
-          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
-        end;
-        writeln('    mov x0, x21');
-        writeln('    add x21, x21, #256');
+          Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
+        End;
+        WriteLn('    mov x0, x21');
+        WriteLn('    add x21, x21, #256');
         EmitPushX0;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_COMMA);
-      { Second arg: string to search in }
-      if tok_type = TOK_IDENT then
-      begin
+      { Second arg: String To search In }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
-        EmitVarAddr(idx, scope_level);  { string addr in x0 }
+        EmitVarAddr(idx, scope_level);  { String addr In x0 }
         { mov x1, x0; pop x0 }
-        writeln('    mov x1, x0');
-        EmitPopX0  { substr in x0 }
-      end
-      else
+        WriteLn('    mov x1, x0');
+        EmitPopX0  { substr In x0 }
+      End
+      Else
         Error(9);
-      { Call rt_str_pos(x0=substr, x1=string) }
+      { Call rt_str_pos(x0=substr, x1=String) }
       EmitBL(rt_str_pos);
       Expect(TOK_RPAREN);
       expr_type := TYPE_INTEGER
-    end
+    End
     { paramcount = 112,97,114,97,109,99,111,117,110,116 }
-    else if (tok_len = 10) and (tok_str[0] = 112) and (tok_str[1] = 97) and
-            (tok_str[2] = 114) and (tok_str[3] = 97) and (tok_str[4] = 109) and
-            (tok_str[5] = 99) and (tok_str[6] = 111) and (tok_str[7] = 117) and
-            (tok_str[8] = 110) and (tok_str[9] = 116) then
-    begin
-      { paramcount - returns argc - 1 (number of command-line parameters) }
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 97) And
+            (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 97) And (ToLower(tok_str[4]) = 109) And
+            (ToLower(tok_str[5]) = 99) And (ToLower(tok_str[6]) = 111) And (ToLower(tok_str[7]) = 117) And
+            (ToLower(tok_str[8]) = 110) And (ToLower(tok_str[9]) = 116) Then
+    Begin
+      { paramcount - returns argc - 1 (number Of command-line parameters) }
       NextToken;
       { x25 holds argc, return argc - 1 }
-      writeln('    sub x0, x25, #1');
+      WriteLn('    sub x0, x25, #1');
       expr_type := TYPE_INTEGER
-    end
+    End
     { paramstr = 112,97,114,97,109,115,116,114 }
-    else if (tok_len = 8) and (tok_str[0] = 112) and (tok_str[1] = 97) and
-            (tok_str[2] = 114) and (tok_str[3] = 97) and (tok_str[4] = 109) and
-            (tok_str[5] = 115) and (tok_str[6] = 116) and (tok_str[7] = 114) then
-    begin
-      { paramstr(n) - returns argv[n] as Pascal string }
+    Else If (tok_len = 8) And (ToLower(tok_str[0]) = 112) And (ToLower(tok_str[1]) = 97) And
+            (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 97) And (ToLower(tok_str[4]) = 109) And
+            (ToLower(tok_str[5]) = 115) And (ToLower(tok_str[6]) = 116) And (ToLower(tok_str[7]) = 114) Then
+    Begin
+      { paramstr(n) - returns argv[n] as Pascal String }
       NextToken;
       Expect(TOK_LPAREN);
-      ParseExpression;  { n in x0 }
+      ParseExpression;  { n In x0 }
       Expect(TOK_RPAREN);
       EmitBL(rt_paramstr);
       expr_type := TYPE_STRING
-    end
-    else
-    begin
-      { Check for WITH context - try to find identifier as a field }
-      if with_rec_idx >= 0 then
-      begin
-        arg_count := FindField(with_rec_type);  { reuse arg_count for field_idx }
-        if arg_count >= 0 then
-        begin
+    End
+    Else
+    Begin
+      { Check For With context - try To find identifier as a field }
+      If with_rec_idx >= 0 Then
+      Begin
+        arg_count := FindField(with_rec_type);  { reuse arg_count For field_idx }
+        If arg_count >= 0 Then
+        Begin
           { Found field - generate access code }
           NextToken;
           { Compute address: base + field_offset }
-          if sym_level[with_rec_idx] < scope_level then
-          begin
+          If sym_level[with_rec_idx] < scope_level Then
+          Begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
             { add x0, x8, #sym_offset + field_offset }
-            writeln('    add x0, x8, #');
-          end
-          else
-          begin
+            WriteLn('    add x0, x8, #');
+          End
+          Else
+          Begin
             { add x0, x29, #sym_offset + field_offset }
-            writeln('    add x0, x29, #');
-          end;
+            WriteLn('    add x0, x29, #');
+          End;
           { Load from computed address }
-          if field_type[arg_count] = TYPE_REAL then
-          begin
-            writeln('    ldr d0, [x0]');
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            WriteLn('    ldr d0, [x0]');
             expr_type := TYPE_REAL
-          end
-          else
-          begin
-            writeln('    ldr x0, [x0]');
+          End
+          Else
+          Begin
+            WriteLn('    ldr x0, [x0]');
             expr_type := field_type[arg_count]
-          end
-        end
-        else
-        begin
-          { Field not found, proceed with normal lookup }
+          End
+        End
+        Else
+        Begin
+          { Field Not found, proceed With normal lookup }
           idx := SymLookup;
-          if idx < 0 then
+          If idx < 0 Then
             Error(3);  { undefined identifier }
-          { Continue with the normal identifier handling below }
-        end
-      end
-      else
-      begin
+          { Continue With the normal identifier handling below }
+        End
+      End
+      Else
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);  { undefined identifier }
-      end;
-      { Skip if we already handled WITH field }
-      if (with_rec_idx < 0) or (arg_count < 0) then
-      begin
+      End;
+      { Skip If we already handled With field }
+      If (with_rec_idx < 0) Or (arg_count < 0) Then
+      Begin
       NextToken;
-      if sym_kind[idx] = SYM_CONST then
-      begin
+      If sym_kind[idx] = SYM_CONST Then
+      Begin
         EmitMovX0(sym_const_val[idx]);
         expr_type := TYPE_INTEGER
-      end
-      else if (sym_kind[idx] = SYM_VAR) or (sym_kind[idx] = SYM_PARAM) then
-      begin
-        if (sym_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-        begin
-          { Array element access: arr[index] or arr[index].field }
+      End
+      Else If (sym_kind[idx] = SYM_VAR) Or (sym_kind[idx] = SYM_PARAM) Then
+      Begin
+        If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+        Begin
+          { Array element access: arr[index] Or arr[index].field }
           NextToken;  { consume '[' }
-          ParseExpression;  { index in x0 }
+          ParseExpression;  { index In x0 }
           Expect(TOK_RBRACKET);
           { Subtract low bound }
           EmitPushX0;
           EmitMovX0(sym_const_val[idx]);  { low bound }
           EmitPopX1;
           { x0 = x1 - x0 = index - low_bound }
-          writeln('    sub x0, x1, x0');
-          { Check if array of records }
-          if sym_var_param_flags[idx] > 0 then
-          begin
-            { Array of records - multiply by record size }
-            lbl1 := sym_label[sym_var_param_flags[idx] - 1];  { record size }
+          WriteLn('    sub x0, x1, x0');
+          { Check If Array Of records }
+          If sym_var_param_flags[idx] > 0 Then
+          Begin
+            { Array Of records - multiply by Record size }
+            lbl1 := sym_label[sym_var_param_flags[idx] - 1];  { Record size }
             EmitPushX0;
             EmitMovX0(lbl1);
             EmitPopX1;
             { mul x0, x1, x0 }
-            writeln('    mul x0, x1, x0');
-          end
-          else
-          begin
-            { Basic type - multiply by 8 using lsl #3 }
-            writeln('    lsl x0, x0, #3');
-          end;
+            WriteLn('    mul x0, x1, x0');
+          End
+          Else
+          Begin
+            { Basic Type - multiply by 8 using lsl #3 }
+            WriteLn('    lsl x0, x0, #3');
+          End;
           { Get base address: frame + offset (offset is negative) }
-          if sym_level[idx] < scope_level then
-          begin
+          If sym_level[idx] < scope_level Then
+          Begin
             EmitFollowChain(sym_level[idx], scope_level);
             EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
-          end
-          else
+          End
+          Else
             EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
           { Compute element address: x1 - x0 }
-          writeln('    sub x1, x1, x0');
-          { Check for field access on array of records }
-          if (sym_var_param_flags[idx] > 0) and (tok_type = TOK_DOT) then
-          begin
+          WriteLn('    sub x1, x1, x0');
+          { Check For field access on Array Of records }
+          If (sym_var_param_flags[idx] > 0) And (tok_type = TOK_DOT) Then
+          Begin
             NextToken;  { consume '.' }
             arg_count := FindField(sym_var_param_flags[idx] - 1);
-            if arg_count < 0 then
+            If arg_count < 0 Then
               Error(11);
             NextToken;  { consume field name }
             { Add field offset: x1 = x1 + offset }
-            if field_offset[arg_count] > 0 then
-            begin
-              writeln('    add x1, x1, #');
-            end;
+            If field_offset[arg_count] > 0 Then
+            Begin
+              WriteLn('    add x1, x1, #');
+            End;
             { Load field value }
-            if field_type[arg_count] = TYPE_REAL then
-            begin
-              writeln('    ldr d0, [x1]');
+            If field_type[arg_count] = TYPE_REAL Then
+            Begin
+              WriteLn('    ldr d0, [x1]');
               expr_type := TYPE_REAL
-            end
-            else
-            begin
-              writeln('    ldr x0, [x1]');
+            End
+            Else
+            Begin
+              WriteLn('    ldr x0, [x1]');
               expr_type := field_type[arg_count]
-            end
-          end
-          else
-          begin
+            End
+          End
+          Else
+          Begin
             { Load element value }
-            writeln('    ldr x0, [x1]');
-          end
-        end
-        else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
-        begin
-          { Record field access: rec.field or rec.field.subfield... }
+            WriteLn('    ldr x0, [x1]');
+          End
+        End
+        Else If (sym_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
+        Begin
+          { Record field access: rec.field Or rec.field.subfield... }
           NextToken;  { consume '.' }
-          if tok_type <> TOK_IDENT then
+          If tok_type <> TOK_IDENT Then
             Error(11);
-          { Find the field in the record type }
-          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count for field_idx }
-          if arg_count < 0 then
+          { Find the field In the Record Type }
+          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count For field_idx }
+          If arg_count < 0 Then
             Error(15);  { undefined field }
           { Compute address: base + field_offset }
-          { Base is at [x29 + sym_offset] for local, field at positive offset from there }
-          if sym_level[idx] < scope_level then
-          begin
+          { Base is at [x29 + sym_offset] For local, field at positive offset from there }
+          If sym_level[idx] < scope_level Then
+          Begin
             EmitFollowChain(sym_level[idx], scope_level);
             { add x0, x8, #sym_offset + field_offset }
-            writeln('    add x0, x8, #');
-          end
-          else
-          begin
+            WriteLn('    add x0, x8, #');
+          End
+          Else
+          Begin
             { add x0, x29, #sym_offset + field_offset }
-            writeln('    add x0, x29, #');
-          end;
+            WriteLn('    add x0, x29, #');
+          End;
           NextToken;
-          { Handle nested record fields: x0 has address, check for more dots }
-          while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
-          begin
+          { Handle nested Record fields: x0 has address, check For more dots }
+          While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
+          Begin
             NextToken;  { consume '.' }
-            if tok_type <> TOK_IDENT then
+            If tok_type <> TOK_IDENT Then
               Error(11);
-            { Find sub-field in the nested record type }
+            { Find sub-field In the nested Record Type }
             lbl1 := arg_count;  { save current field index }
             arg_count := FindField(field_rec_type[lbl1]);
-            if arg_count < 0 then
+            If arg_count < 0 Then
               Error(15);
-            { Add sub-field offset to x0 }
-            if field_offset[arg_count] > 0 then
-            begin
-              writeln('    add x0, x0, #');
-            end;
+            { Add sub-field offset To x0 }
+            If field_offset[arg_count] > 0 Then
+            Begin
+              WriteLn('    add x0, x0, #');
+            End;
             NextToken
-          end;
+          End;
           { Load from final computed address }
-          if field_type[arg_count] = TYPE_REAL then
-          begin
-            writeln('    ldr d0, [x0]');
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            WriteLn('    ldr d0, [x0]');
             expr_type := TYPE_REAL
-          end
-          else if field_type[arg_count] = TYPE_RECORD then
-          begin
-            { Accessing a nested record as a whole - keep address in x0 }
+          End
+          Else If field_type[arg_count] = TYPE_RECORD Then
+          Begin
+            { Accessing a nested Record as a whole - keep address In x0 }
             expr_type := TYPE_RECORD
-          end
-          else
-          begin
-            writeln('    ldr x0, [x0]');
+          End
+          Else
+          Begin
+            WriteLn('    ldr x0, [x0]');
             expr_type := field_type[arg_count]
-          end
-        end
-        else
-        begin
-          { Load variable value - check for var param and type }
-          if sym_type[idx] = TYPE_REAL then
-          begin
-            if sym_level[idx] < scope_level then
+          End
+        End
+        Else
+        Begin
+          { Load variable value - check For Var param And Type }
+          If sym_type[idx] = TYPE_REAL Then
+          Begin
+            If sym_level[idx] < scope_level Then
               EmitLdurD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitLdurD0(sym_offset[idx]);
-            { If var param, d0 contains address - dereference it }
-            if sym_is_var_param[idx] = 1 then
-            begin
+            { If Var param, d0 contains address - dereference it }
+            If sym_is_var_param[idx] = 1 Then
+            Begin
               { fmov x0, d0; ldr d0, [x0] }
               EmitFmovX0D0;
-              writeln('    ldr d0, [x0]');
-            end;
+              WriteLn('    ldr d0, [x0]');
+            End;
             expr_type := TYPE_REAL
-          end
-          else if sym_type[idx] = TYPE_STRING then
-          begin
+          End
+          Else If sym_type[idx] = TYPE_STRING Then
+          Begin
             { For strings, emit the address (strings are pass-by-reference) }
             EmitVarAddr(idx, scope_level);
             expr_type := TYPE_STRING;
-            { Check for string indexing s[i] }
-            if tok_type = TOK_LBRACKET then
-            begin
+            { Check For String indexing s[i] }
+            If tok_type = TOK_LBRACKET Then
+            Begin
               NextToken;  { consume '[' }
-              EmitPushX0;  { save string base address }
-              ParseExpression;  { index in x0 }
+              EmitPushX0;  { save String base address }
+              ParseExpression;  { index In x0 }
               Expect(TOK_RBRACKET);
               { x0 = index, stack has base address }
               EmitPopX1;  { x1 = base address }
-              { Add index to base: x0 = x1 + x0 }
-              writeln('    add x0, x1, x0');
+              { Add index To base: x0 = x1 + x0 }
+              WriteLn('    add x0, x1, x0');
               { Load byte at [x0]: ldrb w0, [x0] }
-              writeln('    ldrb w0, [x0]');
+              WriteLn('    ldrb w0, [x0]');
               expr_type := TYPE_CHAR
-            end
-          end
-          else
-          begin
-            if sym_level[idx] < scope_level then
+            End
+          End
+          Else
+          Begin
+            If sym_level[idx] < scope_level Then
               EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitLdurX0(sym_offset[idx]);
-            { If var param, x0 now contains address - dereference it }
-            if sym_is_var_param[idx] = 1 then
-            begin
-              writeln('    ldr x0, [x0]');
-            end;
+            { If Var param, x0 now contains address - dereference it }
+            If sym_is_var_param[idx] = 1 Then
+            Begin
+              WriteLn('    ldr x0, [x0]');
+            End;
             expr_type := sym_type[idx]
-          end
-        end;
-        { Track pointer base type if this is a pointer }
-        if sym_type[idx] = TYPE_POINTER then
+          End
+        End;
+        { Track pointer base Type If this is a pointer }
+        If sym_type[idx] = TYPE_POINTER Then
           ptr_base_type := sym_const_val[idx];
-        { Check for pointer dereference }
-        if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
-        begin
+        { Check For pointer dereference }
+        If (sym_type[idx] = TYPE_POINTER) And (tok_type = TOK_CARET) Then
+        Begin
           { Count consecutive ^ tokens }
           lbl1 := 0;  { deref count }
-          while tok_type = TOK_CARET do
-          begin
+          While tok_type = TOK_CARET Do
+          Begin
             lbl1 := lbl1 + 1;
             NextToken
-          end;
+          End;
           { lbl2 = remaining depth after derefs }
           lbl2 := ptr_depth[idx] - lbl1;
           { Emit dereference operations }
-          { For pointer-to-array, don't emit final deref - array base is the pointer value }
-          { For pointer-to-record with field access, don't emit final deref - record base is the pointer value }
-          if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_ARRAY) then
+          { For pointer-To-Array, don't emit final deref - Array base is the pointer value }
+          { For pointer-To-Record With field access, don't emit final deref - Record base is the pointer value }
+          If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_ARRAY) Then
             arg_count := lbl1 - 1
-          else if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
+          Else If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
             arg_count := lbl1 - 1
-          else
+          Else
             arg_count := lbl1;
-          for i := 1 to arg_count do
-          begin
-            writeln('    ldr x0, [x0]');
-          end;
-          { Determine result type }
-          if lbl2 > 0 then
-          begin
+          For i := 1 To arg_count Do
+          Begin
+            WriteLn('    ldr x0, [x0]');
+          End;
+          { Determine result Type }
+          If lbl2 > 0 Then
+          Begin
             { Still have pointer levels remaining }
             expr_type := TYPE_POINTER;
             ptr_base_type := TYPE_POINTER
-          end
-          else if ptr_ultimate_type[idx] = TYPE_RECORD then
-          begin
-            { Reached record - check for field access }
-            if tok_type = TOK_DOT then
-            begin
+          End
+          Else If ptr_ultimate_type[idx] = TYPE_RECORD Then
+          Begin
+            { Reached Record - check For field access }
+            If tok_type = TOK_DOT Then
+            Begin
               NextToken;  { consume '.' }
-              { Find field in the record type }
+              { Find field In the Record Type }
               arg_count := FindField(ptr_ultimate_rec[idx]);
-              if arg_count < 0 then
+              If arg_count < 0 Then
                 Error(11);  { unknown field }
               NextToken;  { consume field name }
-              { Add field offset to pointer: add x0, x0, #offset }
-              if field_offset[arg_count] > 0 then
-              begin
-                writeln('    add x0, x0, #');
-              end;
-              { Handle nested record fields }
-              while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
-              begin
+              { Add field offset To pointer: add x0, x0, #offset }
+              If field_offset[arg_count] > 0 Then
+              Begin
+                WriteLn('    add x0, x0, #');
+              End;
+              { Handle nested Record fields }
+              While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
+              Begin
                 NextToken;  { consume '.' }
-                if tok_type <> TOK_IDENT then
+                If tok_type <> TOK_IDENT Then
                   Error(11);
                 var_arg_idx := arg_count;  { save current field index }
                 arg_count := FindField(field_rec_type[var_arg_idx]);
-                if arg_count < 0 then
+                If arg_count < 0 Then
                   Error(15);
-                if field_offset[arg_count] > 0 then
-                begin
-                  writeln('    add x0, x0, #');
-                end;
+                If field_offset[arg_count] > 0 Then
+                Begin
+                  WriteLn('    add x0, x0, #');
+                End;
                 NextToken
-              end;
+              End;
               { Load field value }
-              if field_type[arg_count] = TYPE_REAL then
-              begin
-                writeln('    ldr d0, [x0]');
+              If field_type[arg_count] = TYPE_REAL Then
+              Begin
+                WriteLn('    ldr d0, [x0]');
                 expr_type := TYPE_REAL
-              end
-              else if field_type[arg_count] = TYPE_RECORD then
+              End
+              Else If field_type[arg_count] = TYPE_RECORD Then
                 expr_type := TYPE_RECORD
-              else
-              begin
-                writeln('    ldr x0, [x0]');
+              Else
+              Begin
+                WriteLn('    ldr x0, [x0]');
                 expr_type := field_type[arg_count]
-              end
-            end
-            else
-            begin
-              { Just p^ without field access - address in x0 }
+              End
+            End
+            Else
+            Begin
+              { Just p^ without field access - address In x0 }
               expr_type := TYPE_RECORD
-            end
-          end
-          else if ptr_ultimate_type[idx] = TYPE_ARRAY then
-          begin
-            { Pointer to array - check for indexing pa^[i] }
-            if tok_type = TOK_LBRACKET then
-            begin
+            End
+          End
+          Else If ptr_ultimate_type[idx] = TYPE_ARRAY Then
+          Begin
+            { Pointer To Array - check For indexing pa^[i] }
+            If tok_type = TOK_LBRACKET Then
+            Begin
               NextToken;  { consume '[' }
-              EmitPushX0;  { save array base address }
-              ParseExpression;  { index in x0 }
+              EmitPushX0;  { save Array base address }
+              ParseExpression;  { index In x0 }
               Expect(TOK_RBRACKET);
               { x0 = index, stack has base address }
               { Subtract low bound }
@@ -7203,239 +7203,239 @@ begin
               EmitMovX0(ptr_arr_lo[arg_count]);
               EmitPopX1;
               { x0 = x1 - x0 = index - low_bound }
-              writeln('    sub x0, x1, x0');
+              WriteLn('    sub x0, x1, x0');
               { Multiply by 8 using lsl #3 }
-              writeln('    lsl x0, x0, #3');
-              { Add to base: x1 = base + offset }
+              WriteLn('    lsl x0, x0, #3');
+              { Add To base: x1 = base + offset }
               EmitPopX1;  { x1 = base address }
-              writeln('    add x0, x1, x0');
+              WriteLn('    add x0, x1, x0');
               { Load element value }
-              if ptr_arr_elem[arg_count] = TYPE_REAL then
-              begin
-                writeln('    ldr d0, [x0]');
+              If ptr_arr_elem[arg_count] = TYPE_REAL Then
+              Begin
+                WriteLn('    ldr d0, [x0]');
                 expr_type := TYPE_REAL
-              end
-              else
-              begin
-                writeln('    ldr x0, [x0]');
+              End
+              Else
+              Begin
+                WriteLn('    ldr x0, [x0]');
                 expr_type := ptr_arr_elem[arg_count]
-              end
-            end
-            else
+              End
+            End
+            Else
               expr_type := TYPE_ARRAY  { Just pa^ without indexing }
-          end
-          else if ptr_ultimate_type[idx] = TYPE_REAL then
-          begin
+          End
+          Else If ptr_ultimate_type[idx] = TYPE_REAL Then
+          Begin
             expr_type := TYPE_REAL
-          end
-          else
-          begin
+          End
+          Else
+          Begin
             expr_type := ptr_ultimate_type[idx]
-          end
-        end
-      end
-      else if sym_kind[idx] = SYM_FUNCTION then
-      begin
-        { Function call - pass args in x0-x7 }
+          End
+        End
+      End
+      Else If sym_kind[idx] = SYM_FUNCTION Then
+      Begin
+        { Function call - pass args In x0-x7 }
         arg_count := 0;
         var_flags := sym_var_param_flags[idx];
-        if tok_type = TOK_LPAREN then
-        begin
+        If tok_type = TOK_LPAREN Then
+        Begin
           NextToken;
-          if tok_type <> TOK_RPAREN then
-          begin
-            { Evaluate all args and push to stack }
-            repeat
-              if tok_type = TOK_COMMA then NextToken;
-              { Check if this is a var parameter }
-              if IsVarParam(var_flags, arg_count) = 1 then
-              begin
-                { Var param - pass address of variable }
-                if tok_type <> TOK_IDENT then
-                  Error(6);  { var param requires variable }
+          If tok_type <> TOK_RPAREN Then
+          Begin
+            { Evaluate all args And push To stack }
+            Repeat
+              If tok_type = TOK_COMMA Then NextToken;
+              { Check If this is a Var parameter }
+              If IsVarParam(var_flags, arg_count) = 1 Then
+              Begin
+                { Var param - pass address Of variable }
+                If tok_type <> TOK_IDENT Then
+                  Error(6);  { Var param requires variable }
                 var_arg_idx := SymLookup;
-                if var_arg_idx < 0 then
+                If var_arg_idx < 0 Then
                   Error(3);
                 NextToken;
-                { Check for array element - pass address of element }
-                if (sym_type[var_arg_idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-                begin
+                { Check For Array element - pass address Of element }
+                If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+                Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index in x0 }
+                  ParseExpression;  { index In x0 }
                   Expect(TOK_RBRACKET);
                   { Compute element address }
                   EmitPushX0;
                   EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
                   EmitPopX1;
                   { x0 = x1 - x0 = index - low_bound }
-                  writeln('    sub x0, x1, x0');
+                  WriteLn('    sub x0, x1, x0');
                   { Multiply by 8 using lsl #3 }
-                  writeln('    lsl x0, x0, #3');
-                  { Get base address and subtract element offset }
-                  if sym_level[var_arg_idx] < scope_level then
-                  begin
+                  WriteLn('    lsl x0, x0, #3');
+                  { Get base address And subtract element offset }
+                  If sym_level[var_arg_idx] < scope_level Then
+                  Begin
                     EmitFollowChain(sym_level[var_arg_idx], scope_level);
                     EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
-                  end
-                  else
+                  End
+                  Else
                     EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
                   { Address = base - element_offset }
-                  writeln('    sub x0, x1, x0');
-                end
-                else
+                  WriteLn('    sub x0, x1, x0');
+                End
+                Else
                   { Simple variable - emit address }
                   EmitVarAddr(var_arg_idx, scope_level)
-              end
-              else
-              begin
+              End
+              Else
+              Begin
                 { Value param - evaluate expression }
                 ParseExpression
-              end;
+              End;
               EmitPushX0;
               arg_count := arg_count + 1
-            until tok_type <> TOK_COMMA
-          end;
+            Until tok_type <> TOK_COMMA
+          End;
           Expect(TOK_RPAREN)
-        end;
-        { Pop args from stack into registers in reverse order }
-        for i := arg_count - 1 downto 0 do
-        begin
-          write('    ldr x'); write(i); writeln(', [sp], #16');
-        end;
-        { Set up static link for callee }
+        End;
+        { Pop args from stack into registers In reverse order }
+        For i := arg_count - 1 DownTo 0 Do
+        Begin
+          Write('    ldr x'); Write(i); WriteLn(', [sp], #16');
+        End;
+        { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check if calling imported unit procedure }
-        if sym_unit_idx[idx] >= 0 then
+        { Check If calling imported Unit Procedure }
+        If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
-        else
+        Else
           EmitBL(sym_label[idx]);
-        expr_type := sym_type[idx]  { function return type }
-      end
-      else
+        expr_type := sym_type[idx]  { Function return Type }
+      End
+      Else
         Error(4)
-      end  { end of if (with_rec_idx < 0) or (arg_count < 0) }
-    end  { end of else for non-builtin ident }
-  end  { end of else if tok_type = TOK_IDENT }
-  else
+      End  { End Of If (with_rec_idx < 0) Or (arg_count < 0) }
+    End  { End Of Else For non-builtin ident }
+  End  { End Of Else If tok_type = TOK_IDENT }
+  Else
     Error(5)
-end;
+End;
 
-procedure ParseUnary;
-begin
-  if tok_type = TOK_MINUS then
-  begin
+Procedure ParseUnary;
+Begin
+  If tok_type = TOK_MINUS Then
+  Begin
     NextToken;
     ParseFactor;
-    if expr_type = TYPE_REAL then
+    If expr_type = TYPE_REAL Then
       EmitFNeg
-    else
+    Else
       EmitNeg
-  end
-  else if tok_type = TOK_PLUS then
-  begin
+  End
+  Else If tok_type = TOK_PLUS Then
+  Begin
     NextToken;
     ParseFactor
-  end
-  else
+  End
+  Else
     ParseFactor
-end;
+End;
 
-procedure ParseTerm;
-var
-  op, left_type, and_skip_label, had_and: integer;
-begin
+Procedure ParseTerm;
+Var
+  op, left_type, and_skip_label, had_and: Integer;
+Begin
   ParseUnary;
   had_and := 0;
   and_skip_label := 0;
-  while (tok_type = TOK_STAR) or (tok_type = TOK_DIV) or (tok_type = TOK_MOD) or
-        (tok_type = TOK_AND) or (tok_type = TOK_SLASH) do
-  begin
+  While (tok_type = TOK_STAR) Or (tok_type = TOK_DIV) Or (tok_type = TOK_MOD) Or
+        (tok_type = TOK_AND) Or (tok_type = TOK_SLASH) Do
+  Begin
     op := tok_type;
     left_type := expr_type;
     NextToken;
 
-    if op = TOK_AND then
-    begin
-      { Short-circuit AND: if current value is 0, skip rest }
-      if had_and = 0 then
-      begin
+    If op = TOK_AND Then
+    Begin
+      { Short-circuit And: If current value is 0, skip rest }
+      If had_and = 0 Then
+      Begin
         and_skip_label := NewLabel;
         had_and := 1
-      end;
-      { cbz x0, .Lskip - branch if zero }
+      End;
+      { cbz x0, .Lskip - branch If zero }
       EmitBranchLabelZ(and_skip_label);
       ParseUnary;
       expr_type := TYPE_INTEGER
-    end
-    else
-    begin
+    End
+    Else
+    Begin
       { Regular operators - push left, eval right, pop, compute }
-      if left_type = TYPE_REAL then
+      If left_type = TYPE_REAL Then
         EmitPushD0
-      else
+      Else
         EmitPushX0;
       ParseUnary;
-      { right operand is now in x0 or d0 depending on expr_type }
+      { right operand is now In x0 Or d0 depending on expr_type }
 
-      if op = TOK_SLASH then
-      begin
-        { / always produces real - convert both operands to float }
-        if expr_type <> TYPE_REAL then
-          EmitScvtfD0X0;  { convert right to float }
-        if left_type = TYPE_REAL then
+      If op = TOK_SLASH Then
+      Begin
+        { / always produces Real - convert both operands To float }
+        If expr_type <> TYPE_REAL Then
+          EmitScvtfD0X0;  { convert right To float }
+        If left_type = TYPE_REAL Then
           EmitPopD1
-        else
-        begin
+        Else
+        Begin
           EmitPopX1;
-          EmitScvtfD1X1  { convert left to float }
-        end;
+          EmitScvtfD1X1  { convert left To float }
+        End;
         EmitFDiv;
         expr_type := TYPE_REAL
-      end
-      else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
-      begin
-        { Mixed or both real - use float ops }
-        if expr_type <> TYPE_REAL then
-          EmitScvtfD0X0;  { convert right to float }
-        if left_type = TYPE_REAL then
+      End
+      Else If (left_type = TYPE_REAL) Or (expr_type = TYPE_REAL) Then
+      Begin
+        { Mixed Or both Real - use float ops }
+        If expr_type <> TYPE_REAL Then
+          EmitScvtfD0X0;  { convert right To float }
+        If left_type = TYPE_REAL Then
           EmitPopD1
-        else
-        begin
+        Else
+        Begin
           EmitPopX1;
-          EmitScvtfD1X1  { convert left to float }
-        end;
-        if op = TOK_STAR then
+          EmitScvtfD1X1  { convert left To float }
+        End;
+        If op = TOK_STAR Then
           EmitFMul
-        else if op = TOK_DIV then
-        begin
-          { div on floats - truncate result to integer }
+        Else If op = TOK_DIV Then
+        Begin
+          { Div on floats - truncate result To Integer }
           EmitFDiv;
           EmitFcvtzsX0D0;
           expr_type := TYPE_INTEGER
-        end
-        else if op = TOK_MOD then
-          Error(13);  { mod not supported for reals }
-        if (op = TOK_STAR) then
+        End
+        Else If op = TOK_MOD Then
+          Error(13);  { Mod Not supported For reals }
+        If (op = TOK_STAR) Then
           expr_type := TYPE_REAL
-      end
-      else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
-      begin
-        { Set intersection: x0 = x1 AND x0 }
+      End
+      Else If (left_type = TYPE_SET) Or (expr_type = TYPE_SET) Then
+      Begin
+        { Set intersection: x0 = x1 And x0 }
         EmitPopX1;
-        writeln('    and x0, x1, x0');
+        WriteLn('    And x0, x1, x0');
         expr_type := TYPE_SET
-      end
-      else
-      begin
-        { Both integers - use integer ops }
+      End
+      Else
+      Begin
+        { Both integers - use Integer ops }
         EmitPopX1;
-        if op = TOK_STAR then
+        If op = TOK_STAR Then
           EmitMul
-        else if op = TOK_DIV then
+        Else If op = TOK_DIV Then
           EmitSDiv
-        else if op = TOK_MOD then
-        begin
-          { x1 mod x0: x1 - (x1 / x0) * x0 }
+        Else If op = TOK_MOD Then
+        Begin
+          { x1 Mod x0: x1 - (x1 / x0) * x0 }
           EmitPushX0;
           EmitPushX1;
           EmitSDiv;
@@ -7443,342 +7443,342 @@ begin
           EmitPopX1;
           EmitPopX0;
           EmitMsub
-        end;
+        End;
         expr_type := TYPE_INTEGER
-      end
-    end
-  end;
+      End
+    End
+  End;
 
-  { Emit skip label for short-circuit AND if we had any }
-  if had_and = 1 then
+  { Emit skip label For short-circuit And If we had any }
+  If had_and = 1 Then
     EmitLabel(and_skip_label)
-end;
+End;
 
-procedure ParseSimpleExpr;
-var
-  op, left_type, left_ptr_base, or_true_label, or_end_label, had_or: integer;
-begin
+Procedure ParseSimpleExpr;
+Var
+  op, left_type, left_ptr_base, or_true_label, or_end_label, had_or: Integer;
+Begin
   ParseTerm;
   had_or := 0;
   or_true_label := 0;
   or_end_label := 0;
-  while (tok_type = TOK_PLUS) or (tok_type = TOK_MINUS) or (tok_type = TOK_OR) do
-  begin
+  While (tok_type = TOK_PLUS) Or (tok_type = TOK_MINUS) Or (tok_type = TOK_OR) Do
+  Begin
     op := tok_type;
     left_type := expr_type;
     left_ptr_base := ptr_base_type;
     NextToken;
 
-    if op = TOK_OR then
-    begin
-      { Short-circuit OR: if current value is non-zero, skip rest with result 1 }
-      if had_or = 0 then
-      begin
+    If op = TOK_OR Then
+    Begin
+      { Short-circuit Or: If current value is non-zero, skip rest With result 1 }
+      If had_or = 0 Then
+      Begin
         or_true_label := NewLabel;
         or_end_label := NewLabel;
         had_or := 1
-      end;
-      { cbnz x0, .Ltrue - branch if not zero }
+      End;
+      { cbnz x0, .Ltrue - branch If Not zero }
       EmitBranchLabelNZ(or_true_label);
       ParseTerm;
       expr_type := TYPE_INTEGER
-    end
-    else
-    begin
+    End
+    Else
+    Begin
       { Regular operators (+, -) - push left, eval right, pop, compute }
-      if left_type = TYPE_REAL then
+      If left_type = TYPE_REAL Then
         EmitPushD0
-      else
+      Else
         EmitPushX0;
       ParseTerm;
 
-      if (left_type = TYPE_POINTER) and (op = TOK_PLUS) then
-    begin
-      { pointer + integer: scale integer by 8 and SUBTRACT (arrays grow downward) }
-      EmitPopX1;  { pointer in x1 }
-      { x0 has integer offset, multiply by 8 using lsl #3 }
-      writeln('    lsl x0, x0, #3');
+      If (left_type = TYPE_POINTER) And (op = TOK_PLUS) Then
+    Begin
+      { pointer + Integer: scale Integer by 8 And SUBTRACT (arrays grow downward) }
+      EmitPopX1;  { pointer In x1 }
+      { x0 has Integer offset, multiply by 8 using lsl #3 }
+      WriteLn('    lsl x0, x0, #3');
       EmitSub;  { x0 = x1 - x0 (subtract because arrays grow downward) }
       expr_type := TYPE_POINTER;
       ptr_base_type := left_ptr_base
-    end
-    else if (left_type = TYPE_POINTER) and (op = TOK_MINUS) then
-    begin
-      if expr_type = TYPE_POINTER then
-      begin
-        { pointer - pointer: returns integer count (negated for downward growth) }
-        EmitPopX1;  { left pointer in x1 }
+    End
+    Else If (left_type = TYPE_POINTER) And (op = TOK_MINUS) Then
+    Begin
+      If expr_type = TYPE_POINTER Then
+      Begin
+        { pointer - pointer: returns Integer count (negated For downward growth) }
+        EmitPopX1;  { left pointer In x1 }
         EmitSub;  { x0 = x1 - x0 }
-        { Negate and divide by 8 for correct count }
+        { Negate And divide by 8 For correct count }
         EmitNeg;  { x0 = -(x1 - x0) = x0 - x1 }
         { Divide by 8 (element size) using asr #3 }
-        writeln('    asr x0, x0, #3');
+        WriteLn('    asr x0, x0, #3');
         expr_type := TYPE_INTEGER
-      end
-      else
-      begin
-        { pointer - integer: scale integer by 8 and ADD (arrays grow downward) }
-        EmitPopX1;  { pointer in x1 }
-        { x0 has integer offset, multiply by 8 using lsl #3 }
-        writeln('    lsl x0, x0, #3');
+      End
+      Else
+      Begin
+        { pointer - Integer: scale Integer by 8 And ADD (arrays grow downward) }
+        EmitPopX1;  { pointer In x1 }
+        { x0 has Integer offset, multiply by 8 using lsl #3 }
+        WriteLn('    lsl x0, x0, #3');
         EmitAdd;  { x0 = x1 + x0 (add because arrays grow downward) }
         expr_type := TYPE_POINTER;
         ptr_base_type := left_ptr_base
-      end
-    end
-    else if (left_type = TYPE_STRING) and (expr_type = TYPE_STRING) and (op = TOK_PLUS) then
-    begin
+      End
+    End
+    Else If (left_type = TYPE_STRING) And (expr_type = TYPE_STRING) And (op = TOK_PLUS) Then
+    Begin
       { String concatenation: str1 + str2 }
       { x0 = string2 addr, stack top = string1 addr }
-      writeln('    mov x2, x0');
+      WriteLn('    mov x2, x0');
       EmitPopX1;  { string1 addr }
-      { Allocate temp string from heap }
-      writeln('    mov x0, x21');
-      writeln('    add x21, x21, #256');
+      { Allocate temp String from heap }
+      WriteLn('    mov x0, x21');
+      WriteLn('    add x21, x21, #256');
       { Call rt_str_concat(x0=dest, x1=str1, x2=str2) }
       EmitBL(rt_str_concat);
       expr_type := TYPE_STRING
-    end
-    else if (((left_type = TYPE_STRING) and (expr_type = TYPE_CHAR)) or
-             ((left_type = TYPE_CHAR) and (expr_type = TYPE_STRING))) and (op = TOK_PLUS) then
-    begin
-      { String + char or char + string concatenation }
-      { Need to convert char to a single-character string, then concatenate }
-      if left_type = TYPE_STRING then
-      begin
-        { string + char: x0 = char, stack top = string addr }
-        { Create single-char string from x0 on heap }
-        writeln('    mov x3, x0');
-        writeln('    mov x2, x21');
-        EmitMovX0(1);  { length = 1 }
-        writeln('    strb w0, [x2]');
-        writeln('    strb w3, [x2, #1]');
-        writeln('    add x21, x21, #256');
+    End
+    Else If (((left_type = TYPE_STRING) And (expr_type = TYPE_CHAR)) Or
+             ((left_type = TYPE_CHAR) And (expr_type = TYPE_STRING))) And (op = TOK_PLUS) Then
+    Begin
+      { String + Char Or Char + String concatenation }
+      { Need To convert Char To a single-character String, Then concatenate }
+      If left_type = TYPE_STRING Then
+      Begin
+        { String + Char: x0 = Char, stack top = String addr }
+        { Create single-Char String from x0 on heap }
+        WriteLn('    mov x3, x0');
+        WriteLn('    mov x2, x21');
+        EmitMovX0(1);  { Length = 1 }
+        WriteLn('    strb w0, [x2]');
+        WriteLn('    strb w3, [x2, #1]');
+        WriteLn('    add x21, x21, #256');
         EmitPopX1;  { string1 addr }
-        { x2 = char string, x1 = string1, allocate result on heap }
-        writeln('    mov x0, x21');
-        writeln('    add x21, x21, #256');
+        { x2 = Char String, x1 = string1, allocate result on heap }
+        WriteLn('    mov x0, x21');
+        WriteLn('    add x21, x21, #256');
         EmitBL(rt_str_concat)
-      end
-      else
-      begin
-        { char + string: x0 = string addr, stack top = char }
-        writeln('    mov x2, x0');
-        EmitPopX0;  { x0 = char }
-        { Create single-char string from x0 on heap }
-        writeln('    mov x1, x21');
-        writeln('    mov x3, x0');
-        EmitMovX0(1);  { length = 1 }
-        writeln('    strb w0, [x1]');
-        writeln('    strb w3, [x1, #1]');
-        writeln('    add x21, x21, #256');
-        { x1 = char string, x2 = string2, allocate result on heap }
-        writeln('    mov x0, x21');
-        writeln('    add x21, x21, #256');
+      End
+      Else
+      Begin
+        { Char + String: x0 = String addr, stack top = Char }
+        WriteLn('    mov x2, x0');
+        EmitPopX0;  { x0 = Char }
+        { Create single-Char String from x0 on heap }
+        WriteLn('    mov x1, x21');
+        WriteLn('    mov x3, x0');
+        EmitMovX0(1);  { Length = 1 }
+        WriteLn('    strb w0, [x1]');
+        WriteLn('    strb w3, [x1, #1]');
+        WriteLn('    add x21, x21, #256');
+        { x1 = Char String, x2 = string2, allocate result on heap }
+        WriteLn('    mov x0, x21');
+        WriteLn('    add x21, x21, #256');
         EmitBL(rt_str_concat)
-      end;
+      End;
       expr_type := TYPE_STRING
-    end
-    else if (left_type = TYPE_SET) or (expr_type = TYPE_SET) then
-    begin
+    End
+    Else If (left_type = TYPE_SET) Or (expr_type = TYPE_SET) Then
+    Begin
       { Set operations: + is union, - is difference }
-      EmitPopX1;  { left set in x1 }
-      if op = TOK_PLUS then
-      begin
-        { Union: x0 = x1 OR x0 }
-        writeln('    orr x0, x1, x0');
-      end
-      else if op = TOK_MINUS then
-      begin
-        { Difference: x0 = x1 AND NOT x0 }
-        { First: mvn x0, x0 (NOT x0) }
-        writeln('    mvn x0, x0');
-        { Then: and x0, x1, x0 }
-        writeln('    and x0, x1, x0');
-      end;
+      EmitPopX1;  { left Set In x1 }
+      If op = TOK_PLUS Then
+      Begin
+        { Union: x0 = x1 Or x0 }
+        WriteLn('    orr x0, x1, x0');
+      End
+      Else If op = TOK_MINUS Then
+      Begin
+        { Difference: x0 = x1 And Not x0 }
+        { First: mvn x0, x0 (Not x0) }
+        WriteLn('    mvn x0, x0');
+        { Then: And x0, x1, x0 }
+        WriteLn('    And x0, x1, x0');
+      End;
       expr_type := TYPE_SET
-    end
-    else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
-    begin
-      { Mixed or both real - use float ops }
-      if expr_type <> TYPE_REAL then
-        EmitScvtfD0X0;  { convert right to float }
-      if left_type = TYPE_REAL then
+    End
+    Else If (left_type = TYPE_REAL) Or (expr_type = TYPE_REAL) Then
+    Begin
+      { Mixed Or both Real - use float ops }
+      If expr_type <> TYPE_REAL Then
+        EmitScvtfD0X0;  { convert right To float }
+      If left_type = TYPE_REAL Then
         EmitPopD1
-      else
-      begin
+      Else
+      Begin
         EmitPopX1;
-        EmitScvtfD1X1  { convert left to float }
-      end;
-      if op = TOK_PLUS then
+        EmitScvtfD1X1  { convert left To float }
+      End;
+      If op = TOK_PLUS Then
         EmitFAdd
-      else if op = TOK_MINUS then
+      Else If op = TOK_MINUS Then
         EmitFSub
-      else { TOK_OR }
-        Error(13);  { or not supported for reals }
+      Else { TOK_OR }
+        Error(13);  { Or Not supported For reals }
       expr_type := TYPE_REAL
-    end
-    else
-    begin
-      { Both integers (only + and - reach here) }
+    End
+    Else
+    Begin
+      { Both integers (only + And - reach here) }
       EmitPopX1;
-      if op = TOK_PLUS then
+      If op = TOK_PLUS Then
         EmitAdd
-      else
+      Else
         EmitSub;
       expr_type := TYPE_INTEGER
-    end
-    end  { end of else for non-OR operators }
-  end;
+    End
+    End  { End Of Else For non-Or operators }
+  End;
 
-  { Emit labels for short-circuit OR if we had any }
-  if had_or = 1 then
-  begin
+  { Emit labels For short-circuit Or If we had any }
+  If had_or = 1 Then
+  Begin
     { b .Lend - skip the mov x0, #1 }
     EmitBranchLabel(or_end_label);
     EmitLabel(or_true_label);
     EmitMovX0(1);
     EmitLabel(or_end_label)
-  end
-end;
+  End
+End;
 
-procedure ParseExpression;
-var
-  op, cond, left_type: integer;
-begin
+Procedure ParseExpression;
+Var
+  op, cond, left_type: Integer;
+Begin
   ParseSimpleExpr;
-  if (tok_type = TOK_EQ) or (tok_type = TOK_NEQ) or (tok_type = TOK_LT) or
-     (tok_type = TOK_LE) or (tok_type = TOK_GT) or (tok_type = TOK_GE) then
-  begin
+  If (tok_type = TOK_EQ) Or (tok_type = TOK_NEQ) Or (tok_type = TOK_LT) Or
+     (tok_type = TOK_LE) Or (tok_type = TOK_GT) Or (tok_type = TOK_GE) Then
+  Begin
     op := tok_type;
     left_type := expr_type;
     NextToken;
     { Push left operand appropriately }
-    if left_type = TYPE_REAL then
+    If left_type = TYPE_REAL Then
       EmitPushD0
-    else
+    Else
       EmitPushX0;
     ParseSimpleExpr;
 
-    if (left_type = TYPE_STRING) and (expr_type = TYPE_STRING) then
-    begin
+    If (left_type = TYPE_STRING) And (expr_type = TYPE_STRING) Then
+    Begin
       { String comparison }
       { x0 = string2 addr, stack top = string1 addr }
-      writeln('    mov x1, x0');
-      EmitPopX0;  { string1 addr in x0 }
-      if (op = TOK_EQ) or (op = TOK_NEQ) then
-      begin
-        { Call rt_str_compare(x0=str1, x1=str2) - returns 1 if equal, 0 if not }
+      WriteLn('    mov x1, x0');
+      EmitPopX0;  { string1 addr In x0 }
+      If (op = TOK_EQ) Or (op = TOK_NEQ) Then
+      Begin
+        { Call rt_str_compare(x0=str1, x1=str2) - returns 1 If equal, 0 If Not }
         EmitBL(rt_str_compare);
-        if op = TOK_NEQ then
+        If op = TOK_NEQ Then
           EmitEorX0(1)
-      end
-      else
-      begin
+      End
+      Else
+      Begin
         { Relational operators: call rt_str_cmp which returns -1/0/1 }
         EmitBL(rt_str_cmp);
-        { x0 = -1 if s1<s2, 0 if s1=s2, 1 if s1>s2 }
-        if op = TOK_LT then
-        begin
+        { x0 = -1 If s1<s2, 0 If s1=s2, 1 If s1>s2 }
+        If op = TOK_LT Then
+        Begin
           { cmp x0, #0; cset x0, lt }
-          writeln('    cmp x0, #0');
-          writeln('    cset x0, lt');
-        end
-        else if op = TOK_GT then
-        begin
+          WriteLn('    cmp x0, #0');
+          WriteLn('    cset x0, lt');
+        End
+        Else If op = TOK_GT Then
+        Begin
           { cmp x0, #0; cset x0, gt }
-          writeln('    cmp x0, #0');
-          writeln('    cset x0, gt');
-        end
-        else if op = TOK_LE then
-        begin
+          WriteLn('    cmp x0, #0');
+          WriteLn('    cset x0, gt');
+        End
+        Else If op = TOK_LE Then
+        Begin
           { cmp x0, #0; cset x0, le }
-          writeln('    cmp x0, #0');
-          writeln('    cset x0, le');
-        end
-        else if op = TOK_GE then
-        begin
+          WriteLn('    cmp x0, #0');
+          WriteLn('    cset x0, le');
+        End
+        Else If op = TOK_GE Then
+        Begin
           { cmp x0, #0; cset x0, ge }
-          writeln('    cmp x0, #0');
-          writeln('    cset x0, ge');
-        end
-      end;
+          WriteLn('    cmp x0, #0');
+          WriteLn('    cset x0, ge');
+        End
+      End;
       expr_type := TYPE_INTEGER
-    end
-    else if (left_type = TYPE_REAL) or (expr_type = TYPE_REAL) then
-    begin
+    End
+    Else If (left_type = TYPE_REAL) Or (expr_type = TYPE_REAL) Then
+    Begin
       { Float comparison }
-      if expr_type <> TYPE_REAL then
-        EmitScvtfD0X0;  { convert right to float }
-      if left_type = TYPE_REAL then
+      If expr_type <> TYPE_REAL Then
+        EmitScvtfD0X0;  { convert right To float }
+      If left_type = TYPE_REAL Then
         EmitPopD1
-      else
-      begin
+      Else
+      Begin
         EmitPopX1;
-        EmitScvtfD1X1  { convert left to float }
-      end;
+        EmitScvtfD1X1  { convert left To float }
+      End;
       EmitFCmp;
-      if op = TOK_EQ then cond := 0
-      else if op = TOK_NEQ then cond := 1
-      else if op = TOK_LT then cond := 2
-      else if op = TOK_LE then cond := 3
-      else if op = TOK_GT then cond := 4
-      else cond := 5;
+      If op = TOK_EQ Then cond := 0
+      Else If op = TOK_NEQ Then cond := 1
+      Else If op = TOK_LT Then cond := 2
+      Else If op = TOK_LE Then cond := 3
+      Else If op = TOK_GT Then cond := 4
+      Else cond := 5;
       EmitCset(cond);
       expr_type := TYPE_INTEGER
-    end
-    else
-    begin
+    End
+    Else
+    Begin
       { Integer comparison }
       EmitPopX1;
       EmitCmpX0X1;
-      if op = TOK_EQ then cond := 0
-      else if op = TOK_NEQ then cond := 1
-      else if op = TOK_LT then cond := 2
-      else if op = TOK_LE then cond := 3
-      else if op = TOK_GT then cond := 4
-      else cond := 5;
+      If op = TOK_EQ Then cond := 0
+      Else If op = TOK_NEQ Then cond := 1
+      Else If op = TOK_LT Then cond := 2
+      Else If op = TOK_LE Then cond := 3
+      Else If op = TOK_GT Then cond := 4
+      Else cond := 5;
       EmitCset(cond);
       expr_type := TYPE_INTEGER
-    end
-  end
-  else if tok_type = TOK_IN then
-  begin
-    { Set membership: value in set }
-    { x0 = value, need to check if bit is set in the set }
+    End
+  End
+  Else If tok_type = TOK_IN Then
+  Begin
+    { Set membership: value In Set }
+    { x0 = value, need To check If bit is Set In the Set }
     EmitPushX0;  { push value }
     NextToken;
-    ParseSimpleExpr;  { set in x0 }
-    { x0 = set, stack = value }
-    { Result: (set >> value) & 1 }
-    EmitPopX1;  { value in x1 }
+    ParseSimpleExpr;  { Set In x0 }
+    { x0 = Set, stack = value }
+    { Result: (Set >> value) & 1 }
+    EmitPopX1;  { value In x1 }
     { lsr x0, x0, x1 }
-    writeln('    lsr x0, x0, x1');
-    { and x0, x0, #1 }
+    WriteLn('    lsr x0, x0, x1');
+    { And x0, x0, #1 }
     EmitAndImm(1);
     expr_type := TYPE_BOOLEAN
-  end
-end;
+  End
+End;
 
-procedure ParseStatement;
-var
-  idx, lbl1, lbl2, lbl3, arg_count, i: integer;
-  var_flags, arg_idx, var_arg_idx: integer;
-  old_break, old_continue: integer;
-begin
-  if tok_type = TOK_BEGIN then
-  begin
+Procedure ParseStatement;
+Var
+  idx, lbl1, lbl2, lbl3, arg_count, i: Integer;
+  var_flags, arg_idx, var_arg_idx: Integer;
+  old_break, old_continue: Integer;
+Begin
+  If tok_type = TOK_BEGIN Then
+  Begin
     NextToken;
     ParseStatement;
-    while tok_type = TOK_SEMICOLON do
-    begin
+    While tok_type = TOK_SEMICOLON Do
+    Begin
       NextToken;
       ParseStatement
-    end;
+    End;
     Expect(TOK_END)
-  end
-  else if tok_type = TOK_IF then
-  begin
+  End
+  Else If tok_type = TOK_IF Then
+  Begin
     NextToken;
     ParseExpression;
     Expect(TOK_THEN);
@@ -7786,22 +7786,22 @@ begin
     lbl2 := NewLabel;
     EmitBranchLabelZ(lbl1);
     ParseStatement;
-    if tok_type = TOK_ELSE then
-    begin
+    If tok_type = TOK_ELSE Then
+    Begin
       EmitBranchLabel(lbl2);
       EmitLabel(lbl1);
       NextToken;
       ParseStatement;
       EmitLabel(lbl2)
-    end
-    else
+    End
+    Else
       EmitLabel(lbl1)
-  end
-  else if tok_type = TOK_WHILE then
-  begin
-    lbl1 := NewLabel;  { loop start / continue target }
-    lbl2 := NewLabel;  { loop end / break target }
-    { Save old break/continue labels }
+  End
+  Else If tok_type = TOK_WHILE Then
+  Begin
+    lbl1 := NewLabel;  { loop start / Continue target }
+    lbl2 := NewLabel;  { loop End / Break target }
+    { Save old Break/Continue labels }
     old_break := break_label;
     old_continue := continue_label;
     break_label := lbl2;
@@ -7814,15 +7814,15 @@ begin
     ParseStatement;
     EmitBranchLabel(lbl1);
     EmitLabel(lbl2);
-    { Restore old break/continue labels }
+    { Restore old Break/Continue labels }
     break_label := old_break;
     continue_label := old_continue
-  end
-  else if tok_type = TOK_REPEAT then
-  begin
-    lbl1 := NewLabel;  { loop start / continue target }
-    lbl2 := NewLabel;  { loop end / break target }
-    { Save old break/continue labels }
+  End
+  Else If tok_type = TOK_REPEAT Then
+  Begin
+    lbl1 := NewLabel;  { loop start / Continue target }
+    lbl2 := NewLabel;  { loop End / Break target }
+    { Save old Break/Continue labels }
     old_break := break_label;
     old_continue := continue_label;
     break_label := lbl2;
@@ -7830,26 +7830,26 @@ begin
     EmitLabel(lbl1);
     NextToken;
     ParseStatement;
-    while tok_type = TOK_SEMICOLON do
-    begin
+    While tok_type = TOK_SEMICOLON Do
+    Begin
       NextToken;
       ParseStatement
-    end;
+    End;
     Expect(TOK_UNTIL);
     ParseExpression;
     EmitBranchLabelZ(lbl1);
     EmitLabel(lbl2);
-    { Restore old break/continue labels }
+    { Restore old Break/Continue labels }
     break_label := old_break;
     continue_label := old_continue
-  end
-  else if tok_type = TOK_FOR then
-  begin
+  End
+  Else If tok_type = TOK_FOR Then
+  Begin
     NextToken;
-    if tok_type <> TOK_IDENT then
+    If tok_type <> TOK_IDENT Then
       Error(6);
     idx := SymLookup;
-    if idx < 0 then
+    If idx < 0 Then
       Error(3);
     NextToken;
     Expect(TOK_ASSIGN);
@@ -7857,844 +7857,844 @@ begin
     EmitSturX0(sym_offset[idx]);
 
     lbl1 := NewLabel;  { condition check }
-    lbl2 := NewLabel;  { loop end / break target }
-    lbl3 := NewLabel;  { increment / continue target }
+    lbl2 := NewLabel;  { loop End / Break target }
+    lbl3 := NewLabel;  { increment / Continue target }
 
-    { Save old break/continue labels }
+    { Save old Break/Continue labels }
     old_break := break_label;
     old_continue := continue_label;
     break_label := lbl2;
     continue_label := lbl3;
 
-    if tok_type = TOK_TO then
-    begin
+    If tok_type = TOK_TO Then
+    Begin
       NextToken;
-      ParseExpression;  { end value into x0 }
-      EmitPushX0;       { save end value on stack }
+      ParseExpression;  { End value into x0 }
+      EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop var }
-      { ldur x1, [sp] - load end value from stack }
-      writeln('    ldur x1, [sp]');
+      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { ldur x1, [sp] - load End value from stack }
+      WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
-      EmitCset(2);  { lt: exit when end < i, meaning i > end }
+      EmitCset(2);  { lt: Exit when End < i, meaning i > End }
       EmitBranchLabelNZ(lbl2);
       ParseStatement;
-      { continue target - increment }
+      { Continue target - increment }
       EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
-      writeln('    add x0, x0, #1');
+      WriteLn('    add x0, x0, #1');
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
-      { Restore old break/continue labels }
+      { Restore old Break/Continue labels }
       break_label := old_break;
       continue_label := old_continue;
-      { Pop end value from stack }
-      writeln('    add sp, sp, #16');
-    end
-    else
-    begin
+      { Pop End value from stack }
+      WriteLn('    add sp, sp, #16');
+    End
+    Else
+    Begin
       Expect(TOK_DOWNTO);
-      ParseExpression;  { end value into x0 }
-      EmitPushX0;       { save end value on stack }
+      ParseExpression;  { End value into x0 }
+      EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop var }
-      { ldur x1, [sp] - load end value from stack }
-      writeln('    ldur x1, [sp]');
+      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { ldur x1, [sp] - load End value from stack }
+      WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
-      EmitCset(4);  { gt: exit when end > i, meaning i < end }
+      EmitCset(4);  { gt: Exit when End > i, meaning i < End }
       EmitBranchLabelNZ(lbl2);
       ParseStatement;
-      { continue target - decrement }
+      { Continue target - decrement }
       EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
-      writeln('    sub x0, x0, #1');
+      WriteLn('    sub x0, x0, #1');
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
-      { Restore old break/continue labels }
+      { Restore old Break/Continue labels }
       break_label := old_break;
       continue_label := old_continue;
-      { Pop end value from stack }
-      writeln('    add sp, sp, #16');
-    end
-  end
-  else if tok_type = TOK_CASE then
-  begin
-    { CASE selector OF const: stmt; ... [ELSE stmt] END }
+      { Pop End value from stack }
+      WriteLn('    add sp, sp, #16');
+    End
+  End
+  Else If tok_type = TOK_CASE Then
+  Begin
+    { Case selector Of Const: stmt; ... [Else stmt] End }
     NextToken;
-    ParseExpression;  { selector in x0 }
+    ParseExpression;  { selector In x0 }
     EmitPushX0;       { save selector on stack }
     Expect(TOK_OF);
-    lbl1 := NewLabel;  { end of case label }
+    lbl1 := NewLabel;  { End Of Case label }
 
-    while (tok_type <> TOK_END) and (tok_type <> TOK_ELSE) do
-    begin
-      { Parse constant(s) for this case branch }
-      lbl2 := NewLabel;  { next case branch label }
+    While (tok_type <> TOK_END) And (tok_type <> TOK_ELSE) Do
+    Begin
+      { Parse constant(s) For this Case branch }
+      lbl2 := NewLabel;  { next Case branch label }
       lbl3 := NewLabel;  { match found, execute statement }
-      repeat
-        if tok_type = TOK_COMMA then NextToken;
+      Repeat
+        If tok_type = TOK_COMMA Then NextToken;
         { Load selector from stack (peek, don't pop): ldr x1, [sp] }
-        writeln('    ldr x1, [sp]');
+        WriteLn('    ldr x1, [sp]');
         { Parse constant value }
-        if tok_type = TOK_INTEGER then
-        begin
+        If tok_type = TOK_INTEGER Then
+        Begin
           EmitMovX0(tok_int);
           NextToken
-        end
-        else if tok_type = TOK_MINUS then
-        begin
+        End
+        Else If tok_type = TOK_MINUS Then
+        Begin
           NextToken;
-          if tok_type = TOK_INTEGER then
-          begin
+          If tok_type = TOK_INTEGER Then
+          Begin
             EmitMovX0(0 - tok_int);
             NextToken
-          end
-          else
+          End
+          Else
             Error(10)
-        end
-        else
+        End
+        Else
           Error(10);  { expected constant }
         { Compare: cmp x1, x0 }
         EmitCmpX0X1;
-        { If equal, jump to match label }
-        write('    b.eq L'); writeln(lbl3);
-      until tok_type = TOK_COLON;
-      { No match in this group, jump to next branch }
+        { If equal, jump To match label }
+        Write('    b.eq L'); WriteLn(lbl3);
+      Until tok_type = TOK_COLON;
+      { No match In this group, jump To next branch }
       EmitBranchLabel(lbl2);
       { Match found - execute statement }
       EmitLabel(lbl3);
       NextToken;  { consume ':' }
       { Pop selector from stack (discard) }
-      writeln('    add sp, sp, #16');
+      WriteLn('    add sp, sp, #16');
       ParseStatement;
-      { Jump to end of case }
+      { Jump To End Of Case }
       EmitBranchLabel(lbl1);
-      { Repush selector for next comparisons: sub sp, sp, #16; str x0, [sp] }
-      { Actually we need to restore selector - this gets tricky }
+      { Repush selector For next comparisons: sub sp, sp, #16; str x0, [sp] }
+      { Actually we need To restore selector - this gets tricky }
       { Simpler approach: jump around the next branch's test }
       EmitLabel(lbl2);
       { After ParseStatement the selector was popped, repush it }
-      { For simplicity, we push a placeholder and let the next iteration reload }
+      { For simplicity, we push a placeholder And let the next iteration reload }
       { Actually, we need the selector back - let's use a different approach }
-      { The cleanest way: keep selector on stack until we match or hit else/end }
-      { Re-push selector: we saved it in x0 before? No. Let's rethink. }
-      { Better: save selector to a dedicated spot before the loop }
-      { For now: don't pop until match, just peek. Pop only when match or done. }
-      { Skip the repush - we've jumped to lbl1 if matched, lbl2 if not }
+      { The cleanest way: keep selector on stack Until we match Or hit Else/End }
+      { Re-push selector: we saved it In x0 before? No. Let's rethink. }
+      { Better: save selector To a dedicated spot before the loop }
+      { For now: don't pop Until match, just peek. Pop only when match Or done. }
+      { Skip the repush - we've jumped To lbl1 If matched, lbl2 If Not }
       { At lbl2, we still have selector on stack }
-      if tok_type = TOK_SEMICOLON then NextToken
-    end;
+      If tok_type = TOK_SEMICOLON Then NextToken
+    End;
 
-    if tok_type = TOK_ELSE then
-    begin
+    If tok_type = TOK_ELSE Then
+    Begin
       NextToken;
-      { Pop selector (discard) before else statement }
-      writeln('    add sp, sp, #16');
+      { Pop selector (discard) before Else statement }
+      WriteLn('    add sp, sp, #16');
       ParseStatement;
-      { Note: no need to jump to lbl1, we fall through }
-    end
-    else
-    begin
-      { No else - just pop selector }
-      writeln('    add sp, sp, #16');
-    end;
+      { Note: no need To jump To lbl1, we fall through }
+    End
+    Else
+    Begin
+      { No Else - just pop selector }
+      WriteLn('    add sp, sp, #16');
+    End;
     EmitLabel(lbl1);
     Expect(TOK_END)
-  end
-  else if tok_type = TOK_READ then
-  begin
-    { read([f,] var) - reads an integer or real into a variable }
+  End
+  Else If tok_type = TOK_READ Then
+  Begin
+    { Read([f,] Var) - reads an Integer Or Real into a variable }
     NextToken;
     Expect(TOK_LPAREN);
-    lbl1 := 0;  { flag: 1 if reading from file }
-    if tok_type <> TOK_IDENT then
+    lbl1 := 0;  { flag: 1 If reading from file }
+    If tok_type <> TOK_IDENT Then
       Error(6);
     idx := SymLookup;
-    if idx < 0 then
+    If idx < 0 Then
       Error(3);
-    { Check if first arg is a file variable }
-    if (sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT) then
-    begin
-      { File variable - save x19 and load file's fd }
+    { Check If first arg is a file variable }
+    If (sym_type[idx] = TYPE_FILE) Or (sym_type[idx] = TYPE_TEXT) Then
+    Begin
+      { File variable - save x19 And load file's fd }
       lbl1 := 1;
       NextToken;
-      { Push x19 to save it }
-      writeln('    str x19, [sp, #-16]!');
+      { Push x19 To save it }
+      WriteLn('    str x19, [sp, #-16]!');
       { Load file's fd into x19 }
       EmitVarAddr(idx, scope_level);
-      writeln('    ldr x19, [x0]');
+      WriteLn('    ldr x19, [x0]');
       Expect(TOK_COMMA);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3)
-    end;
+    End;
     NextToken;
-    if sym_type[idx] = TYPE_REAL then
-    begin
-      { Call read_real runtime - result in d0 }
+    If sym_type[idx] = TYPE_REAL Then
+    Begin
+      { Call read_real runtime - result In d0 }
       EmitBL(rt_read_real);
-      { Store result in variable }
-      if sym_level[idx] = scope_level then
+      { Store result In variable }
+      If sym_level[idx] = scope_level Then
         EmitSturD0(sym_offset[idx])
-      else
+      Else
         EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-    end
-    else
-    begin
+    End
+    Else
+    Begin
       { Call read_int runtime }
       EmitBL(rt_read_int);
-      { Store result in variable }
-      if sym_level[idx] = scope_level then
+      { Store result In variable }
+      If sym_level[idx] = scope_level Then
         EmitSturX0(sym_offset[idx])
-      else
+      Else
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-    end;
-    { Restore x19 if we saved it }
-    if lbl1 = 1 then
-    begin
-      writeln('    ldr x19, [sp], #16');
-    end;
+    End;
+    { Restore x19 If we saved it }
+    If lbl1 = 1 Then
+    Begin
+      WriteLn('    ldr x19, [sp], #16');
+    End;
     Expect(TOK_RPAREN)
-  end
-  else if tok_type = TOK_READLN then
-  begin
-    { readln([f,] var) or readln([f]) - reads integer/real/string and skips to end of line }
+  End
+  Else If tok_type = TOK_READLN Then
+  Begin
+    { ReadLn([f,] Var) Or ReadLn([f]) - reads Integer/Real/String And skips To End Of line }
     NextToken;
-    lbl1 := 0;  { flag: 1 if reading from file }
-    if tok_type = TOK_LPAREN then
-    begin
+    lbl1 := 0;  { flag: 1 If reading from file }
+    If tok_type = TOK_LPAREN Then
+    Begin
       NextToken;
-      if tok_type <> TOK_RPAREN then
-      begin
-        if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_RPAREN Then
+      Begin
+        If tok_type <> TOK_IDENT Then
           Error(6);
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        { Check if first arg is a file variable }
-        if (sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT) then
-        begin
-          { File variable - save x19 and load file's fd }
+        { Check If first arg is a file variable }
+        If (sym_type[idx] = TYPE_FILE) Or (sym_type[idx] = TYPE_TEXT) Then
+        Begin
+          { File variable - save x19 And load file's fd }
           lbl1 := 1;
           NextToken;
-          { Push x19 to save it }
-          writeln('    str x19, [sp, #-16]!');
+          { Push x19 To save it }
+          WriteLn('    str x19, [sp, #-16]!');
           { Load file's fd into x19 }
           EmitVarAddr(idx, scope_level);
-          writeln('    ldr x19, [x0]');
-          { Check for comma (more args) or just skip to rparen }
-          if tok_type = TOK_COMMA then
-          begin
+          WriteLn('    ldr x19, [x0]');
+          { Check For comma (more args) Or just skip To rparen }
+          If tok_type = TOK_COMMA Then
+          Begin
             NextToken;
-            if tok_type <> TOK_IDENT then
+            If tok_type <> TOK_IDENT Then
               Error(6);
             idx := SymLookup;
-            if idx < 0 then
+            If idx < 0 Then
               Error(3)
-          end
-          else
-          begin
-            { Just file arg, no variable to read into - skip to rparen }
+          End
+          Else
+          Begin
+            { Just file arg, no variable To Read into - skip To rparen }
             Expect(TOK_RPAREN);
-            { Skip to end of line }
+            { Skip To End Of line }
             EmitBL(rt_skip_line);
             { Restore x19 }
-            writeln('    ldr x19, [sp], #16');
-          end
-        end;
-        { Only process variable if we have one }
-        if tok_type = TOK_IDENT then
-        begin
+            WriteLn('    ldr x19, [sp], #16');
+          End
+        End;
+        { Only process variable If we have one }
+        If tok_type = TOK_IDENT Then
+        Begin
           idx := SymLookup;
-          if idx < 0 then
+          If idx < 0 Then
             Error(3);
-          lbl2 := sym_type[idx];  { save type for skip_line decision }
+          lbl2 := sym_type[idx];  { save Type For skip_line decision }
           NextToken;
-          if sym_type[idx] = TYPE_REAL then
-          begin
-            { Call read_real runtime - result in d0 }
+          If sym_type[idx] = TYPE_REAL Then
+          Begin
+            { Call read_real runtime - result In d0 }
             EmitBL(rt_read_real);
-            { Store result in variable }
-            if sym_level[idx] = scope_level then
+            { Store result In variable }
+            If sym_level[idx] = scope_level Then
               EmitSturD0(sym_offset[idx])
-            else
+            Else
               EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-          end
-          else if sym_type[idx] = TYPE_STRING then
-          begin
-            { Load string variable address into x0 }
+          End
+          Else If sym_type[idx] = TYPE_STRING Then
+          Begin
+            { Load String variable address into x0 }
             EmitVarAddr(idx, scope_level);
             { Call read_string runtime - already consumes newline }
             EmitBL(rt_read_string)
-          end
-          else
-          begin
+          End
+          Else
+          Begin
             { Call read_int runtime }
             EmitBL(rt_read_int);
-            { Store result in variable }
-            if sym_level[idx] = scope_level then
+            { Store result In variable }
+            If sym_level[idx] = scope_level Then
               EmitSturX0(sym_offset[idx])
-            else
+            Else
               EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-          end;
+          End;
           Expect(TOK_RPAREN);
-          { Skip to end of line only for integer/real (read_string already consumed newline) }
-          if lbl2 <> TYPE_STRING then
+          { Skip To End Of line only For Integer/Real (read_string already consumed newline) }
+          If lbl2 <> TYPE_STRING Then
             EmitBL(rt_skip_line);
-          { Restore x19 if we saved it }
-          if lbl1 = 1 then
-          begin
-            writeln('    ldr x19, [sp], #16');
-          end
-        end
-      end
-      else
-      begin
-        { readln() with no args }
+          { Restore x19 If we saved it }
+          If lbl1 = 1 Then
+          Begin
+            WriteLn('    ldr x19, [sp], #16');
+          End
+        End
+      End
+      Else
+      Begin
+        { ReadLn() With no args }
         Expect(TOK_RPAREN);
         EmitBL(rt_skip_line)
-      end
-    end
-    else
-    begin
-      { readln with no parens }
+      End
+    End
+    Else
+    Begin
+      { ReadLn With no parens }
       EmitBL(rt_skip_line)
-    end
-  end
-  else if tok_type = TOK_WITH then
-  begin
-    { WITH record_var DO statement }
+    End
+  End
+  Else If tok_type = TOK_WITH Then
+  Begin
+    { With record_var Do statement }
     NextToken;
-    if tok_type <> TOK_IDENT then
+    If tok_type <> TOK_IDENT Then
       Error(6);  { expected identifier }
     idx := SymLookup;
-    if idx < 0 then
+    If idx < 0 Then
       Error(3);  { undefined identifier }
-    if sym_type[idx] <> TYPE_RECORD then
-      Error(9);  { expected record type }
-    { Save current with context }
-    lbl1 := with_rec_idx;  { reuse lbl1 to save old with_rec_idx }
-    lbl2 := with_rec_type;  { reuse lbl2 to save old with_rec_type }
+    If sym_type[idx] <> TYPE_RECORD Then
+      Error(9);  { expected Record Type }
+    { Save current With context }
+    lbl1 := with_rec_idx;  { reuse lbl1 To save old with_rec_idx }
+    lbl2 := with_rec_type;  { reuse lbl2 To save old with_rec_type }
     with_rec_idx := idx;
-    with_rec_type := sym_const_val[idx];  { the type definition index }
+    with_rec_type := sym_const_val[idx];  { the Type definition index }
     NextToken;
     Expect(TOK_DO);
     ParseStatement;
-    { Restore with context }
+    { Restore With context }
     with_rec_idx := lbl1;
     with_rec_type := lbl2
-  end
-  else if tok_type = TOK_IDENT then
-  begin
-    { Check for built-in procedures first }
-    { break = 98,114,101,97,107 }
-    if (tok_len = 5) and (tok_str[0] = 98) and (tok_str[1] = 114) and
-       (tok_str[2] = 101) and (tok_str[3] = 97) and (tok_str[4] = 107) then
-    begin
+  End
+  Else If tok_type = TOK_IDENT Then
+  Begin
+    { Check For built-In procedures first }
+    { Break = 98,114,101,97,107 }
+    If (tok_len = 5) And (ToLower(tok_str[0]) = 98) And (ToLower(tok_str[1]) = 114) And
+       (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 97) And (ToLower(tok_str[4]) = 107) Then
+    Begin
       NextToken;
-      if break_label = 0 then
-        Error(15)  { break not inside a loop }
-      else
+      If break_label = 0 Then
+        Error(15)  { Break Not inside a loop }
+      Else
         EmitBranchLabel(break_label)
-    end
-    { continue = 99,111,110,116,105,110,117,101 }
-    else if (tok_len = 8) and (tok_str[0] = 99) and (tok_str[1] = 111) and
-            (tok_str[2] = 110) and (tok_str[3] = 116) and (tok_str[4] = 105) and
-            (tok_str[5] = 110) and (tok_str[6] = 117) and (tok_str[7] = 101) then
-    begin
+    End
+    { Continue = 99,111,110,116,105,110,117,101 }
+    Else If (tok_len = 8) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 105) And
+            (ToLower(tok_str[5]) = 110) And (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 101) Then
+    Begin
       NextToken;
-      if continue_label = 0 then
-        Error(15)  { continue not inside a loop }
-      else
+      If continue_label = 0 Then
+        Error(15)  { Continue Not inside a loop }
+      Else
         EmitBranchLabel(continue_label)
-    end
-    { exit = 101,120,105,116 }
-    else if (tok_len = 4) and (tok_str[0] = 101) and (tok_str[1] = 120) and
-            (tok_str[2] = 105) and (tok_str[3] = 116) then
-    begin
+    End
+    { Exit = 101,120,105,116 }
+    Else If (tok_len = 4) And (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 120) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) Then
+    Begin
       NextToken;
-      if exit_label = 0 then
-      begin
-        { In main program - just call halt with exit code 0 }
+      If exit_label = 0 Then
+      Begin
+        { In main Program - just call Halt With Exit code 0 }
         EmitMovX0(0);
         { mov x16, #1 }
-        writeln('    mov x16, #1');
+        WriteLn('    mov x16, #1');
         { svc #0x80 }
-        writeln('    svc #0x80');
-      end
-      else
+        WriteLn('    svc #0x80');
+      End
+      Else
         EmitBranchLabel(exit_label)
-    end
-    { write = 119,114,105,116,101 }
-    { writeln = 119,114,105,116,101,108,110 }
-    { readchar = 114,101,97,100,99,104,97,114 }
-    { writechar = 119,114,105,116,101,99,104,97 - actually too long, use 8 }
-    { halt = 104,97,108,116 }
-    else if TokIs8(119, 114, 105, 116, 101, 108, 110, 0) = 1 then
-    begin
-      { writeln }
+    End
+    { Write = 119,114,105,116,101 }
+    { WriteLn = 119,114,105,116,101,108,110 }
+    { ReadChar = 114,101,97,100,99,104,97,114 }
+    { WriteChar = 119,114,105,116,101,99,104,97 - actually too long, use 8 }
+    { Halt = 104,97,108,116 }
+    Else If TokIs8(119, 114, 105, 116, 101, 108, 110, 0) = 1 Then
+    Begin
+      { WriteLn }
       NextToken;
-      lbl1 := 0;  { flag: 1 if writing to file }
-      if tok_type = TOK_LPAREN then
-      begin
+      lbl1 := 0;  { flag: 1 If writing To file }
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
-        if tok_type <> TOK_RPAREN then
-        begin
-          { Check if first arg is a file variable }
-          if tok_type = TOK_IDENT then
-          begin
+        If tok_type <> TOK_RPAREN Then
+        Begin
+          { Check If first arg is a file variable }
+          If tok_type = TOK_IDENT Then
+          Begin
             idx := SymLookup;
-            if (idx >= 0) and ((sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT)) then
-            begin
-              { File variable - save x20 and load file's fd }
+            If (idx >= 0) And ((sym_type[idx] = TYPE_FILE) Or (sym_type[idx] = TYPE_TEXT)) Then
+            Begin
+              { File variable - save x20 And load file's fd }
               lbl1 := 1;
               NextToken;
-              { Push x20 to save it }
-              writeln('    str x20, [sp, #-16]!');
+              { Push x20 To save it }
+              WriteLn('    str x20, [sp, #-16]!');
               { Load file's fd into x20 }
               EmitVarAddr(idx, scope_level);
-              writeln('    ldr x20, [x0]');
-              if tok_type = TOK_COMMA then
+              WriteLn('    ldr x20, [x0]');
+              If tok_type = TOK_COMMA Then
                 NextToken
-            end
-          end;
-          if (lbl1 = 0) or (tok_type <> TOK_RPAREN) then
-          begin
-            while tok_type <> TOK_RPAREN do
-            begin
-              if tok_type = TOK_STRING then
-              begin
-                { Print string literal character by character }
+            End
+          End;
+          If (lbl1 = 0) Or (tok_type <> TOK_RPAREN) Then
+          Begin
+            While tok_type <> TOK_RPAREN Do
+            Begin
+              If tok_type = TOK_STRING Then
+              Begin
+                { Print String literal character by character }
                 idx := 0;
-                while idx < tok_len do
-                begin
+                While idx < tok_len Do
+                Begin
                   EmitMovX0(tok_str[idx]);
                   EmitBL(rt_print_char);
                   idx := idx + 1
-                end;
+                End;
                 NextToken
-              end
-              else if tok_type = TOK_IDENT then
-              begin
-                { Check if it's a string variable }
+              End
+              Else If tok_type = TOK_IDENT Then
+              Begin
+                { Check If it's a String variable }
                 idx := SymLookup;
-                if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
-                begin
-                  { String variable - compute address and call print_string }
+                If (idx >= 0) And (sym_type[idx] = TYPE_STRING) Then
+                Begin
+                  { String variable - compute address And call print_string }
                   NextToken;
                   EmitVarAddr(idx, scope_level);
                   EmitBL(rt_print_string)
-                end
-                else
-                begin
-                  { Not a string - parse as expression and print based on type }
+                End
+                Else
+                Begin
+                  { Not a String - parse as expression And print based on Type }
                   ParseExpression;
-                  if expr_type = TYPE_REAL then
+                  If expr_type = TYPE_REAL Then
                     EmitBL(rt_print_real)
-                  else if expr_type = TYPE_STRING then
+                  Else If expr_type = TYPE_STRING Then
                     EmitBL(rt_print_string)
-                  else
+                  Else
                     EmitBL(rt_print_int)
-                end
-              end
-              else
-              begin
+                End
+              End
+              Else
+              Begin
                 ParseExpression;
-                if expr_type = TYPE_REAL then
+                If expr_type = TYPE_REAL Then
                   EmitBL(rt_print_real)
-                else if expr_type = TYPE_STRING then
+                Else If expr_type = TYPE_STRING Then
                   EmitBL(rt_print_string)
-                else
+                Else
                   EmitBL(rt_print_int)
-              end;
-              if tok_type = TOK_COMMA then NextToken
-            end
-          end
-        end;
+              End;
+              If tok_type = TOK_COMMA Then NextToken
+            End
+          End
+        End;
         Expect(TOK_RPAREN)
-      end;
+      End;
       EmitBL(rt_newline);
-      { Restore x20 if we saved it }
-      if lbl1 = 1 then
-      begin
-        writeln('    ldr x20, [sp], #16');
-      end
-    end
-    else if TokIs8(119, 114, 105, 116, 101, 0, 0, 0) = 1 then
-    begin
-      { write }
+      { Restore x20 If we saved it }
+      If lbl1 = 1 Then
+      Begin
+        WriteLn('    ldr x20, [sp], #16');
+      End
+    End
+    Else If TokIs8(119, 114, 105, 116, 101, 0, 0, 0) = 1 Then
+    Begin
+      { Write }
       NextToken;
-      lbl1 := 0;  { flag: 1 if writing to file }
-      if tok_type = TOK_LPAREN then
-      begin
+      lbl1 := 0;  { flag: 1 If writing To file }
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
-        if tok_type <> TOK_RPAREN then
-        begin
-          { Check if first arg is a file variable }
-          if tok_type = TOK_IDENT then
-          begin
+        If tok_type <> TOK_RPAREN Then
+        Begin
+          { Check If first arg is a file variable }
+          If tok_type = TOK_IDENT Then
+          Begin
             idx := SymLookup;
-            if (idx >= 0) and ((sym_type[idx] = TYPE_FILE) or (sym_type[idx] = TYPE_TEXT)) then
-            begin
-              { File variable - save x20 and load file's fd }
+            If (idx >= 0) And ((sym_type[idx] = TYPE_FILE) Or (sym_type[idx] = TYPE_TEXT)) Then
+            Begin
+              { File variable - save x20 And load file's fd }
               lbl1 := 1;
               NextToken;
-              { Push x20 to save it }
-              writeln('    str x20, [sp, #-16]!');
+              { Push x20 To save it }
+              WriteLn('    str x20, [sp, #-16]!');
               { Load file's fd into x20 }
               EmitVarAddr(idx, scope_level);
-              writeln('    ldr x20, [x0]');
-              if tok_type = TOK_COMMA then
+              WriteLn('    ldr x20, [x0]');
+              If tok_type = TOK_COMMA Then
                 NextToken
-            end
-          end;
-          if (lbl1 = 0) or (tok_type <> TOK_RPAREN) then
-          begin
-            while tok_type <> TOK_RPAREN do
-            begin
-              if tok_type = TOK_STRING then
-              begin
-                { Print string literal character by character }
+            End
+          End;
+          If (lbl1 = 0) Or (tok_type <> TOK_RPAREN) Then
+          Begin
+            While tok_type <> TOK_RPAREN Do
+            Begin
+              If tok_type = TOK_STRING Then
+              Begin
+                { Print String literal character by character }
                 idx := 0;
-                while idx < tok_len do
-                begin
+                While idx < tok_len Do
+                Begin
                   EmitMovX0(tok_str[idx]);
                   EmitBL(rt_print_char);
                   idx := idx + 1
-                end;
+                End;
                 NextToken
-              end
-              else if tok_type = TOK_IDENT then
-              begin
-                { Check if it's a string variable }
+              End
+              Else If tok_type = TOK_IDENT Then
+              Begin
+                { Check If it's a String variable }
                 idx := SymLookup;
-                if (idx >= 0) and (sym_type[idx] = TYPE_STRING) then
-                begin
-                  { String variable - compute address and call print_string }
+                If (idx >= 0) And (sym_type[idx] = TYPE_STRING) Then
+                Begin
+                  { String variable - compute address And call print_string }
                   NextToken;
                   EmitVarAddr(idx, scope_level);
                   EmitBL(rt_print_string)
-                end
-                else
-                begin
-                  { Not a string - parse as expression and print based on type }
+                End
+                Else
+                Begin
+                  { Not a String - parse as expression And print based on Type }
                   ParseExpression;
-                  if expr_type = TYPE_REAL then
+                  If expr_type = TYPE_REAL Then
                     EmitBL(rt_print_real)
-                  else if expr_type = TYPE_STRING then
+                  Else If expr_type = TYPE_STRING Then
                     EmitBL(rt_print_string)
-                  else
+                  Else
                     EmitBL(rt_print_int)
-                end
-              end
-              else
-              begin
+                End
+              End
+              Else
+              Begin
                 ParseExpression;
-                if expr_type = TYPE_REAL then
+                If expr_type = TYPE_REAL Then
                   EmitBL(rt_print_real)
-                else if expr_type = TYPE_STRING then
+                Else If expr_type = TYPE_STRING Then
                   EmitBL(rt_print_string)
-                else
+                Else
                   EmitBL(rt_print_int)
-              end;
-              if tok_type = TOK_COMMA then NextToken
-            end
-          end
-        end;
+              End;
+              If tok_type = TOK_COMMA Then NextToken
+            End
+          End
+        End;
         Expect(TOK_RPAREN)
-      end;
-      { Restore x20 if we saved it }
-      if lbl1 = 1 then
-      begin
-        writeln('    ldr x20, [sp], #16');
-      end
-    end
-    else if TokIs8(104, 97, 108, 116, 0, 0, 0, 0) = 1 then
-    begin
-      { halt }
+      End;
+      { Restore x20 If we saved it }
+      If lbl1 = 1 Then
+      Begin
+        WriteLn('    ldr x20, [sp], #16');
+      End
+    End
+    Else If TokIs8(104, 97, 108, 116, 0, 0, 0, 0) = 1 Then
+    Begin
+      { Halt }
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
-        if tok_type <> TOK_RPAREN then
+        If tok_type <> TOK_RPAREN Then
           ParseExpression
-        else
+        Else
           EmitMovX0(0);
         Expect(TOK_RPAREN)
-      end
-      else
+      End
+      Else
         EmitMovX0(0);
-      EmitMovX16(33554433);  { 0x2000001 = exit }
+      EmitMovX16(33554433);  { 0x2000001 = Exit }
       EmitSvc
-    end
+    End
     { randomize = 114,97,110,100,111,109,105,122,101 }
-    else if (tok_len = 9) and (tok_str[0] = 114) and (tok_str[1] = 97) and
-            (tok_str[2] = 110) and (tok_str[3] = 100) and (tok_str[4] = 111) and
-            (tok_str[5] = 109) and (tok_str[6] = 105) and (tok_str[7] = 122) and
-            (tok_str[8] = 101) then
-    begin
-      { randomize - seed the PRNG using stack pointer XOR with a constant }
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 97) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 100) And (ToLower(tok_str[4]) = 111) And
+            (ToLower(tok_str[5]) = 109) And (ToLower(tok_str[6]) = 105) And (ToLower(tok_str[7]) = 122) And
+            (ToLower(tok_str[8]) = 101) Then
+    Begin
+      { randomize - seed the PRNG using stack pointer XOR With a constant }
       NextToken;
-      if tok_type = TOK_LPAREN then
-      begin
+      If tok_type = TOK_LPAREN Then
+      Begin
         NextToken;
-        if tok_type <> TOK_RPAREN then
-        begin
+        If tok_type <> TOK_RPAREN Then
+        Begin
           { randomize(seed) - use provided seed }
           ParseExpression;
           { mov x27, x0 }
-          writeln('    mov x27, x0');
-        end
-        else
-        begin
+          WriteLn('    mov x27, x0');
+        End
+        Else
+        Begin
           { randomize() - use sp as seed }
-          writeln('    mov x27, sp');
-        end;
+          WriteLn('    mov x27, sp');
+        End;
         Expect(TOK_RPAREN)
-      end
-      else
-      begin
-        { randomize with no parens - use sp as seed }
-        writeln('    mov x27, sp');
-      end
-    end
-    { inc = 105,110,99 }
-    else if TokIs8(105, 110, 99, 0, 0, 0, 0, 0) = 1 then
-    begin
+      End
+      Else
+      Begin
+        { randomize With no parens - use sp as seed }
+        WriteLn('    mov x27, sp');
+      End
+    End
+    { Inc = 105,110,99 }
+    Else If TokIs8(105, 110, 99, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(3);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
       NextToken;
       { Load address into x8 }
       EmitVarAddr(idx, scope_level);
-      writeln('    mov x8, x0');
+      WriteLn('    mov x8, x0');
       { Load current value }
-      writeln('    ldr x0, [x8]');
+      WriteLn('    ldr x0, [x8]');
       { Add 1 }
-      writeln('    add x0, x0, #1');
+      WriteLn('    add x0, x0, #1');
       { Store back }
-      writeln('    str x0, [x8]');
+      WriteLn('    str x0, [x8]');
       Expect(TOK_RPAREN)
-    end
-    { dec = 100,101,99 }
-    else if TokIs8(100, 101, 99, 0, 0, 0, 0, 0) = 1 then
-    begin
+    End
+    { Dec = 100,101,99 }
+    Else If TokIs8(100, 101, 99, 0, 0, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(3);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
       NextToken;
       { Load address into x8 }
       EmitVarAddr(idx, scope_level);
-      writeln('    mov x8, x0');
+      WriteLn('    mov x8, x0');
       { Load current value }
-      writeln('    ldr x0, [x8]');
+      WriteLn('    ldr x0, [x8]');
       { Subtract 1 }
-      writeln('    sub x0, x0, #1');
+      WriteLn('    sub x0, x0, #1');
       { Store back }
-      writeln('    str x0, [x8]');
+      WriteLn('    str x0, [x8]');
       Expect(TOK_RPAREN)
-    end
-    else if (tok_len = 9) and (tok_str[0] = 119) and (tok_str[1] = 114) and
-            (tok_str[2] = 105) and (tok_str[3] = 116) and (tok_str[4] = 101) and
-            (tok_str[5] = 99) and (tok_str[6] = 104) and (tok_str[7] = 97) and
-            (tok_str[8] = 114) then
-    begin
-      { writechar - 119,114,105,116,101,99,104,97,114 }
+    End
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 99) And (ToLower(tok_str[6]) = 104) And (ToLower(tok_str[7]) = 97) And
+            (ToLower(tok_str[8]) = 114) Then
+    Begin
+      { WriteChar - 119,114,105,116,101,99,104,97,114 }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       EmitBL(rt_print_char)
-    end
-    { writefilechar(file, char) - 119,114,105,116,101,102,105,108,101,99,104,97,114 }
-    else if (tok_len = 13) and (tok_str[0] = 119) and (tok_str[1] = 114) and
-            (tok_str[2] = 105) and (tok_str[3] = 116) and (tok_str[4] = 101) and
-            (tok_str[5] = 102) and (tok_str[6] = 105) and (tok_str[7] = 108) and
-            (tok_str[8] = 101) and (tok_str[9] = 99) and (tok_str[10] = 104) and
-            (tok_str[11] = 97) and (tok_str[12] = 114) then
-    begin
+    End
+    { writefilechar(file, Char) - 119,114,105,116,101,102,105,108,101,99,104,97,114 }
+    Else If (tok_len = 13) And (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 102) And (ToLower(tok_str[6]) = 105) And (ToLower(tok_str[7]) = 108) And
+            (ToLower(tok_str[8]) = 101) And (ToLower(tok_str[9]) = 99) And (ToLower(tok_str[10]) = 104) And
+            (ToLower(tok_str[11]) = 97) And (ToLower(tok_str[12]) = 114) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       { First arg: file variable }
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       { Load file fd into x0 }
       EmitVarAddr(idx, scope_level);
-      writeln('    ldr x0, [x0]');
-      { Push fd to stack }
+      WriteLn('    ldr x0, [x0]');
+      { Push fd To stack }
       EmitPushX0;
       NextToken;
       Expect(TOK_COMMA);
       { Second arg: character expression }
       ParseExpression;
       Expect(TOK_RPAREN);
-      { x0 has char, pop fd into x1, swap }
-      writeln('    mov x1, x0');
-      writeln('    ldr x0, [sp], #16');
-      { Call write char to fd runtime: x0=fd, x1=char }
+      { x0 has Char, pop fd into x1, swap }
+      WriteLn('    mov x1, x0');
+      WriteLn('    ldr x0, [sp], #16');
+      { Call Write Char To fd runtime: x0=fd, x1=Char }
       EmitBL(rt_write_char_fd)
-    end
-    else if (tok_len = 8) and (tok_str[0] = 114) and (tok_str[1] = 101) and
-            (tok_str[2] = 97) and (tok_str[3] = 100) and (tok_str[4] = 99) and
-            (tok_str[5] = 104) and (tok_str[6] = 97) and (tok_str[7] = 114) then
-    begin
-      { readchar - 114,101,97,100,99,104,97,114 }
+    End
+    Else If (tok_len = 8) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 97) And (ToLower(tok_str[3]) = 100) And (ToLower(tok_str[4]) = 99) And
+            (ToLower(tok_str[5]) = 104) And (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 114) Then
+    Begin
+      { ReadChar - 114,101,97,100,99,104,97,114 }
       NextToken;
       EmitBL(rt_readchar)
-    end
-    else if TokIs8(110, 101, 119, 0, 0, 0, 0, 0) = 1 then
-    begin
-      { new(p) - allocate memory for pointer variable }
+    End
+    Else If TokIs8(110, 101, 119, 0, 0, 0, 0, 0) = 1 Then
+    Begin
+      { New(p) - allocate memory For pointer variable }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);  { expected identifier }
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);  { undefined identifier }
-      if sym_type[idx] <> TYPE_POINTER then
-        Error(14);  { expected pointer type }
+      If sym_type[idx] <> TYPE_POINTER Then
+        Error(14);  { expected pointer Type }
       NextToken;
       Expect(TOK_RPAREN);
-      { Determine allocation size based on base type }
-      if sym_const_val[idx] = TYPE_RECORD then
-        lbl1 := sym_label[sym_label[idx]]  { record size from type definition }
-      else if sym_const_val[idx] = TYPE_ARRAY then
-      begin
-        { Pointer to array: calculate size from bounds }
+      { Determine allocation size based on base Type }
+      If sym_const_val[idx] = TYPE_RECORD Then
+        lbl1 := sym_label[sym_label[idx]]  { Record size from Type definition }
+      Else If sym_const_val[idx] = TYPE_ARRAY Then
+      Begin
+        { Pointer To Array: calculate size from bounds }
         arg_count := sym_label[idx];  { ptr_arr index }
         lbl1 := (ptr_arr_hi[arg_count] - ptr_arr_lo[arg_count] + 1) * 8
-      end
-      else
+      End
+      Else
         lbl1 := 8;  { basic types are 8 bytes }
-      { Align to 8 bytes }
-      lbl1 := ((lbl1 + 7) div 8) * 8;
-      { Allocate via rt_alloc: put size in x0, call rt_alloc }
+      { Align To 8 bytes }
+      lbl1 := ((lbl1 + 7) Div 8) * 8;
+      { Allocate via rt_alloc: put size In x0, call rt_alloc }
       EmitMovX0(lbl1);
       EmitBL(rt_alloc);
-      { Store address in pointer variable }
-      if sym_level[idx] < scope_level then
+      { Store address In pointer variable }
+      If sym_level[idx] < scope_level Then
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-      else
+      Else
         EmitSturX0(sym_offset[idx])
-    end
-    else if (tok_len = 7) and (tok_str[0] = 100) and (tok_str[1] = 105) and
-            (tok_str[2] = 115) and (tok_str[3] = 112) and (tok_str[4] = 111) and
-            (tok_str[5] = 115) and (tok_str[6] = 101) then
-    begin
-      { dispose(p) - free memory via free list allocator }
+    End
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 112) And (ToLower(tok_str[4]) = 111) And
+            (ToLower(tok_str[5]) = 115) And (ToLower(tok_str[6]) = 101) Then
+    Begin
+      { Dispose(p) - free memory via free list allocator }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);  { expected identifier }
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);  { undefined identifier }
-      if sym_type[idx] <> TYPE_POINTER then
-        Error(14);  { expected pointer type }
+      If sym_type[idx] <> TYPE_POINTER Then
+        Error(14);  { expected pointer Type }
       NextToken;
       Expect(TOK_RPAREN);
       { Load pointer value into x0 }
-      if sym_level[idx] < scope_level then
+      If sym_level[idx] < scope_level Then
         EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-      else
+      Else
         EmitLdurX0(sym_offset[idx]);
-      { Call rt_free to return memory to free list }
+      { Call rt_free To return memory To free list }
       EmitBL(rt_free);
-      { Set pointer to nil for safety }
+      { Set pointer To Nil For safety }
       EmitMovX0(0);
-      if sym_level[idx] < scope_level then
+      If sym_level[idx] < scope_level Then
         EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-      else
+      Else
         EmitSturX0(sym_offset[idx])
-    end
+    End
     { assign = 97,115,115,105,103,110 }
-    else if (tok_len = 6) and (tok_str[0] = 97) and (tok_str[1] = 115) and
-            (tok_str[2] = 115) and (tok_str[3] = 105) and (tok_str[4] = 103) and
-            (tok_str[5] = 110) then
-    begin
-      { assign(f, filename) - associate file variable with filename }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 115) And
+            (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 103) And
+            (ToLower(tok_str[5]) = 110) Then
+    Begin
+      { assign(f, filename) - associate file variable With filename }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_COMMA);
-      { Get address of file variable }
+      { Get address Of file variable }
       EmitVarAddr(idx, scope_level);
-      EmitPushX0;  { save file var address }
-      { Parse filename (string expression) }
+      EmitPushX0;  { save file Var address }
+      { Parse filename (String expression) }
       ParseExpression;
-      { x0 = source string address, stack = file var address }
-      { Copy filename to file var offset 16 }
-      EmitPopX1;  { x1 = file var address }
-      { add x1, x1, #16 - point to filename area }
-      writeln('    add x1, x1, #16');
-      { swap x0 and x1 for str_copy (dest in x0, src in x1) }
-      { x0 = src string, x1 = dest (file var + 16) }
-      writeln('    mov x2, x0');
-      writeln('    mov x0, x1');
-      writeln('    mov x1, x2');
+      { x0 = source String address, stack = file Var address }
+      { Copy filename To file Var offset 16 }
+      EmitPopX1;  { x1 = file Var address }
+      { add x1, x1, #16 - point To filename area }
+      WriteLn('    add x1, x1, #16');
+      { swap x0 And x1 For str_copy (dest In x0, src In x1) }
+      { x0 = src String, x1 = dest (file Var + 16) }
+      WriteLn('    mov x2, x0');
+      WriteLn('    mov x0, x1');
+      WriteLn('    mov x1, x2');
       { Now x0 = dest, x1 = src. Save dest before call. }
       EmitPushX0;
       EmitBL(rt_str_copy);
       EmitPopX0;  { restore dest address }
-      { Add null terminator for C string compatibility }
-      { ldrb w1, [x0] - load length }
-      writeln('    ldrb w1, [x0]');
-      { add x1, x1, #1 - position after last char }
-      writeln('    add x1, x1, #1');
+      { Add null terminator For C String compatibility }
+      { ldrb w1, [x0] - load Length }
+      WriteLn('    ldrb w1, [x0]');
+      { add x1, x1, #1 - position after last Char }
+      WriteLn('    add x1, x1, #1');
       { strb wzr, [x0, x1] - store null byte }
-      writeln('    strb wzr, [x0, x1]');
-      { Initialize fd to -1 (not open) }
+      WriteLn('    strb wzr, [x0, x1]');
+      { Initialize fd To -1 (Not open) }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
+      WriteLn('    str x0, [x1]');
       Expect(TOK_RPAREN)
-    end
+    End
     { assigntokstr = 97,115,115,105,103,110,116,111,107,115,116,114 }
-    else if (tok_len = 12) and (tok_str[0] = 97) and (tok_str[1] = 115) and
-            (tok_str[2] = 115) and (tok_str[3] = 105) and (tok_str[4] = 103) and
-            (tok_str[5] = 110) and (tok_str[6] = 116) and (tok_str[7] = 111) and
-            (tok_str[8] = 107) and (tok_str[9] = 115) and (tok_str[10] = 116) and
-            (tok_str[11] = 114) then
-    begin
-      { assigntokstr(f, start, len) - assign filename from tok_str to file }
+    Else If (tok_len = 12) And (ToLower(tok_str[0]) = 97) And (ToLower(tok_str[1]) = 115) And
+            (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 103) And
+            (ToLower(tok_str[5]) = 110) And (ToLower(tok_str[6]) = 116) And (ToLower(tok_str[7]) = 111) And
+            (ToLower(tok_str[8]) = 107) And (ToLower(tok_str[9]) = 115) And (ToLower(tok_str[10]) = 116) And
+            (ToLower(tok_str[11]) = 114) Then
+    Begin
+      { assigntokstr(f, start, len) - assign filename from tok_str To file }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_COMMA);
@@ -8702,373 +8702,373 @@ begin
       ParseExpression;
       EmitPushX0;  { save start }
       Expect(TOK_COMMA);
-      { Parse length }
+      { Parse Length }
       ParseExpression;
       { x0 = len, stack has start }
       { mov x2, x0 - x2 = len }
-      writeln('    mov x2, x0');
+      WriteLn('    mov x2, x0');
       EmitPopX1;  { x1 = start }
-      { Get address of tok_str using VarAddr }
-      { We need the tok_str global - find it in symbol table }
-      { For now, use direct offset calculation since tok_str is a global array }
-      { Get file var base address first }
+      { Get address Of tok_str using VarAddr }
+      { We need the tok_str global - find it In symbol table }
+      { For now, use direct offset calculation since tok_str is a global Array }
+      { Get file Var base address first }
       EmitVarAddr(idx, scope_level);
-      { add x0, x0, #16 - point to filename area }
-      writeln('    add x0, x0, #16');
+      { add x0, x0, #16 - point To filename area }
+      WriteLn('    add x0, x0, #16');
       { Save dest address }
       EmitPushX0;
       { Get tok_str base address - look it up }
       { str x1, [sp, #-16]! - save start index }
-      writeln('    str x1, [sp, #-16]!');
+      WriteLn('    str x1, [sp, #-16]!');
       { str x2, [sp, #-16]! - save len }
-      writeln('    str x2, [sp, #-16]!');
-      { Find tok_str in symbol table and get its address }
+      WriteLn('    str x2, [sp, #-16]!');
+      { Find tok_str In symbol table And get its address }
       tok_str[0] := 116; tok_str[1] := 111; tok_str[2] := 107; tok_str[3] := 95;
       tok_str[4] := 115; tok_str[5] := 116; tok_str[6] := 114; tok_str[7] := 0;
       tok_len := 7;
       arg_idx := SymLookup;
-      if arg_idx < 0 then
-        Error(3);  { tok_str not found }
+      If arg_idx < 0 Then
+        Error(3);  { tok_str Not found }
       EmitVarAddr(arg_idx, scope_level);  { x0 = tok_str base }
       { mov x3, x0 - x3 = tok_str base }
-      writeln('    mov x3, x0');
+      WriteLn('    mov x3, x0');
       { ldr x2, [sp], #16 - restore len }
-      writeln('    ldr x2, [sp], #16');
+      WriteLn('    ldr x2, [sp], #16');
       { ldr x1, [sp], #16 - restore start }
-      writeln('    ldr x1, [sp], #16');
+      WriteLn('    ldr x1, [sp], #16');
       { ldr x0, [sp], #16 - restore dest }
       EmitPopX0;
       { x3 + x1*8 = source address (tok_str elements are 8 bytes) }
       { lsl x1, x1, #3 }
-      writeln('    lsl x1, x1, #3');
+      WriteLn('    lsl x1, x1, #3');
       { add x3, x3, x1 - x3 = source address }
-      writeln('    add x3, x3, x1');
-      { Copy loop: copy x2 characters from [x3] to [x0], skip length byte }
-      { add x0, x0, #1 - skip length byte position }
-      writeln('    add x0, x0, #1');
-      { Save x2 (len) for later length byte write }
-      writeln('    mov x4, x2');
+      WriteLn('    add x3, x3, x1');
+      { Copy loop: copy x2 characters from [x3] To [x0], skip Length byte }
+      { add x0, x0, #1 - skip Length byte position }
+      WriteLn('    add x0, x0, #1');
+      { Save x2 (len) For later Length byte Write }
+      WriteLn('    mov x4, x2');
       lbl1 := NewLabel;
       lbl2 := NewLabel;
       EmitLabel(lbl1);
       { cbz x2, done }
-      write('    cbz x2, L'); writeln(lbl2);
-      { ldr x5, [x3], #8 - load 8-byte integer from tok_str }
-      writeln('    ldr x5, [x3], #8');
+      Write('    cbz x2, L'); WriteLn(lbl2);
+      { ldr x5, [x3], #8 - load 8-byte Integer from tok_str }
+      WriteLn('    ldr x5, [x3], #8');
       { strb w5, [x0], #1 - store as byte }
-      writeln('    strb w5, [x0], #1');
+      WriteLn('    strb w5, [x0], #1');
       { sub x2, x2, #1 }
-      writeln('    sub x2, x2, #1');
+      WriteLn('    sub x2, x2, #1');
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { strb wzr, [x0] - null terminate }
-      writeln('    strb wzr, [x0]');
-      { Write length byte at start of filename: x0-x4-1 = start address }
+      WriteLn('    strb wzr, [x0]');
+      { Write Length byte at start Of filename: x0-x4-1 = start address }
       { sub x0, x0, x4 }
-      writeln('    sub x0, x0, x4');
+      WriteLn('    sub x0, x0, x4');
       { sub x0, x0, #1 }
-      writeln('    sub x0, x0, #1');
-      { strb w4, [x0] - store length byte }
-      writeln('    strb w4, [x0]');
-      { Initialize fd to -1 }
+      WriteLn('    sub x0, x0, #1');
+      { strb w4, [x0] - store Length byte }
+      WriteLn('    strb w4, [x0]');
+      { Initialize fd To -1 }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
+      WriteLn('    str x0, [x1]');
       Expect(TOK_RPAREN)
-    end
+    End
     { reset = 114,101,115,101,116 }
-    else if (tok_len = 5) and (tok_str[0] = 114) and (tok_str[1] = 101) and
-            (tok_str[2] = 115) and (tok_str[3] = 101) and (tok_str[4] = 116) then
-    begin
-      { reset(f) - open file for reading }
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 116) Then
+    Begin
+      { reset(f) - open file For reading }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Get filename address (offset 16) and convert to C string }
+      { Get filename address (offset 16) And convert To C String }
       EmitVarAddr(idx, scope_level);
-      EmitPushX0;  { save file var base }
-      { add x0, x0, #16 - point to filename }
-      writeln('    add x0, x0, #16');
-      { Convert Pascal string to C string: skip length byte }
-      writeln('    add x0, x0, #1');
+      EmitPushX0;  { save file Var base }
+      { add x0, x0, #16 - point To filename }
+      WriteLn('    add x0, x0, #16');
+      { Convert Pascal String To C String: skip Length byte }
+      WriteLn('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
-      writeln('    mov x1, #0');
-      writeln('    mov x2, #0');
+      WriteLn('    mov x1, #0');
+      WriteLn('    mov x2, #0');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      writeln('    movz x16, #5');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #5');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { Store fd in file variable (offset 0) }
-      EmitPopX1;  { x1 = file var base }
+      { Store fd In file variable (offset 0) }
+      EmitPopX1;  { x1 = file Var base }
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
-      { Store mode=1 (read) at offset 8 }
-      writeln('    mov x0, #1');
+      WriteLn('    str x0, [x1]');
+      { Store mode=1 (Read) at offset 8 }
+      WriteLn('    mov x0, #1');
       { str x0, [x1, #8] }
-      writeln('    str x0, [x1, #8]');
-    end
+      WriteLn('    str x0, [x1, #8]');
+    End
     { rewrite = 114,101,119,114,105,116,101 }
-    else if (tok_len = 7) and (tok_str[0] = 114) and (tok_str[1] = 101) and
-            (tok_str[2] = 119) and (tok_str[3] = 114) and (tok_str[4] = 105) and
-            (tok_str[5] = 116) and (tok_str[6] = 101) then
-    begin
-      { rewrite(f) - open/create file for writing }
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 114) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 119) And (ToLower(tok_str[3]) = 114) And (ToLower(tok_str[4]) = 105) And
+            (ToLower(tok_str[5]) = 116) And (ToLower(tok_str[6]) = 101) Then
+    Begin
+      { rewrite(f) - open/create file For writing }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Get filename address (offset 16) and convert to C string }
+      { Get filename address (offset 16) And convert To C String }
       EmitVarAddr(idx, scope_level);
-      EmitPushX0;  { save file var base }
-      { add x0, x0, #16 - point to filename }
-      writeln('    add x0, x0, #16');
-      { Convert Pascal string to C string: skip length byte }
-      writeln('    add x0, x0, #1');
+      EmitPushX0;  { save file Var base }
+      { add x0, x0, #16 - point To filename }
+      WriteLn('    add x0, x0, #16');
+      { Convert Pascal String To C String: skip Length byte }
+      WriteLn('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420) }
       { mov x1, #1537 }
-      writeln('    mov x1, #1537');
+      WriteLn('    mov x1, #1537');
       { mov x2, #420 }
-      writeln('    mov x2, #420');
+      WriteLn('    mov x2, #420');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      writeln('    movz x16, #5');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #5');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { Store fd in file variable (offset 0) }
-      EmitPopX1;  { x1 = file var base }
+      { Store fd In file variable (offset 0) }
+      EmitPopX1;  { x1 = file Var base }
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
-      { Store mode=2 (write) at offset 8 }
-      writeln('    mov x0, #2');
+      WriteLn('    str x0, [x1]');
+      { Store mode=2 (Write) at offset 8 }
+      WriteLn('    mov x0, #2');
       { str x0, [x1, #8] }
-      writeln('    str x0, [x1, #8]');
-    end
+      WriteLn('    str x0, [x1, #8]');
+    End
     { close = 99,108,111,115,101 }
-    else if (tok_len = 5) and (tok_str[0] = 99) and (tok_str[1] = 108) and
-            (tok_str[2] = 111) and (tok_str[3] = 115) and (tok_str[4] = 101) then
-    begin
+    Else If (tok_len = 5) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 108) And
+            (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 115) And (ToLower(tok_str[4]) = 101) Then
+    Begin
       { close(f) - close file }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
       { Load fd from file variable }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      writeln('    ldr x0, [x0]');
+      WriteLn('    ldr x0, [x0]');
       { close syscall: x0=fd }
       { movz x16, #6; movk x16, #0x200, lsl #16 = 0x2000006 }
-      writeln('    movz x16, #6');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #6');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { Set fd to -1 to mark as closed }
+      { Set fd To -1 To mark as closed }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
-      { Set mode to 0 (closed) at offset 8 }
-      writeln('    mov x0, #0');
+      WriteLn('    str x0, [x1]');
+      { Set mode To 0 (closed) at offset 8 }
+      WriteLn('    mov x0, #0');
       { str x0, [x1, #8] }
-      writeln('    str x0, [x1, #8]');
-    end
+      WriteLn('    str x0, [x1, #8]');
+    End
     { setinput = 115,101,116,105,110,112,117,116 }
-    else if (tok_len = 8) and (tok_str[0] = 115) and (tok_str[1] = 101) and
-            (tok_str[2] = 116) and (tok_str[3] = 105) and (tok_str[4] = 110) and
-            (tok_str[5] = 112) and (tok_str[6] = 117) and (tok_str[7] = 116) then
-    begin
-      { setinput(f) - set input file descriptor from text file variable }
+    Else If (tok_len = 8) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 110) And
+            (ToLower(tok_str[5]) = 112) And (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 116) Then
+    Begin
+      { setinput(f) - Set input file descriptor from Text file variable }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if sym_type[idx] <> TYPE_TEXT then
+      If sym_type[idx] <> TYPE_TEXT Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Load fd from file variable and store in x19 }
+      { Load fd from file variable And store In x19 }
       EmitVarAddr(idx, scope_level);
       { ldr x19, [x0] }
-      writeln('    ldr x19, [x0]');
-    end
+      WriteLn('    ldr x19, [x0]');
+    End
     { setoutput = 115,101,116,111,117,116,112,117,116 }
-    else if (tok_len = 9) and (tok_str[0] = 115) and (tok_str[1] = 101) and
-            (tok_str[2] = 116) and (tok_str[3] = 111) and (tok_str[4] = 117) and
-            (tok_str[5] = 116) and (tok_str[6] = 112) and (tok_str[7] = 117) and
-            (tok_str[8] = 116) then
-    begin
-      { setoutput(f) - set output file descriptor from text file variable }
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 111) And (ToLower(tok_str[4]) = 117) And
+            (ToLower(tok_str[5]) = 116) And (ToLower(tok_str[6]) = 112) And (ToLower(tok_str[7]) = 117) And
+            (ToLower(tok_str[8]) = 116) Then
+    Begin
+      { setoutput(f) - Set output file descriptor from Text file variable }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if sym_type[idx] <> TYPE_TEXT then
+      If sym_type[idx] <> TYPE_TEXT Then
         Error(9);
       NextToken;
       Expect(TOK_RPAREN);
-      { Load fd from file variable and store in x20 }
+      { Load fd from file variable And store In x20 }
       EmitVarAddr(idx, scope_level);
       { ldr x20, [x0] }
-      writeln('    ldr x20, [x0]');
-    end
+      WriteLn('    ldr x20, [x0]');
+    End
     { setinputfd = 115,101,116,105,110,112,117,116,102,100 (10 chars) }
-    else if (tok_len = 10) and (tok_str[0] = 115) and (tok_str[1] = 101) and
-            (tok_str[2] = 116) and (tok_str[3] = 105) and (tok_str[4] = 110) and
-            (tok_str[5] = 112) and (tok_str[6] = 117) and (tok_str[7] = 116) and
-            (tok_str[8] = 102) and (tok_str[9] = 100) then
-    begin
-      { setinputfd(fd) - set input file descriptor directly from integer }
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 105) And (ToLower(tok_str[4]) = 110) And
+            (ToLower(tok_str[5]) = 112) And (ToLower(tok_str[6]) = 117) And (ToLower(tok_str[7]) = 116) And
+            (ToLower(tok_str[8]) = 102) And (ToLower(tok_str[9]) = 100) Then
+    Begin
+      { setinputfd(fd) - Set input file descriptor directly from Integer }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { mov x19, x0 }
-      writeln('    mov x19, x0');
-    end
+      WriteLn('    mov x19, x0');
+    End
     { setoutputfd = 115,101,116,111,117,116,112,117,116,102,100 (11 chars) }
-    else if (tok_len = 11) and (tok_str[0] = 115) and (tok_str[1] = 101) and
-            (tok_str[2] = 116) and (tok_str[3] = 111) and (tok_str[4] = 117) and
-            (tok_str[5] = 116) and (tok_str[6] = 112) and (tok_str[7] = 117) and
-            (tok_str[8] = 116) and (tok_str[9] = 102) and (tok_str[10] = 100) then
-    begin
-      { setoutputfd(fd) - set output file descriptor directly from integer }
+    Else If (tok_len = 11) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 111) And (ToLower(tok_str[4]) = 117) And
+            (ToLower(tok_str[5]) = 116) And (ToLower(tok_str[6]) = 112) And (ToLower(tok_str[7]) = 117) And
+            (ToLower(tok_str[8]) = 116) And (ToLower(tok_str[9]) = 102) And (ToLower(tok_str[10]) = 100) Then
+    Begin
+      { setoutputfd(fd) - Set output file descriptor directly from Integer }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
       { mov x20, x0 }
-      writeln('    mov x20, x0');
-    end
+      WriteLn('    mov x20, x0');
+    End
     { closefd = 99,108,111,115,101,102,100 (7 chars) }
-    else if (tok_len = 7) and (tok_str[0] = 99) and (tok_str[1] = 108) and
-            (tok_str[2] = 111) and (tok_str[3] = 115) and (tok_str[4] = 101) and
-            (tok_str[5] = 102) and (tok_str[6] = 100) then
-    begin
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 99) And (ToLower(tok_str[1]) = 108) And
+            (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 115) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 102) And (ToLower(tok_str[6]) = 100) Then
+    Begin
       { closefd(fd) - close a file descriptor }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;
       Expect(TOK_RPAREN);
-      { x0 = fd to close }
+      { x0 = fd To close }
       { close syscall: x16 = 0x2000006 }
-      writeln('    movz x16, #6');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #6');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc
-    end
+    End
     { writefd = 119,114,105,116,101,102,100 (7 chars) }
-    else if (tok_len = 7) and (tok_str[0] = 119) and (tok_str[1] = 114) and
-            (tok_str[2] = 105) and (tok_str[3] = 116) and (tok_str[4] = 101) and
-            (tok_str[5] = 102) and (tok_str[6] = 100) then
-    begin
-      { writefd(fd, char) - write one char to fd }
+    Else If (tok_len = 7) And (ToLower(tok_str[0]) = 119) And (ToLower(tok_str[1]) = 114) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 101) And
+            (ToLower(tok_str[5]) = 102) And (ToLower(tok_str[6]) = 100) Then
+    Begin
+      { writefd(fd, Char) - Write one Char To fd }
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;  { fd }
       EmitPushX0;
       Expect(TOK_COMMA);
-      ParseExpression;  { char }
-      { x0 = char, stack top = fd }
-      { sub sp, sp, #16; strb w0, [sp] - store char in buffer }
-      writeln('    sub sp, sp, #16');
+      ParseExpression;  { Char }
+      { x0 = Char, stack top = fd }
+      { sub sp, sp, #16; strb w0, [sp] - store Char In buffer }
+      WriteLn('    sub sp, sp, #16');
       { strb w0, [sp] }
-      writeln('    strb w0, [sp]');
+      WriteLn('    strb w0, [sp]');
       { ldr x0, [sp, #16] - load fd from saved position }
-      writeln('    ldr x0, [sp, #16]');
+      WriteLn('    ldr x0, [sp, #16]');
       { mov x1, sp - buffer address }
-      writeln('    mov x1, sp');
-      { mov x2, #1 - write 1 byte }
-      writeln('    mov x2, #1');
-      { write syscall: x16 = 0x2000004 }
-      writeln('    movz x16, #4');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    mov x1, sp');
+      { mov x2, #1 - Write 1 byte }
+      WriteLn('    mov x2, #1');
+      { Write syscall: x16 = 0x2000004 }
+      WriteLn('    movz x16, #4');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
-      { add sp, sp, #32 - restore stack (16 for buffer + 16 for saved fd) }
-      writeln('    add sp, sp, #32');
+      { add sp, sp, #32 - restore stack (16 For buffer + 16 For saved fd) }
+      WriteLn('    add sp, sp, #32');
       Expect(TOK_RPAREN)
-    end
+    End
     { seek = 115,101,101,107 }
-    else if (tok_len = 4) and (tok_str[0] = 115) and (tok_str[1] = 101) and
-            (tok_str[2] = 101) and (tok_str[3] = 107) then
-    begin
-      { seek(f, pos) - move to position in file }
+    Else If (tok_len = 4) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 101) And (ToLower(tok_str[3]) = 107) Then
+    Begin
+      { seek(f, pos) - move To position In file }
       NextToken;
       Expect(TOK_LPAREN);
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+      If (sym_type[idx] <> TYPE_FILE) And (sym_type[idx] <> TYPE_TEXT) Then
         Error(9);
       NextToken;
       Expect(TOK_COMMA);
-      { Get file fd and save to x23 }
+      { Get file fd And save To x23 }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      writeln('    ldr x0, [x0]');
-      { Save fd to x23 }
-      writeln('    mov x23, x0');
+      WriteLn('    ldr x0, [x0]');
+      { Save fd To x23 }
+      WriteLn('    mov x23, x0');
       { Parse position expression }
       ParseExpression;
       { x0 = position, x23 = fd }
-      { mov x1, x0 (position to x1) }
-      writeln('    mov x1, x0');
-      { mov x0, x23 (fd to x0) }
-      writeln('    mov x0, x23');
+      { mov x1, x0 (position To x1) }
+      WriteLn('    mov x1, x0');
+      { mov x0, x23 (fd To x0) }
+      WriteLn('    mov x0, x23');
       { mov x2, #0 (SEEK_SET) }
-      writeln('    mov x2, #0');
+      WriteLn('    mov x2, #0');
       { lseek syscall: 0x20000C7 }
-      writeln('    movz x16, #0xC7');
-      writeln('    movk x16, #0x200, lsl #16');
+      WriteLn('    movz x16, #0xC7');
+      WriteLn('    movk x16, #0x200, lsl #16');
       EmitSvc;
       Expect(TOK_RPAREN)
-    end
+    End
     { delete = 100,101,108,101,116,101 }
-    else if (tok_len = 6) and (tok_str[0] = 100) and (tok_str[1] = 101) and
-            (tok_str[2] = 108) and (tok_str[3] = 101) and (tok_str[4] = 116) and
-            (tok_str[5] = 101) then
-    begin
-      { delete(s, start, count) - remove chars from string }
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 108) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 116) And
+            (ToLower(tok_str[5]) = 101) Then
+    Begin
+      { delete(s, start, count) - remove chars from String }
       NextToken;
       Expect(TOK_LPAREN);
-      { First arg: string variable }
-      if tok_type <> TOK_IDENT then
+      { First arg: String variable }
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if sym_type[idx] <> TYPE_STRING then
+      If sym_type[idx] <> TYPE_STRING Then
         Error(9);
       NextToken;
       EmitVarAddr(idx, scope_level);
@@ -9080,59 +9080,59 @@ begin
       Expect(TOK_COMMA);
       { Third arg: count }
       ParseExpression;
-      { x0=count, stack has string addr and start }
-      writeln('    mov x2, x0');
+      { x0=count, stack has String addr And start }
+      WriteLn('    mov x2, x0');
       EmitPopX1;  { start }
-      EmitPopX0;  { string addr }
+      EmitPopX0;  { String addr }
       EmitBL(rt_str_delete);
       Expect(TOK_RPAREN)
-    end
+    End
     { insert = 105,110,115,101,114,116 }
-    else if (tok_len = 6) and (tok_str[0] = 105) and (tok_str[1] = 110) and
-            (tok_str[2] = 115) and (tok_str[3] = 101) and (tok_str[4] = 114) and
-            (tok_str[5] = 116) then
-    begin
+    Else If (tok_len = 6) And (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) And
+            (ToLower(tok_str[2]) = 115) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 114) And
+            (ToLower(tok_str[5]) = 116) Then
+    Begin
       { insert(source, dest, pos) - insert source into dest at pos }
       NextToken;
       Expect(TOK_LPAREN);
-      { First arg: source string }
-      if tok_type = TOK_IDENT then
-      begin
+      { First arg: source String }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level);
         EmitPushX0
-      end
-      else if tok_type = TOK_STRING then
-      begin
+      End
+      Else If tok_type = TOK_STRING Then
+      Begin
         { String literal - allocate temp on heap }
-        writeln('    mov x8, x21');
+        WriteLn('    mov x8, x21');
         EmitMovX0(tok_len);
-        writeln('    strb w0, [x8]');
-        for i := 0 to tok_len - 1 do
-        begin
+        WriteLn('    strb w0, [x8]');
+        For i := 0 To tok_len - 1 Do
+        Begin
           EmitMovX0(tok_str[i]);
-          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
-        end;
-        writeln('    mov x0, x21');
-        writeln('    add x21, x21, #256');
+          Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
+        End;
+        WriteLn('    mov x0, x21');
+        WriteLn('    add x21, x21, #256');
         EmitPushX0;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_COMMA);
-      { Second arg: dest string variable }
-      if tok_type <> TOK_IDENT then
+      { Second arg: dest String variable }
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if sym_type[idx] <> TYPE_STRING then
+      If sym_type[idx] <> TYPE_STRING Then
         Error(9);
       NextToken;
       EmitVarAddr(idx, scope_level);
@@ -9140,120 +9140,120 @@ begin
       Expect(TOK_COMMA);
       { Third arg: position }
       ParseExpression;
-      { x0=pos, stack has source and dest }
-      writeln('    mov x2, x0');
+      { x0=pos, stack has source And dest }
+      WriteLn('    mov x2, x0');
       EmitPopX1;  { dest }
       EmitPopX0;  { source }
       EmitBL(rt_str_insert);
       Expect(TOK_RPAREN)
-    end
-    { str = 115,116,114 - but only if not a local variable }
-    else if (tok_len = 3) and (tok_str[0] = 115) and (tok_str[1] = 116) and
-            (tok_str[2] = 114) and (SymLookup < 0) then
-    begin
-      { str(n, s) - convert integer n to string s }
+    End
+    { str = 115,116,114 - but only If Not a local variable }
+    Else If (tok_len = 3) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 116) And
+            (ToLower(tok_str[2]) = 114) And (SymLookup < 0) Then
+    Begin
+      { str(n, s) - convert Integer n To String s }
       NextToken;
       Expect(TOK_LPAREN);
-      { First arg: integer expression }
+      { First arg: Integer expression }
       ParseExpression;
       EmitPushX0;
       Expect(TOK_COMMA);
-      { Second arg: string variable }
-      if tok_type <> TOK_IDENT then
+      { Second arg: String variable }
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
-      if sym_type[idx] <> TYPE_STRING then
+      If sym_type[idx] <> TYPE_STRING Then
         Error(9);
       NextToken;
       EmitVarAddr(idx, scope_level);
-      { x0 = string addr, pop integer into x1 then swap }
-      writeln('    mov x1, x0');
-      EmitPopX0;  { x0 = integer value }
-      { Now: x0 = integer, x1 = string addr }
+      { x0 = String addr, pop Integer into x1 Then swap }
+      WriteLn('    mov x1, x0');
+      EmitPopX0;  { x0 = Integer value }
+      { Now: x0 = Integer, x1 = String addr }
       EmitBL(rt_int_to_str);
       Expect(TOK_RPAREN)
-    end
-    { val = 118,97,108 - but only if not a local variable }
-    else if (tok_len = 3) and (tok_str[0] = 118) and (tok_str[1] = 97) and
-            (tok_str[2] = 108) and (SymLookup < 0) then
-    begin
-      { val(s, v, code) - convert string s to integer v, error in code }
+    End
+    { val = 118,97,108 - but only If Not a local variable }
+    Else If (tok_len = 3) And (ToLower(tok_str[0]) = 118) And (ToLower(tok_str[1]) = 97) And
+            (ToLower(tok_str[2]) = 108) And (SymLookup < 0) Then
+    Begin
+      { val(s, v, code) - convert String s To Integer v, error In code }
       NextToken;
       Expect(TOK_LPAREN);
-      { First arg: string }
-      if tok_type = TOK_IDENT then
-      begin
+      { First arg: String }
+      If tok_type = TOK_IDENT Then
+      Begin
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3);
-        if sym_type[idx] <> TYPE_STRING then
+        If sym_type[idx] <> TYPE_STRING Then
           Error(9);
         NextToken;
         EmitVarAddr(idx, scope_level)
-      end
-      else if tok_type = TOK_STRING then
-      begin
+      End
+      Else If tok_type = TOK_STRING Then
+      Begin
         { String literal - allocate temp on heap }
-        writeln('    mov x8, x21');
+        WriteLn('    mov x8, x21');
         EmitMovX0(tok_len);
-        writeln('    strb w0, [x8]');
-        for i := 0 to tok_len - 1 do
-        begin
+        WriteLn('    strb w0, [x8]');
+        For i := 0 To tok_len - 1 Do
+        Begin
           EmitMovX0(tok_str[i]);
-          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
-        end;
-        writeln('    mov x0, x21');
-        writeln('    add x21, x21, #256');
+          Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
+        End;
+        WriteLn('    mov x0, x21');
+        WriteLn('    add x21, x21, #256');
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
-      { Call rt_str_to_int: x0=string addr -> x0=value, x1=error }
+      { Call rt_str_to_int: x0=String addr -> x0=value, x1=error }
       EmitBL(rt_str_to_int);
-      { Save both results: push error first (x1), then value (x0) }
+      { Save both results: push error first (x1), Then value (x0) }
       EmitPushX1;
       EmitPushX0;
       Expect(TOK_COMMA);
-      { Second arg: integer variable to receive value }
-      if tok_type <> TOK_IDENT then
+      { Second arg: Integer variable To receive value }
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
       NextToken;
-      { Get address of v into x0, move to x1, pop value, store }
+      { Get address Of v into x0, move To x1, pop value, store }
       EmitVarAddr(idx, scope_level);
-      writeln('    mov x1, x0');
+      WriteLn('    mov x1, x0');
       EmitPopX0;  { value }
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
+      WriteLn('    str x0, [x1]');
       Expect(TOK_COMMA);
-      { Third arg: integer variable to receive error code }
-      if tok_type <> TOK_IDENT then
+      { Third arg: Integer variable To receive error code }
+      If tok_type <> TOK_IDENT Then
         Error(6);
       idx := SymLookup;
-      if idx < 0 then
+      If idx < 0 Then
         Error(3);
       NextToken;
-      { Get address of code into x0, move to x1, pop error, store }
+      { Get address Of code into x0, move To x1, pop error, store }
       EmitVarAddr(idx, scope_level);
-      writeln('    mov x1, x0');
+      WriteLn('    mov x1, x0');
       EmitPopX0;  { error }
       { str x0, [x1] }
-      writeln('    str x0, [x1]');
+      WriteLn('    str x0, [x1]');
       Expect(TOK_RPAREN)
-    end
+    End
     { clrscr = 99,108,114,115,99,114 }
-    else if TokIs8(99, 108, 114, 115, 99, 114, 0, 0) = 1 then
-    begin
+    Else If TokIs8(99, 108, 114, 115, 99, 114, 0, 0) = 1 Then
+    Begin
       NextToken;
       EmitBL(rt_clrscr)
-    end
+    End
     { gotoxy = 103,111,116,111,120,121 }
-    else if TokIs8(103, 111, 116, 111, 120, 121, 0, 0) = 1 then
-    begin
+    Else If TokIs8(103, 111, 116, 111, 120, 121, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;    { x }
@@ -9263,474 +9263,474 @@ begin
       EmitPopX1;          { x1=x, x0=y }
       EmitBL(rt_gotoxy);
       Expect(TOK_RPAREN)
-    end
+    End
     { clreol = 99,108,114,101,111,108 }
-    else if TokIs8(99, 108, 114, 101, 111, 108, 0, 0) = 1 then
-    begin
+    Else If TokIs8(99, 108, 114, 101, 111, 108, 0, 0) = 1 Then
+    Begin
       NextToken;
       EmitBL(rt_clreol)
-    end
+    End
     { textcolor = 116,101,120,116,99,111,108,111,114 (9 chars) }
-    else if (tok_len = 9) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 99) and
-            (ToLower(tok_str[5]) = 111) and (ToLower(tok_str[6]) = 108) and (ToLower(tok_str[7]) = 111) and
-            (ToLower(tok_str[8]) = 114) then
-    begin
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 120) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 99) And
+            (ToLower(tok_str[5]) = 111) And (ToLower(tok_str[6]) = 108) And (ToLower(tok_str[7]) = 111) And
+            (ToLower(tok_str[8]) = 114) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;    { color code 0-7 }
       EmitBL(rt_textcolor);
       Expect(TOK_RPAREN)
-    end
+    End
     { textbackground = 116,101,120,116,98,97,99,107,103,114,111,117,110,100 (14 chars) }
-    else if (tok_len = 14) and (ToLower(tok_str[0]) = 116) and (ToLower(tok_str[1]) = 101) and
-            (ToLower(tok_str[2]) = 120) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 98) and
-            (ToLower(tok_str[5]) = 97) and (ToLower(tok_str[6]) = 99) and (ToLower(tok_str[7]) = 107) and
-            (ToLower(tok_str[8]) = 103) and (ToLower(tok_str[9]) = 114) and (ToLower(tok_str[10]) = 111) and
-            (ToLower(tok_str[11]) = 117) and (ToLower(tok_str[12]) = 110) and (ToLower(tok_str[13]) = 100) then
-    begin
+    Else If (tok_len = 14) And (ToLower(tok_str[0]) = 116) And (ToLower(tok_str[1]) = 101) And
+            (ToLower(tok_str[2]) = 120) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 98) And
+            (ToLower(tok_str[5]) = 97) And (ToLower(tok_str[6]) = 99) And (ToLower(tok_str[7]) = 107) And
+            (ToLower(tok_str[8]) = 103) And (ToLower(tok_str[9]) = 114) And (ToLower(tok_str[10]) = 111) And
+            (ToLower(tok_str[11]) = 117) And (ToLower(tok_str[12]) = 110) And (ToLower(tok_str[13]) = 100) Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
       ParseExpression;    { color code 0-7 }
       EmitBL(rt_textbackground);
       Expect(TOK_RPAREN)
-    end
+    End
     { normvideo = 110,111,114,109,118,105,100,101,111 (9 chars) }
-    else if (tok_len = 9) and (ToLower(tok_str[0]) = 110) and (ToLower(tok_str[1]) = 111) and
-            (ToLower(tok_str[2]) = 114) and (ToLower(tok_str[3]) = 109) and (ToLower(tok_str[4]) = 118) and
-            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
-            (ToLower(tok_str[8]) = 111) then
-    begin
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 110) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 109) And (ToLower(tok_str[4]) = 118) And
+            (ToLower(tok_str[5]) = 105) And (ToLower(tok_str[6]) = 100) And (ToLower(tok_str[7]) = 101) And
+            (ToLower(tok_str[8]) = 111) Then
+    Begin
       NextToken;
       EmitBL(rt_normvideo)
-    end
+    End
     { highvideo = 104,105,103,104,118,105,100,101,111 (9 chars) }
-    else if (tok_len = 9) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
-            (ToLower(tok_str[2]) = 103) and (ToLower(tok_str[3]) = 104) and (ToLower(tok_str[4]) = 118) and
-            (ToLower(tok_str[5]) = 105) and (ToLower(tok_str[6]) = 100) and (ToLower(tok_str[7]) = 101) and
-            (ToLower(tok_str[8]) = 111) then
-    begin
+    Else If (tok_len = 9) And (ToLower(tok_str[0]) = 104) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 103) And (ToLower(tok_str[3]) = 104) And (ToLower(tok_str[4]) = 118) And
+            (ToLower(tok_str[5]) = 105) And (ToLower(tok_str[6]) = 100) And (ToLower(tok_str[7]) = 101) And
+            (ToLower(tok_str[8]) = 111) Then
+    Begin
       NextToken;
       EmitBL(rt_highvideo)
-    end
+    End
     { lowvideo = 108,111,119,118,105,100,101,111 (8 chars) }
-    else if TokIs8(108, 111, 119, 118, 105, 100, 101, 111) = 1 then
-    begin
+    Else If TokIs8(108, 111, 119, 118, 105, 100, 101, 111) = 1 Then
+    Begin
       NextToken;
       EmitBL(rt_lowvideo)
-    end
+    End
     { hidecursor = 104,105,100,101,99,117,114,115,111,114 (10 chars) }
-    else if (tok_len = 10) and (ToLower(tok_str[0]) = 104) and (ToLower(tok_str[1]) = 105) and
-            (ToLower(tok_str[2]) = 100) and (ToLower(tok_str[3]) = 101) and (ToLower(tok_str[4]) = 99) and
-            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
-            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
-    begin
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 104) And (ToLower(tok_str[1]) = 105) And
+            (ToLower(tok_str[2]) = 100) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 99) And
+            (ToLower(tok_str[5]) = 117) And (ToLower(tok_str[6]) = 114) And (ToLower(tok_str[7]) = 115) And
+            (ToLower(tok_str[8]) = 111) And (ToLower(tok_str[9]) = 114) Then
+    Begin
       NextToken;
       EmitBL(rt_hidecursor)
-    end
+    End
     { showcursor = 115,104,111,119,99,117,114,115,111,114 (10 chars) }
-    else if (tok_len = 10) and (ToLower(tok_str[0]) = 115) and (ToLower(tok_str[1]) = 104) and
-            (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 119) and (ToLower(tok_str[4]) = 99) and
-            (ToLower(tok_str[5]) = 117) and (ToLower(tok_str[6]) = 114) and (ToLower(tok_str[7]) = 115) and
-            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 114) then
-    begin
+    Else If (tok_len = 10) And (ToLower(tok_str[0]) = 115) And (ToLower(tok_str[1]) = 104) And
+            (ToLower(tok_str[2]) = 111) And (ToLower(tok_str[3]) = 119) And (ToLower(tok_str[4]) = 99) And
+            (ToLower(tok_str[5]) = 117) And (ToLower(tok_str[6]) = 114) And (ToLower(tok_str[7]) = 115) And
+            (ToLower(tok_str[8]) = 111) And (ToLower(tok_str[9]) = 114) Then
+    Begin
       NextToken;
       EmitBL(rt_showcursor)
-    end
+    End
     { sleep = 115,108,101,101,112 (5 chars) - Sleep(ms) }
-    else if TokIs8(115, 108, 101, 101, 112, 0, 0, 0) = 1 then
-    begin
+    Else If TokIs8(115, 108, 101, 101, 112, 0, 0, 0) = 1 Then
+    Begin
       NextToken;
       Expect(TOK_LPAREN);
-      ParseExpression;  { ms in x0 }
+      ParseExpression;  { ms In x0 }
       EmitBL(rt_sleep);
       Expect(TOK_RPAREN)
-    end
+    End
     { initkeyboard = 105,110,105,116,107,101,121,98,111,97,114,100 (12 chars) }
-    else if (tok_len = 12) and (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) and
-            (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) and (ToLower(tok_str[4]) = 107) and
-            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 121) and (ToLower(tok_str[7]) = 98) and
-            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 97) and (ToLower(tok_str[10]) = 114) and
-            (ToLower(tok_str[11]) = 100) then
-    begin
+    Else If (tok_len = 12) And (ToLower(tok_str[0]) = 105) And (ToLower(tok_str[1]) = 110) And
+            (ToLower(tok_str[2]) = 105) And (ToLower(tok_str[3]) = 116) And (ToLower(tok_str[4]) = 107) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 121) And (ToLower(tok_str[7]) = 98) And
+            (ToLower(tok_str[8]) = 111) And (ToLower(tok_str[9]) = 97) And (ToLower(tok_str[10]) = 114) And
+            (ToLower(tok_str[11]) = 100) Then
+    Begin
       NextToken;
       EmitBL(rt_initkeyboard)
-    end
+    End
     { donekeyboard = 100,111,110,101,107,101,121,98,111,97,114,100 (12 chars) }
-    else if (tok_len = 12) and (ToLower(tok_str[0]) = 100) and (ToLower(tok_str[1]) = 111) and
-            (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 101) and (ToLower(tok_str[4]) = 107) and
-            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 121) and (ToLower(tok_str[7]) = 98) and
-            (ToLower(tok_str[8]) = 111) and (ToLower(tok_str[9]) = 97) and (ToLower(tok_str[10]) = 114) and
-            (ToLower(tok_str[11]) = 100) then
-    begin
+    Else If (tok_len = 12) And (ToLower(tok_str[0]) = 100) And (ToLower(tok_str[1]) = 111) And
+            (ToLower(tok_str[2]) = 110) And (ToLower(tok_str[3]) = 101) And (ToLower(tok_str[4]) = 107) And
+            (ToLower(tok_str[5]) = 101) And (ToLower(tok_str[6]) = 121) And (ToLower(tok_str[7]) = 98) And
+            (ToLower(tok_str[8]) = 111) And (ToLower(tok_str[9]) = 97) And (ToLower(tok_str[10]) = 114) And
+            (ToLower(tok_str[11]) = 100) Then
+    Begin
       NextToken;
       EmitBL(rt_donekeyboard)
-    end
-    else
-    begin
-      { Check for WITH context - try to find identifier as a field }
-      if with_rec_idx >= 0 then
-      begin
-        arg_count := FindField(with_rec_type);  { reuse arg_count for field_idx }
-        if arg_count >= 0 then
-        begin
+    End
+    Else
+    Begin
+      { Check For With context - try To find identifier as a field }
+      If with_rec_idx >= 0 Then
+      Begin
+        arg_count := FindField(with_rec_type);  { reuse arg_count For field_idx }
+        If arg_count >= 0 Then
+        Begin
           { Found field - handle assignment }
           NextToken;
           Expect(TOK_ASSIGN);
-          ParseExpression;  { value in x0 or d0 }
+          ParseExpression;  { value In x0 Or d0 }
           { Compute address: base + field_offset }
-          if field_type[arg_count] = TYPE_REAL then
-          begin
-            { Value is in d0, need to store to field }
-            if expr_type <> TYPE_REAL then
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            { Value is In d0, need To store To field }
+            If expr_type <> TYPE_REAL Then
               EmitScvtfD0X0;
             EmitPushD0;  { save value }
-          end
-          else
+          End
+          Else
             EmitPushX0;  { save value }
           { Compute address }
-          if sym_level[with_rec_idx] < scope_level then
-          begin
+          If sym_level[with_rec_idx] < scope_level Then
+          Begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
-            writeln('    add x1, x8, #');
-          end
-          else
-          begin
-            writeln('    add x1, x29, #');
-          end;
-          { Store value to field }
-          if field_type[arg_count] = TYPE_REAL then
-          begin
+            WriteLn('    add x1, x8, #');
+          End
+          Else
+          Begin
+            WriteLn('    add x1, x29, #');
+          End;
+          { Store value To field }
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
             EmitPopD0;
             { str d0, [x1] }
-            writeln('    str d0, [x1]');
-          end
-          else
-          begin
+            WriteLn('    str d0, [x1]');
+          End
+          Else
+          Begin
             EmitPopX0;
             { str x0, [x1] }
-            writeln('    str x0, [x1]');
-          end
-        end
-        else
-        begin
-          { Field not found, proceed with normal lookup }
+            WriteLn('    str x0, [x1]');
+          End
+        End
+        Else
+        Begin
+          { Field Not found, proceed With normal lookup }
           idx := SymLookup;
-          if idx < 0 then
+          If idx < 0 Then
             Error(3)
-        end
-      end
-      else
-      begin
-        { Not a built-in, look up in symbol table }
+        End
+      End
+      Else
+      Begin
+        { Not a built-In, look up In symbol table }
         idx := SymLookup;
-        if idx < 0 then
+        If idx < 0 Then
           Error(3)
-      end;
-      { Skip if we already handled WITH field assignment }
-      if (with_rec_idx < 0) or (arg_count < 0) then
-      begin
+      End;
+      { Skip If we already handled With field assignment }
+      If (with_rec_idx < 0) Or (arg_count < 0) Then
+      Begin
       NextToken;
 
-      if sym_kind[idx] = SYM_PROCEDURE then
-      begin
-        { Procedure call - pass args in x0-x7 }
+      If sym_kind[idx] = SYM_PROCEDURE Then
+      Begin
+        { Procedure call - pass args In x0-x7 }
         arg_count := 0;
         var_flags := sym_var_param_flags[idx];
-        if tok_type = TOK_LPAREN then
-        begin
+        If tok_type = TOK_LPAREN Then
+        Begin
           NextToken;
-          if tok_type <> TOK_RPAREN then
-          begin
-            { Evaluate all args and push to stack }
-            repeat
-              if tok_type = TOK_COMMA then NextToken;
-              { Check if this is a var parameter }
-              if IsVarParam(var_flags, arg_count) = 1 then
-              begin
-                { Var param - pass address of variable }
-                if tok_type <> TOK_IDENT then
-                  Error(6);  { var param requires variable }
+          If tok_type <> TOK_RPAREN Then
+          Begin
+            { Evaluate all args And push To stack }
+            Repeat
+              If tok_type = TOK_COMMA Then NextToken;
+              { Check If this is a Var parameter }
+              If IsVarParam(var_flags, arg_count) = 1 Then
+              Begin
+                { Var param - pass address Of variable }
+                If tok_type <> TOK_IDENT Then
+                  Error(6);  { Var param requires variable }
                 var_arg_idx := SymLookup;
-                if var_arg_idx < 0 then
+                If var_arg_idx < 0 Then
                   Error(3);
                 NextToken;
-                { Check for array element - pass address of element }
-                if (sym_type[var_arg_idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-                begin
+                { Check For Array element - pass address Of element }
+                If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+                Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index in x0 }
+                  ParseExpression;  { index In x0 }
                   Expect(TOK_RBRACKET);
                   { Compute element address }
                   EmitPushX0;
                   EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
                   EmitPopX1;
                   { x0 = x1 - x0 = index - low_bound }
-                  writeln('    sub x0, x1, x0');
+                  WriteLn('    sub x0, x1, x0');
                   { Multiply by 8 using lsl #3 }
-                  writeln('    lsl x0, x0, #3');
-                  { Get base address and subtract element offset }
-                  if sym_level[var_arg_idx] < scope_level then
-                  begin
+                  WriteLn('    lsl x0, x0, #3');
+                  { Get base address And subtract element offset }
+                  If sym_level[var_arg_idx] < scope_level Then
+                  Begin
                     EmitFollowChain(sym_level[var_arg_idx], scope_level);
                     EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
-                  end
-                  else
+                  End
+                  Else
                     EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
                   { Address = base - element_offset }
-                  writeln('    sub x0, x1, x0');
-                end
-                else
+                  WriteLn('    sub x0, x1, x0');
+                End
+                Else
                   { Simple variable - emit address }
                   EmitVarAddr(var_arg_idx, scope_level)
-              end
-              else
-              begin
+              End
+              Else
+              Begin
                 { Value param - evaluate expression }
                 ParseExpression
-              end;
+              End;
               EmitPushX0;
               arg_count := arg_count + 1
-            until tok_type <> TOK_COMMA
-          end;
+            Until tok_type <> TOK_COMMA
+          End;
           Expect(TOK_RPAREN)
-        end;
-        { Pop args from stack into registers in reverse order }
-        for i := arg_count - 1 downto 0 do
-        begin
-          write('    ldr x'); write(i); writeln(', [sp], #16');
-        end;
-        { Set up static link for callee }
+        End;
+        { Pop args from stack into registers In reverse order }
+        For i := arg_count - 1 DownTo 0 Do
+        Begin
+          Write('    ldr x'); Write(i); WriteLn(', [sp], #16');
+        End;
+        { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check if calling imported unit procedure }
-        if sym_unit_idx[idx] >= 0 then
+        { Check If calling imported Unit Procedure }
+        If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
-        else
+        Else
           EmitBL(sym_label[idx])
-      end
-      else if (sym_kind[idx] = SYM_VAR) or (sym_kind[idx] = SYM_PARAM) then
-      begin
-        if (sym_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-        begin
-          { Array element assignment: arr[index] := expr or arr[index].field := expr }
+      End
+      Else If (sym_kind[idx] = SYM_VAR) Or (sym_kind[idx] = SYM_PARAM) Then
+      Begin
+        If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+        Begin
+          { Array element assignment: arr[index] := expr Or arr[index].field := expr }
           NextToken;  { consume '[' }
-          ParseExpression;  { index in x0 }
+          ParseExpression;  { index In x0 }
           Expect(TOK_RBRACKET);
           { Subtract low bound }
           EmitPushX0;
           EmitMovX0(sym_const_val[idx]);
           EmitPopX1;
           { x0 = x1 - x0 = index - low_bound }
-          writeln('    sub x0, x1, x0');
+          WriteLn('    sub x0, x1, x0');
           { Multiply by element size }
-          if sym_var_param_flags[idx] > 0 then
-          begin
-            { Array of records }
+          If sym_var_param_flags[idx] > 0 Then
+          Begin
+            { Array Of records }
             lbl1 := sym_label[sym_var_param_flags[idx] - 1];
             EmitPushX0;
             EmitMovX0(lbl1);
             EmitPopX1;
-            writeln('    mul x0, x1, x0');
-          end
-          else
-          begin
-            writeln('    lsl x0, x0, #3');
-          end;
+            WriteLn('    mul x0, x1, x0');
+          End
+          Else
+          Begin
+            WriteLn('    lsl x0, x0, #3');
+          End;
           { Get base address }
-          if sym_level[idx] < scope_level then
-          begin
+          If sym_level[idx] < scope_level Then
+          Begin
             EmitFollowChain(sym_level[idx], scope_level);
             EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
-          end
-          else
+          End
+          Else
             EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
-          { x1 = base, x0 = offset, compute element address in x1 }
-          writeln('    sub x1, x1, x0');
-          { Check for field access }
-          if (sym_var_param_flags[idx] > 0) and (tok_type = TOK_DOT) then
-          begin
+          { x1 = base, x0 = offset, compute element address In x1 }
+          WriteLn('    sub x1, x1, x0');
+          { Check For field access }
+          If (sym_var_param_flags[idx] > 0) And (tok_type = TOK_DOT) Then
+          Begin
             NextToken;
             arg_count := FindField(sym_var_param_flags[idx] - 1);
-            if arg_count < 0 then
+            If arg_count < 0 Then
               Error(11);
             NextToken;
             { Add field offset }
-            if field_offset[arg_count] > 0 then
-            begin
-              writeln('    add x1, x1, #');
-            end;
+            If field_offset[arg_count] > 0 Then
+            Begin
+              WriteLn('    add x1, x1, #');
+            End;
             EmitPushX1;  { save field address }
             Expect(TOK_ASSIGN);
             ParseExpression;
-            if field_type[arg_count] = TYPE_REAL then
-            begin
-              if expr_type <> TYPE_REAL then
+            If field_type[arg_count] = TYPE_REAL Then
+            Begin
+              If expr_type <> TYPE_REAL Then
                 EmitScvtfD0X0;
               EmitPopX1;
-              writeln('    str d0, [x1]');
-            end
-            else
-            begin
+              WriteLn('    str d0, [x1]');
+            End
+            Else
+            Begin
               EmitPopX1;
-              writeln('    str x0, [x1]');
-            end
-          end
-          else
-          begin
-            { Basic array assignment }
+              WriteLn('    str x0, [x1]');
+            End
+          End
+          Else
+          Begin
+            { Basic Array assignment }
             EmitPushX1;  { save element address }
             Expect(TOK_ASSIGN);
             ParseExpression;
             EmitPopX1;
-            writeln('    str x0, [x1]');
-          end
-        end
-        else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
-        begin
-          { Record field assignment: rec.field := value or rec.field.subfield := value }
+            WriteLn('    str x0, [x1]');
+          End
+        End
+        Else If (sym_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
+        Begin
+          { Record field assignment: rec.field := value Or rec.field.subfield := value }
           NextToken;  { consume '.' }
-          if tok_type <> TOK_IDENT then
+          If tok_type <> TOK_IDENT Then
             Error(11);
           { Find the field }
-          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count for field_idx }
-          if arg_count < 0 then
+          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count For field_idx }
+          If arg_count < 0 Then
             Error(15);  { undefined field }
-          { Accumulate total offset for nested fields }
+          { Accumulate total offset For nested fields }
           lbl1 := field_offset[arg_count];  { total offset from base }
           NextToken;
-          { Handle nested record fields }
-          while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
-          begin
+          { Handle nested Record fields }
+          While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
+          Begin
             NextToken;  { consume '.' }
-            if tok_type <> TOK_IDENT then
+            If tok_type <> TOK_IDENT Then
               Error(11);
             lbl2 := arg_count;  { save current field index }
             arg_count := FindField(field_rec_type[lbl2]);
-            if arg_count < 0 then
+            If arg_count < 0 Then
               Error(15);
             lbl1 := lbl1 + field_offset[arg_count];  { accumulate offset }
             NextToken
-          end;
+          End;
           Expect(TOK_ASSIGN);
-          ParseExpression;  { value in x0 or d0 }
+          ParseExpression;  { value In x0 Or d0 }
 
           { Compute field address: base + total_offset }
-          if field_type[arg_count] = TYPE_REAL then
-          begin
-            { Value is in d0, need to store to field }
-            if expr_type <> TYPE_REAL then
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            { Value is In d0, need To store To field }
+            If expr_type <> TYPE_REAL Then
               EmitScvtfD0X0;
             EmitPushD0;  { save value }
             { Compute address }
-            if sym_level[idx] < scope_level then
-            begin
+            If sym_level[idx] < scope_level Then
+            Begin
               EmitFollowChain(sym_level[idx], scope_level);
-              writeln('    add x0, x8, #');
-            end
-            else
-            begin
-              writeln('    add x0, x29, #');
-            end;
+              WriteLn('    add x0, x8, #');
+            End
+            Else
+            Begin
+              WriteLn('    add x0, x29, #');
+            End;
             EmitPopD0;
             { str d0, [x0] }
-            writeln('    str d0, [x0]');
-          end
-          else
-          begin
-            { Value is in x0 }
+            WriteLn('    str d0, [x0]');
+          End
+          Else
+          Begin
+            { Value is In x0 }
             EmitPushX0;  { save value }
             { Compute address }
-            if sym_level[idx] < scope_level then
-            begin
+            If sym_level[idx] < scope_level Then
+            Begin
               EmitFollowChain(sym_level[idx], scope_level);
-              writeln('    add x1, x8, #');
-            end
-            else
-            begin
-              writeln('    add x1, x29, #');
-            end;
+              WriteLn('    add x1, x8, #');
+            End
+            Else
+            Begin
+              WriteLn('    add x1, x29, #');
+            End;
             EmitPopX0;
             { str x0, [x1] }
-            writeln('    str x0, [x1]');
-          end
-        end
-        else if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
-        begin
-          { Pointer dereference assignment: p^ := value or pp^^ := value or p^.field := value }
+            WriteLn('    str x0, [x1]');
+          End
+        End
+        Else If (sym_type[idx] = TYPE_POINTER) And (tok_type = TOK_CARET) Then
+        Begin
+          { Pointer dereference assignment: p^ := value Or pp^^ := value Or p^.field := value }
           { Count consecutive ^ tokens }
           lbl1 := 0;  { deref count }
-          while tok_type = TOK_CARET do
-          begin
+          While tok_type = TOK_CARET Do
+          Begin
             lbl1 := lbl1 + 1;
             NextToken
-          end;
+          End;
           { Load pointer value }
-          if sym_level[idx] < scope_level then
+          If sym_level[idx] < scope_level Then
             EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-          else
+          Else
             EmitLdurX0(sym_offset[idx]);
-          { Dereference (count-1) times to get target address }
-          for i := 1 to lbl1 - 1 do
-          begin
-            writeln('    ldr x0, [x0]');
-          end;
+          { Dereference (count-1) times To get target address }
+          For i := 1 To lbl1 - 1 Do
+          Begin
+            WriteLn('    ldr x0, [x0]');
+          End;
           { lbl2 = remaining pointer depth after all derefs }
           lbl2 := ptr_depth[idx] - lbl1;
 
-          if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
-          begin
-            { Pointer to record field assignment: p^.field := value or p^.field.subfield := value }
+          If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
+          Begin
+            { Pointer To Record field assignment: p^.field := value Or p^.field.subfield := value }
             NextToken;  { consume '.' }
-            { Find field in the record type }
+            { Find field In the Record Type }
             arg_count := FindField(ptr_ultimate_rec[idx]);
-            if arg_count < 0 then
+            If arg_count < 0 Then
               Error(11);  { unknown field }
             NextToken;  { consume field name }
-            { Add field offset to pointer: x0 = x0 + offset }
-            if field_offset[arg_count] > 0 then
-            begin
-              writeln('    add x0, x0, #');
-            end;
-            { Handle nested record fields }
-            while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
-            begin
+            { Add field offset To pointer: x0 = x0 + offset }
+            If field_offset[arg_count] > 0 Then
+            Begin
+              WriteLn('    add x0, x0, #');
+            End;
+            { Handle nested Record fields }
+            While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
+            Begin
               NextToken;  { consume '.' }
-              if tok_type <> TOK_IDENT then
+              If tok_type <> TOK_IDENT Then
                 Error(11);
               var_arg_idx := arg_count;  { save current field index }
               arg_count := FindField(field_rec_type[var_arg_idx]);
-              if arg_count < 0 then
+              If arg_count < 0 Then
                 Error(15);
-              if field_offset[arg_count] > 0 then
-              begin
-                writeln('    add x0, x0, #');
-              end;
+              If field_offset[arg_count] > 0 Then
+              Begin
+                WriteLn('    add x0, x0, #');
+              End;
               NextToken
-            end;
+            End;
             EmitPushX0;  { save field address }
             Expect(TOK_ASSIGN);
-            ParseExpression;  { value to store }
-            if field_type[arg_count] = TYPE_REAL then
-            begin
-              if expr_type <> TYPE_REAL then
+            ParseExpression;  { value To store }
+            If field_type[arg_count] = TYPE_REAL Then
+            Begin
+              If expr_type <> TYPE_REAL Then
                 EmitScvtfD0X0;
               EmitPopX1;  { get address into x1 }
               { str d0, [x1] }
-              writeln('    str d0, [x1]');
-            end
-            else
-            begin
+              WriteLn('    str d0, [x1]');
+            End
+            Else
+            Begin
               EmitPopX1;  { get address into x1 }
               { str x0, [x1] }
-              writeln('    str x0, [x1]');
-            end
-          end
-          else if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
-          begin
-            { Pointer to array element assignment: pa^[i] := value }
+              WriteLn('    str x0, [x1]');
+            End
+          End
+          Else If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+          Begin
+            { Pointer To Array element assignment: pa^[i] := value }
             NextToken;  { consume '[' }
-            EmitPushX0;  { save array base address }
-            ParseExpression;  { index in x0 }
+            EmitPushX0;  { save Array base address }
+            ParseExpression;  { index In x0 }
             Expect(TOK_RBRACKET);
             { x0 = index, stack has base address }
             { Subtract low bound }
@@ -9739,859 +9739,859 @@ begin
             EmitMovX0(ptr_arr_lo[arg_count]);
             EmitPopX1;
             { x0 = x1 - x0 = index - low_bound }
-            writeln('    sub x0, x1, x0');
+            WriteLn('    sub x0, x1, x0');
             { Multiply by 8 using lsl #3 }
-            writeln('    lsl x0, x0, #3');
-            { Add to base: x0 = base + offset }
+            WriteLn('    lsl x0, x0, #3');
+            { Add To base: x0 = base + offset }
             EmitPopX1;  { x1 = base address }
-            writeln('    add x8, x1, x0');
+            WriteLn('    add x8, x1, x0');
             { x8 now has element address }
             Expect(TOK_ASSIGN);
-            ParseExpression;  { value to store }
+            ParseExpression;  { value To store }
             { Store value }
-            if ptr_arr_elem[arg_count] = TYPE_REAL then
-            begin
-              if expr_type <> TYPE_REAL then
+            If ptr_arr_elem[arg_count] = TYPE_REAL Then
+            Begin
+              If expr_type <> TYPE_REAL Then
                 EmitScvtfD0X0;
-              writeln('    str d0, [x8]');
-            end
-            else
-            begin
-              writeln('    str x0, [x8]');
-            end
-          end
-          else
-          begin
-            { Simple pointer dereference assignment: p^ := value or pp^^ := value }
+              WriteLn('    str d0, [x8]');
+            End
+            Else
+            Begin
+              WriteLn('    str x0, [x8]');
+            End
+          End
+          Else
+          Begin
+            { Simple pointer dereference assignment: p^ := value Or pp^^ := value }
             EmitPushX0;  { save address }
             Expect(TOK_ASSIGN);
-            ParseExpression;  { value to store }
-            { Determine target type }
-            if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_REAL) then
-            begin
-              { Value in d0, need to store through pointer }
-              if expr_type <> TYPE_REAL then
+            ParseExpression;  { value To store }
+            { Determine target Type }
+            If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_REAL) Then
+            Begin
+              { Value In d0, need To store through pointer }
+              If expr_type <> TYPE_REAL Then
                 EmitScvtfD0X0;
               EmitPopX1;  { get address into x1 }
               { str d0, [x1] }
-              writeln('    str d0, [x1]');
-            end
-            else
-            begin
-              { Value in x0 }
+              WriteLn('    str d0, [x1]');
+            End
+            Else
+            Begin
+              { Value In x0 }
               EmitPopX1;  { get address into x1 }
               { str x0, [x1] }
-              writeln('    str x0, [x1]');
-            end
-          end
-        end
-        else if sym_type[idx] = TYPE_STRING then
-        begin
-          { Check for string indexed assignment s[i] := char }
-          if tok_type = TOK_LBRACKET then
-          begin
+              WriteLn('    str x0, [x1]');
+            End
+          End
+        End
+        Else If sym_type[idx] = TYPE_STRING Then
+        Begin
+          { Check For String indexed assignment s[i] := Char }
+          If tok_type = TOK_LBRACKET Then
+          Begin
             NextToken;  { consume '[' }
-            { Get string base address }
+            { Get String base address }
             EmitVarAddr(idx, scope_level);
             EmitPushX0;  { save base address }
-            ParseExpression;  { index in x0 }
+            ParseExpression;  { index In x0 }
             Expect(TOK_RBRACKET);
-            { Add index to base: address = base + index }
+            { Add index To base: address = base + index }
             EmitPopX1;  { x1 = base address }
-            writeln('    add x8, x1, x0');
-            { x8 now has the address to store to }
+            WriteLn('    add x8, x1, x0');
+            { x8 now has the address To store To }
             Expect(TOK_ASSIGN);
-            ParseExpression;  { value to store in x0 }
+            ParseExpression;  { value To store In x0 }
             { strb w0, [x8] }
-            writeln('    strb w0, [x8]');
-          end
-          else
-          begin
+            WriteLn('    strb w0, [x8]');
+          End
+          Else
+          Begin
           { String assignment }
           Expect(TOK_ASSIGN);
-          if tok_type = TOK_STRING then
-          begin
-            { Assign from string literal }
-            { Compute base address of string variable into x8 }
-            if sym_level[idx] < scope_level then
-            begin
+          If tok_type = TOK_STRING Then
+          Begin
+            { Assign from String literal }
+            { Compute base address Of String variable into x8 }
+            If sym_level[idx] < scope_level Then
+            Begin
               EmitFollowChain(sym_level[idx], scope_level);
               { add/sub x8, x8, #offset }
-              if sym_offset[idx] < 0 then
-              begin
-                writeln('    sub x8, x8, #');
-              end
-              else
-              begin
-                writeln('    add x8, x8, #');
-              end
-            end
-            else
-            begin
+              If sym_offset[idx] < 0 Then
+              Begin
+                WriteLn('    sub x8, x8, #');
+              End
+              Else
+              Begin
+                WriteLn('    add x8, x8, #');
+              End
+            End
+            Else
+            Begin
               { add/sub x8, x29, #offset }
-              if sym_offset[idx] < 0 then
-              begin
-                writeln('    sub x8, x29, #');
-              end
-              else
-              begin
-                writeln('    add x8, x29, #');
-              end
-            end;
-            { Store length at [x8] }
+              If sym_offset[idx] < 0 Then
+              Begin
+                WriteLn('    sub x8, x29, #');
+              End
+              Else
+              Begin
+                WriteLn('    add x8, x29, #');
+              End
+            End;
+            { Store Length at [x8] }
             EmitMovX0(tok_len);
-            writeln('    strb w0, [x8]');
+            WriteLn('    strb w0, [x8]');
             { Store each character at [x8+1], [x8+2], etc }
-            for i := 0 to tok_len - 1 do
-            begin
+            For i := 0 To tok_len - 1 Do
+            Begin
               EmitMovX0(tok_str[i]);
-              write('    strb w0, [x8, #'); write(i + 1); writeln(']');
-            end;
+              Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
+            End;
             NextToken
-          end
-          else
-          begin
-            { Parse string expression (variable, copy, concat, or + expressions) }
+          End
+          Else
+          Begin
+            { Parse String expression (variable, copy, concat, Or + expressions) }
             ParseExpression;
-            if expr_type <> TYPE_STRING then
-              Error(12);  { expected string }
-            { x0 = source string address, copy to dest }
-            writeln('    mov x1, x0');
+            If expr_type <> TYPE_STRING Then
+              Error(12);  { expected String }
+            { x0 = source String address, copy To dest }
+            WriteLn('    mov x1, x0');
             { Get dest address into x0 }
             EmitVarAddr(idx, scope_level);
             { Call rt_str_copy(x0=dest, x1=source) }
             EmitBL(rt_str_copy)
-          end
-          end  { end of else for string whole assignment }
-        end
-        else if sym_type[idx] = TYPE_REAL then
-        begin
+          End
+          End  { End Of Else For String whole assignment }
+        End
+        Else If sym_type[idx] = TYPE_REAL Then
+        Begin
           { Real variable assignment }
           Expect(TOK_ASSIGN);
           ParseExpression;
-          { Convert integer to float if needed }
-          if expr_type <> TYPE_REAL then
+          { Convert Integer To float If needed }
+          If expr_type <> TYPE_REAL Then
             EmitScvtfD0X0;
-          { Check if this is a var param - need to dereference address }
-          if sym_is_var_param[idx] = 1 then
-          begin
-            { d0 has the value, need to store to address in var param }
+          { Check If this is a Var param - need To dereference address }
+          If sym_is_var_param[idx] = 1 Then
+          Begin
+            { d0 has the value, need To store To address In Var param }
             EmitPushD0;  { save value }
-            { Load the address stored in the var param }
-            if sym_level[idx] < scope_level then
+            { Load the address stored In the Var param }
+            If sym_level[idx] < scope_level Then
               EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitLdurX0(sym_offset[idx]);
-            { x0 now has the address, pop value to d0 }
+            { x0 now has the address, pop value To d0 }
             EmitPopD0;
-            { Store d0 to [x0] }
-            writeln('    str d0, [x0]');
-          end
-          else
-          begin
-            if sym_level[idx] < scope_level then
+            { Store d0 To [x0] }
+            WriteLn('    str d0, [x0]');
+          End
+          Else
+          Begin
+            If sym_level[idx] < scope_level Then
               EmitSturD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitSturD0(sym_offset[idx])
-          end
-        end
-        else
-        begin
-          { Simple integer assignment }
+          End
+        End
+        Else
+        Begin
+          { Simple Integer assignment }
           Expect(TOK_ASSIGN);
           ParseExpression;
-          { Check if this is a var param - need to dereference address }
-          if sym_is_var_param[idx] = 1 then
-          begin
-            { x0 has the value, need to store to address in var param }
+          { Check If this is a Var param - need To dereference address }
+          If sym_is_var_param[idx] = 1 Then
+          Begin
+            { x0 has the value, need To store To address In Var param }
             EmitPushX0;  { save value }
-            { Load the address stored in the var param }
-            if sym_level[idx] < scope_level then
+            { Load the address stored In the Var param }
+            If sym_level[idx] < scope_level Then
               EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitLdurX0(sym_offset[idx]);
-            { x0 now has the address, pop value to x1 }
+            { x0 now has the address, pop value To x1 }
             EmitPopX1;
-            { Store x1 to [x0] }
-            writeln('    str x1, [x0]');
-          end
-          else
-          begin
-            if sym_level[idx] < scope_level then
+            { Store x1 To [x0] }
+            WriteLn('    str x1, [x0]');
+          End
+          Else
+          Begin
+            If sym_level[idx] < scope_level Then
               EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            else
+            Else
               EmitSturX0(sym_offset[idx])
-          end
-        end
-      end
-      else if sym_kind[idx] = SYM_FUNCTION then
-      begin
-        { Function result assignment - store to result variable at -16 }
+          End
+        End
+      End
+      Else If sym_kind[idx] = SYM_FUNCTION Then
+      Begin
+        { Function result assignment - store To result variable at -16 }
         Expect(TOK_ASSIGN);
         ParseExpression;
-        { For real functions, store in d0 }
-        if sym_type[idx] = TYPE_REAL then
-        begin
-          if expr_type <> TYPE_REAL then
+        { For Real functions, store In d0 }
+        If sym_type[idx] = TYPE_REAL Then
+        Begin
+          If expr_type <> TYPE_REAL Then
             EmitScvtfD0X0;
           EmitSturD0(-16)
-        end
-        else if sym_type[idx] = TYPE_STRING then
-        begin
-          { String function - x0 has source string addr, copy to heap for return }
+        End
+        Else If sym_type[idx] = TYPE_STRING Then
+        Begin
+          { String Function - x0 has source String addr, copy To heap For return }
           { x0 = source, x1 = dest (heap), call str_copy }
-          writeln('    mov x8, x0');
-          writeln('    mov x0, x21');
+          WriteLn('    mov x8, x0');
+          WriteLn('    mov x0, x21');
           { Save heap addr as result }
           EmitSturX0(-16);
-          { x8 = dest, x9 = source for str_copy }
-          writeln('    mov x9, x8');
-          writeln('    mov x8, x21');
+          { x8 = dest, x9 = source For str_copy }
+          WriteLn('    mov x9, x8');
+          WriteLn('    mov x8, x21');
           EmitBL(rt_str_copy);
           { Advance heap pointer }
-          writeln('    add x21, x21, #256');
-        end
-        else
+          WriteLn('    add x21, x21, #256');
+        End
+        Else
           EmitSturX0(-16)
-      end
-      else
+      End
+      Else
         Error(7)
-      end  { end of if (with_rec_idx < 0) or (arg_count < 0) }
-    end  { end of else for non-builtin identifier }
-  end  { end of else if tok_type = TOK_IDENT }
-end;
+      End  { End Of If (with_rec_idx < 0) Or (arg_count < 0) }
+    End  { End Of Else For non-builtin identifier }
+  End  { End Of Else If tok_type = TOK_IDENT }
+End;
 
 
 { ----- Declarations ----- }
 
-procedure ParseVarDeclarations;
-var
-  idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: integer;
-begin
-  NextToken;  { consume 'var' }
-  while tok_type = TOK_IDENT do
-  begin
-    { Remember first var in a group for fixing up array size }
+Procedure ParseVarDeclarations;
+Var
+  idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: Integer;
+Begin
+  NextToken;  { consume 'Var' }
+  While tok_type = TOK_IDENT Do
+  Begin
+    { Remember first Var In a group For fixing up Array size }
     local_offset := local_offset - 8;
     first_idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
     idx := first_idx;
     NextToken;
-    while tok_type = TOK_COMMA do
-    begin
+    While tok_type = TOK_COMMA Do
+    Begin
       NextToken;
-      if tok_type <> TOK_IDENT then
+      If tok_type <> TOK_IDENT Then
         Error(8);
       local_offset := local_offset - 8;
       idx := SymAdd(SYM_VAR, TYPE_INTEGER, scope_level, local_offset);
       NextToken
-    end;
+    End;
     Expect(TOK_COLON);
-    { Parse type }
-    if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-       (tok_type = TOK_BOOLEAN_TYPE) then
+    { Parse Type }
+    If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+       (tok_type = TOK_BOOLEAN_TYPE) Then
       NextToken
-    else if tok_type = TOK_REAL_TYPE then
-    begin
-      { Set type to real for all vars in this group }
-      for j := first_idx to idx do
+    Else If tok_type = TOK_REAL_TYPE Then
+    Begin
+      { Set Type To Real For all vars In this group }
+      For j := first_idx To idx Do
         sym_type[j] := TYPE_REAL;
       NextToken
-    end
-    else if tok_type = TOK_ARRAY then
-    begin
+    End
+    Else If tok_type = TOK_ARRAY Then
+    Begin
       NextToken;
       Expect(TOK_LBRACKET);
       { Parse low bound }
-      if tok_type = TOK_INTEGER then
-      begin
+      If tok_type = TOK_INTEGER Then
+      Begin
         lo_bound := tok_int;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_DOTDOT);
       { Parse high bound }
-      if tok_type = TOK_INTEGER then
-      begin
+      If tok_type = TOK_INTEGER Then
+      Begin
         hi_bound := tok_int;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       Expect(TOK_RBRACKET);
       Expect(TOK_OF);
-      { Parse element type }
-      if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-         (tok_type = TOK_BOOLEAN_TYPE) then
-      begin
+      { Parse element Type }
+      If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+         (tok_type = TOK_BOOLEAN_TYPE) Then
+      Begin
         NextToken;
         arr_size := (hi_bound - lo_bound + 1) * 8;
         local_offset := local_offset - (arr_size - 8);
         sym_type[first_idx] := TYPE_ARRAY;
         sym_const_val[first_idx] := lo_bound;
         sym_label[first_idx] := arr_size;
-        sym_var_param_flags[first_idx] := 0  { 0 = basic type element }
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Array of record type }
+        sym_var_param_flags[first_idx] := 0  { 0 = basic Type element }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Array Of Record Type }
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and (sym_type[base_idx] = TYPE_RECORD) then
-        begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And (sym_type[base_idx] = TYPE_RECORD) Then
+        Begin
           arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
           local_offset := local_offset - (arr_size - 8);
           sym_type[first_idx] := TYPE_ARRAY;
           sym_const_val[first_idx] := lo_bound;
           sym_label[first_idx] := arr_size;
-          sym_var_param_flags[first_idx] := base_idx + 1;  { record type index + 1 (0 means basic) }
+          sym_var_param_flags[first_idx] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else if tok_type = TOK_STRING_TYPE then
-    begin
-      { String type: 256 bytes (1 length byte + 255 char bytes) }
+    End
+    Else If tok_type = TOK_STRING_TYPE Then
+    Begin
+      { String Type: 256 bytes (1 Length byte + 255 Char bytes) }
       NextToken;
-      { Handle all variables in the list }
-      for j := first_idx to idx do
-      begin
+      { Handle all variables In the list }
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_STRING;
-        sym_label[j] := 256;  { Store size for reference }
+        sym_label[j] := 256;  { Store size For reference }
         { Adjust offset: already allocated 8 bytes, need 248 more }
-        if j = first_idx then
-        begin
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 248;
-          sym_offset[j] := local_offset  { Update offset to start of 256-byte area }
-        end
-        else
-        begin
+          sym_offset[j] := local_offset  { Update offset To start Of 256-byte area }
+        End
+        Else
+        Begin
           local_offset := local_offset - 256;
           sym_offset[j] := local_offset
-        end
-      end
-    end
-    else if tok_type = TOK_TEXT then
-    begin
-      { Text file type: 272 bytes (fd + mode + filename) }
+        End
+      End
+    End
+    Else If tok_type = TOK_TEXT Then
+    Begin
+      { Text file Type: 272 bytes (fd + mode + filename) }
       NextToken;
-      for j := first_idx to idx do
-      begin
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_TEXT;
-        sym_const_val[j] := TYPE_CHAR;  { element type is char }
+        sym_const_val[j] := TYPE_CHAR;  { element Type is Char }
         sym_label[j] := 1;  { element size is 1 byte }
-        { Adjust offset: already allocated 8 bytes, need 264 more for 272 total }
-        if j = first_idx then
-        begin
+        { Adjust offset: already allocated 8 bytes, need 264 more For 272 total }
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 264;
           sym_offset[j] := local_offset
-        end
-        else
-        begin
+        End
+        Else
+        Begin
           local_offset := local_offset - 272;
           sym_offset[j] := local_offset
-        end
-      end
-    end
-    else if tok_type = TOK_FILE then
-    begin
-      { Typed file: file of T - 272 bytes (fd + mode + filename) }
+        End
+      End
+    End
+    Else If tok_type = TOK_FILE Then
+    Begin
+      { Typed file: file Of T - 272 bytes (fd + mode + filename) }
       NextToken;
       Expect(TOK_OF);
-      { Parse element type }
-      if tok_type = TOK_INTEGER_TYPE then
-      begin
+      { Parse element Type }
+      If tok_type = TOK_INTEGER_TYPE Then
+      Begin
         base_idx := TYPE_INTEGER;
         arr_size := 8;
         NextToken
-      end
-      else if tok_type = TOK_CHAR_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_CHAR_TYPE Then
+      Begin
         base_idx := TYPE_CHAR;
         arr_size := 1;
         NextToken
-      end
-      else if tok_type = TOK_BOOLEAN_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_BOOLEAN_TYPE Then
+      Begin
         base_idx := TYPE_BOOLEAN;
         arr_size := 1;
         NextToken
-      end
-      else if tok_type = TOK_REAL_TYPE then
-      begin
+      End
+      Else If tok_type = TOK_REAL_TYPE Then
+      Begin
         base_idx := TYPE_REAL;
         arr_size := 8;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Record type }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Record Type }
         lo_bound := SymLookup;
-        if (lo_bound >= 0) and (sym_kind[lo_bound] = SYM_TYPEDEF) and (sym_type[lo_bound] = TYPE_RECORD) then
-        begin
+        If (lo_bound >= 0) And (sym_kind[lo_bound] = SYM_TYPEDEF) And (sym_type[lo_bound] = TYPE_RECORD) Then
+        Begin
           base_idx := TYPE_RECORD;
-          arr_size := sym_label[lo_bound];  { record size }
+          arr_size := sym_label[lo_bound];  { Record size }
           file_rec_idx[file_count] := lo_bound;
           NextToken
-        end
-        else
+        End
+        Else
           Error(14)
-      end
-      else
+      End
+      Else
         Error(9);
-      { Store file type info }
+      { Store file Type info }
       file_elem_type[file_count] := base_idx;
       file_elem_size[file_count] := arr_size;
-      for j := first_idx to idx do
-      begin
+      For j := first_idx To idx Do
+      Begin
         sym_type[j] := TYPE_FILE;
         sym_const_val[j] := file_count;  { index into file arrays }
         sym_label[j] := arr_size;  { element size }
-        { Adjust offset for 272 bytes }
-        if j = first_idx then
-        begin
+        { Adjust offset For 272 bytes }
+        If j = first_idx Then
+        Begin
           local_offset := local_offset - 264;
           sym_offset[j] := local_offset
-        end
-        else
-        begin
+        End
+        Else
+        Begin
           local_offset := local_offset - 272;
           sym_offset[j] := local_offset
-        end
-      end;
+        End
+      End;
       file_count := file_count + 1
-    end
-    else if tok_type = TOK_SET then
-    begin
-      { Inline set type: set of char / set of 0..63 }
-      NextToken;  { consume 'set' }
+    End
+    Else If tok_type = TOK_SET Then
+    Begin
+      { Inline Set Type: Set Of Char / Set Of 0..63 }
+      NextToken;  { consume 'Set' }
       Expect(TOK_OF);
-      if tok_type = TOK_CHAR_TYPE then
-      begin
-        { set of char - uses 64-bit bitmask }
-        for j := first_idx to idx do
-        begin
+      If tok_type = TOK_CHAR_TYPE Then
+      Begin
+        { Set Of Char - Uses 64-bit bitmask }
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_SET;
           sym_const_val[j] := set_count
-        end;
+        End;
         set_base[set_count] := TYPE_CHAR;
         set_low[set_count] := 0;
-        set_high[set_count] := 63;  { limited to 64 elements }
+        set_high[set_count] := 63;  { limited To 64 elements }
         set_count := set_count + 1;
         NextToken
-      end
-      else if tok_type = TOK_INTEGER then
-      begin
-        { set of 0..N - inline subrange }
+      End
+      Else If tok_type = TOK_INTEGER Then
+      Begin
+        { Set Of 0..N - inline subrange }
         lo_bound := tok_int;
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then Error(9);
+        If tok_type <> TOK_INTEGER Then Error(9);
         hi_bound := tok_int;
         NextToken;
-        for j := first_idx to idx do
-        begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_SET;
           sym_const_val[j] := set_count
-        end;
+        End;
         set_base[set_count] := TYPE_INTEGER;
         set_low[set_count] := lo_bound;
         set_high[set_count] := hi_bound;
         set_count := set_count + 1
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { set of EnumType }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Set Of EnumType }
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) and
-           (sym_type[base_idx] = TYPE_ENUM) then
-        begin
-          for j := first_idx to idx do
-          begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And
+           (sym_type[base_idx] = TYPE_ENUM) Then
+        Begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SET;
             sym_const_val[j] := set_count
-          end;
+          End;
           set_base[set_count] := TYPE_ENUM;
           set_low[set_count] := 0;
           set_high[set_count] := sym_label[base_idx] - 1;  { enum count - 1 }
           set_count := set_count + 1;
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else if tok_type = TOK_CARET then
-    begin
-      { Pointer type: ^BaseType or ^^BaseType or ^array[lo..hi] of T }
+    End
+    Else If tok_type = TOK_CARET Then
+    Begin
+      { Pointer Type: ^BaseType Or ^^BaseType Or ^Array[lo..hi] Of T }
       NextToken;
-      lo_bound := 1;  { reuse lo_bound for depth count }
-      while tok_type = TOK_CARET do
-      begin
+      lo_bound := 1;  { reuse lo_bound For depth count }
+      While tok_type = TOK_CARET Do
+      Begin
         lo_bound := lo_bound + 1;
         NextToken
-      end;
-      { Check for pointer to array }
-      if tok_type = TOK_ARRAY then
-      begin
-        { ^array[lo..hi] of T }
-        NextToken;  { consume 'array' }
+      End;
+      { Check For pointer To Array }
+      If tok_type = TOK_ARRAY Then
+      Begin
+        { ^Array[lo..hi] Of T }
+        NextToken;  { consume 'Array' }
         Expect(TOK_LBRACKET);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
-        hi_bound := tok_int;  { reuse hi_bound temporarily for low }
+        hi_bound := tok_int;  { reuse hi_bound temporarily For low }
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         arr_size := tok_int;  { high bound }
         NextToken;
         Expect(TOK_RBRACKET);
         Expect(TOK_OF);
-        { Parse element type }
-        if tok_type = TOK_INTEGER_TYPE then
+        { Parse element Type }
+        If tok_type = TOK_INTEGER_TYPE Then
           base_idx := TYPE_INTEGER
-        else if tok_type = TOK_CHAR_TYPE then
+        Else If tok_type = TOK_CHAR_TYPE Then
           base_idx := TYPE_CHAR
-        else if tok_type = TOK_BOOLEAN_TYPE then
+        Else If tok_type = TOK_BOOLEAN_TYPE Then
           base_idx := TYPE_BOOLEAN
-        else if tok_type = TOK_REAL_TYPE then
+        Else If tok_type = TOK_REAL_TYPE Then
           base_idx := TYPE_REAL
-        else
+        Else
           base_idx := TYPE_INTEGER;  { default }
-        { Store in ptr_arr arrays }
+        { Store In ptr_arr arrays }
         ptr_arr_lo[ptr_arr_count] := hi_bound;
         ptr_arr_hi[ptr_arr_count] := arr_size;
         ptr_arr_elem[ptr_arr_count] := base_idx;
         ptr_arr_rec[ptr_arr_count] := 0;
-        for j := first_idx to idx do
-        begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          sym_const_val[j] := TYPE_ARRAY;  { immediate base is array }
+          sym_const_val[j] := TYPE_ARRAY;  { immediate base is Array }
           sym_label[j] := ptr_arr_count;   { index into ptr_arr arrays }
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_ARRAY;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         ptr_arr_count := ptr_arr_count + 1;
         NextToken
-      end
-      { Now parse ultimate base type }
-      else if tok_type = TOK_INTEGER_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      { Now parse ultimate base Type }
+      Else If tok_type = TOK_INTEGER_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_INTEGER
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;  { immediate base is pointer }
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_INTEGER;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_CHAR_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_CHAR_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_CHAR
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_CHAR;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_BOOLEAN_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_BOOLEAN_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_BOOLEAN
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_BOOLEAN;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_REAL_TYPE then
-      begin
-        for j := first_idx to idx do
-        begin
+      End
+      Else If tok_type = TOK_REAL_TYPE Then
+      Begin
+        For j := first_idx To idx Do
+        Begin
           sym_type[j] := TYPE_POINTER;
-          if lo_bound = 1 then
+          If lo_bound = 1 Then
             sym_const_val[j] := TYPE_REAL
-          else
+          Else
             sym_const_val[j] := TYPE_POINTER;
           ptr_depth[j] := lo_bound;
           ptr_ultimate_type[j] := TYPE_REAL;
           ptr_ultimate_rec[j] := 0
-        end;
+        End;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
-        { Pointer to record type: ^RecordType or ^^RecordType etc }
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
+        { Pointer To Record Type: ^RecordType Or ^^RecordType etc }
         arr_size := SymLookup;  { reuse arr_size as type_idx }
-        if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) and (sym_type[arr_size] = TYPE_RECORD) then
-        begin
-          for j := first_idx to idx do
-          begin
+        If (arr_size >= 0) And (sym_kind[arr_size] = SYM_TYPEDEF) And (sym_type[arr_size] = TYPE_RECORD) Then
+        Begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_POINTER;
-            if lo_bound = 1 then
+            If lo_bound = 1 Then
               sym_const_val[j] := TYPE_RECORD
-            else
+            Else
               sym_const_val[j] := TYPE_POINTER;
-            sym_label[j] := arr_size;  { store record type index }
+            sym_label[j] := arr_size;  { store Record Type index }
             ptr_depth[j] := lo_bound;
             ptr_ultimate_type[j] := TYPE_RECORD;
             ptr_ultimate_rec[j] := arr_size
-          end;
+          End;
           NextToken
-        end
-        else
-          Error(14)  { expected type identifier }
-      end
-      else
-        Error(14)  { expected type identifier }
-    end
-    else if tok_type = TOK_IDENT then
-    begin
-      { May be a record, enum, subrange, or set type name }
+        End
+        Else
+          Error(14)  { expected Type identifier }
+      End
+      Else
+        Error(14)  { expected Type identifier }
+    End
+    Else If tok_type = TOK_IDENT Then
+    Begin
+      { May be a Record, enum, subrange, Or Set Type name }
       arr_size := SymLookup;  { reuse arr_size as type_idx temporarily }
-      if (arr_size >= 0) and (sym_kind[arr_size] = SYM_TYPEDEF) then
-      begin
-        if sym_type[arr_size] = TYPE_RECORD then
-        begin
-          { Allocate space for record }
-          lo_bound := sym_label[arr_size];  { reuse lo_bound for record size }
+      If (arr_size >= 0) And (sym_kind[arr_size] = SYM_TYPEDEF) Then
+      Begin
+        If sym_type[arr_size] = TYPE_RECORD Then
+        Begin
+          { Allocate space For Record }
+          lo_bound := sym_label[arr_size];  { reuse lo_bound For Record size }
           { Adjust local_offset: we already allocated 8 bytes, need rest }
           local_offset := local_offset - (lo_bound - 8);
-          for j := first_idx to idx do
-          begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_RECORD;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_ENUM then
-        begin
-          { Enum variables use 8 bytes (same as integer) }
-          for j := first_idx to idx do
-          begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_ENUM Then
+        Begin
+          { Enum variables use 8 bytes (same as Integer) }
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_ENUM;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_SUBRANGE then
-        begin
-          { Subrange variables use 8 bytes (same as integer) }
-          for j := first_idx to idx do
-          begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_SUBRANGE Then
+        Begin
+          { Subrange variables use 8 bytes (same as Integer) }
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SUBRANGE;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else if sym_type[arr_size] = TYPE_SET then
-        begin
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else If sym_type[arr_size] = TYPE_SET Then
+        Begin
           { Set variables use 8 bytes (64-bit bitmask) }
-          for j := first_idx to idx do
-          begin
+          For j := first_idx To idx Do
+          Begin
             sym_type[j] := TYPE_SET;
-            sym_const_val[j] := arr_size  { link to type definition }
-          end
-        end
-        else
+            sym_const_val[j] := arr_size  { link To Type definition }
+          End
+        End
+        Else
           Error(9);
         NextToken
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else
+    End
+    Else
       Error(9);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseConstDeclarations;
-var
-  idx: integer;
-begin
-  NextToken;  { consume 'const' }
-  while tok_type = TOK_IDENT do
-  begin
+Procedure ParseConstDeclarations;
+Var
+  idx: Integer;
+Begin
+  NextToken;  { consume 'Const' }
+  While tok_type = TOK_IDENT Do
+  Begin
     idx := SymAdd(SYM_CONST, TYPE_INTEGER, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
-    if tok_type = TOK_INTEGER then
-    begin
+    If tok_type = TOK_INTEGER Then
+    Begin
       sym_const_val[idx] := tok_int;
       NextToken
-    end
-    else
+    End
+    Else
       Error(10);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseTypeDeclarations;
-var
-  type_idx, fld_start, fld_offset, fld_type: integer;
-  i, base_idx, nested_idx, nested_size, first_fld: integer;
-  enum_val, lo_val, hi_val, set_base_type: integer;
-begin
-  NextToken;  { consume 'type' }
-  while tok_type = TOK_IDENT do
-  begin
-    { Create type symbol - will set actual type later }
+Procedure ParseTypeDeclarations;
+Var
+  type_idx, fld_start, fld_offset, fld_type: Integer;
+  i, base_idx, nested_idx, nested_size, first_fld: Integer;
+  enum_val, lo_val, hi_val, set_base_type: Integer;
+Begin
+  NextToken;  { consume 'Type' }
+  While tok_type = TOK_IDENT Do
+  Begin
+    { Create Type symbol - will Set actual Type later }
     type_idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, scope_level, 0);
     NextToken;
     Expect(TOK_EQ);
 
-    if tok_type = TOK_RECORD then
-    begin
-      { Record type }
-      NextToken;  { consume 'record' }
+    If tok_type = TOK_RECORD Then
+    Begin
+      { Record Type }
+      NextToken;  { consume 'Record' }
       fld_start := field_count;
       fld_offset := 0;
       sym_const_val[type_idx] := fld_start;  { first field index }
 
-      { Parse fields until 'end' or 'case' (variant part) }
-      while (tok_type <> TOK_END) and (tok_type <> TOK_CASE) do
-      begin
+      { Parse fields Until 'End' Or 'Case' (variant part) }
+      While (tok_type <> TOK_END) And (tok_type <> TOK_CASE) Do
+      Begin
         { Collect field names (may be comma-separated) }
         first_fld := field_count;
-        repeat
-          if tok_type <> TOK_IDENT then
+        Repeat
+          If tok_type <> TOK_IDENT Then
             Error(11);
 
           { Save field name }
           base_idx := field_count * 32;
-          for i := 0 to tok_len - 1 do
+          For i := 0 To tok_len - 1 Do
             field_name[base_idx + i] := tok_str[i];
           field_name[base_idx + tok_len] := 0;
           field_count := field_count + 1;
 
           NextToken;
-          if tok_type = TOK_COMMA then
+          If tok_type = TOK_COMMA Then
             NextToken
-        until tok_type = TOK_COLON;
+        Until tok_type = TOK_COLON;
 
         Expect(TOK_COLON);
 
-        { Parse field type }
-        nested_size := 8;  { default for basic types }
-        if tok_type = TOK_INTEGER_TYPE then
-        begin
+        { Parse field Type }
+        nested_size := 8;  { default For basic types }
+        If tok_type = TOK_INTEGER_TYPE Then
+        Begin
           fld_type := TYPE_INTEGER;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_CHAR_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_CHAR_TYPE Then
+        Begin
           fld_type := TYPE_CHAR;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_BOOLEAN_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_BOOLEAN_TYPE Then
+        Begin
           fld_type := TYPE_BOOLEAN;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_REAL_TYPE then
-        begin
+        End
+        Else If tok_type = TOK_REAL_TYPE Then
+        Begin
           fld_type := TYPE_REAL;
           nested_idx := 0;
           NextToken
-        end
-        else if tok_type = TOK_IDENT then
-        begin
-          { Nested record type or enum type }
+        End
+        Else If tok_type = TOK_IDENT Then
+        Begin
+          { Nested Record Type Or enum Type }
           nested_idx := SymLookup;
-          if (nested_idx >= 0) and (sym_kind[nested_idx] = SYM_TYPEDEF) then
-          begin
-            if sym_type[nested_idx] = TYPE_RECORD then
-            begin
+          If (nested_idx >= 0) And (sym_kind[nested_idx] = SYM_TYPEDEF) Then
+          Begin
+            If sym_type[nested_idx] = TYPE_RECORD Then
+            Begin
               fld_type := TYPE_RECORD;
               nested_size := sym_label[nested_idx]
-            end
-            else if sym_type[nested_idx] = TYPE_ENUM then
+            End
+            Else If sym_type[nested_idx] = TYPE_ENUM Then
               fld_type := TYPE_ENUM
-            else if sym_type[nested_idx] = TYPE_SUBRANGE then
+            Else If sym_type[nested_idx] = TYPE_SUBRANGE Then
               fld_type := TYPE_SUBRANGE
-            else if sym_type[nested_idx] = TYPE_SET then
+            Else If sym_type[nested_idx] = TYPE_SET Then
               fld_type := TYPE_SET
-            else
+            Else
               Error(9);
             NextToken
-          end
-          else
+          End
+          Else
             Error(9)
-        end
-        else
+        End
+        Else
           Error(9);
 
-        { Apply type to all collected field names }
-        for i := first_fld to field_count - 1 do
-        begin
+        { Apply Type To all collected field names }
+        For i := first_fld To field_count - 1 Do
+        Begin
           field_type[i] := fld_type;
           field_offset[i] := fld_offset;
           field_rec_idx[i] := type_idx;
           field_rec_type[i] := nested_idx;
-          if fld_type = TYPE_RECORD then
+          If fld_type = TYPE_RECORD Then
             fld_offset := fld_offset + nested_size
-          else
+          Else
             fld_offset := fld_offset + 8
-        end;
+        End;
 
-        { Expect semicolon or end }
-        if tok_type = TOK_SEMICOLON then
+        { Expect semicolon Or End }
+        If tok_type = TOK_SEMICOLON Then
           NextToken
-      end;
+      End;
 
-      { Check for variant part }
-      if tok_type = TOK_CASE then
-      begin
-        NextToken;  { consume 'case' }
+      { Check For variant part }
+      If tok_type = TOK_CASE Then
+      Begin
+        NextToken;  { consume 'Case' }
 
-        { Check for tag field: "case tag: type of" vs "case type of" }
-        if tok_type = TOK_IDENT then
-        begin
-          { Could be "tag: type" or just "type" - peek ahead }
-          { Save identifier for potential tag field }
+        { Check For tag field: "Case tag: Type Of" vs "Case Type Of" }
+        If tok_type = TOK_IDENT Then
+        Begin
+          { Could be "tag: Type" Or just "Type" - peek ahead }
+          { Save identifier For potential tag field }
           base_idx := field_count * 32;
-          for i := 0 to tok_len - 1 do
+          For i := 0 To tok_len - 1 Do
             field_name[base_idx + i] := tok_str[i];
           field_name[base_idx + tok_len] := 0;
 
           NextToken;
-          if tok_type = TOK_COLON then
-          begin
+          If tok_type = TOK_COLON Then
+          Begin
             { It's a tag field }
             field_count := field_count + 1;
             NextToken;
-            { Parse tag type }
-            if tok_type = TOK_INTEGER_TYPE then
+            { Parse tag Type }
+            If tok_type = TOK_INTEGER_TYPE Then
               fld_type := TYPE_INTEGER
-            else if tok_type = TOK_CHAR_TYPE then
+            Else If tok_type = TOK_CHAR_TYPE Then
               fld_type := TYPE_CHAR
-            else if tok_type = TOK_BOOLEAN_TYPE then
+            Else If tok_type = TOK_BOOLEAN_TYPE Then
               fld_type := TYPE_BOOLEAN
-            else
+            Else
               fld_type := TYPE_INTEGER;  { default }
             NextToken;
 
@@ -10601,253 +10601,253 @@ begin
             field_rec_idx[field_count - 1] := type_idx;
             field_rec_type[field_count - 1] := 0;
             fld_offset := fld_offset + 8
-          end
-          { else: identifier was the type name, already consumed }
-        end
-        else
-          NextToken;  { consume type keyword }
+          End
+          { Else: identifier was the Type name, already consumed }
+        End
+        Else
+          NextToken;  { consume Type keyword }
 
         Expect(TOK_OF);
 
-        { variant_start marks where all variants begin }
+        { variant_start marks where all variants Begin }
         nested_idx := fld_offset;  { reuse as variant_start }
         nested_size := 0;          { reuse as max_variant_size }
 
         { Parse variant alternatives }
-        while tok_type <> TOK_END do
-        begin
+        While tok_type <> TOK_END Do
+        Begin
           { Skip constant label(s) }
-          while (tok_type <> TOK_COLON) and (tok_type <> TOK_END) do
+          While (tok_type <> TOK_COLON) And (tok_type <> TOK_END) Do
             NextToken;
 
-          if tok_type = TOK_COLON then
-          begin
+          If tok_type = TOK_COLON Then
+          Begin
           NextToken;  { consume ':' }
           Expect(TOK_LPAREN);
 
-          { Parse fields in this variant - all start at variant_start }
-          fld_offset := nested_idx;  { reset to variant start }
+          { Parse fields In this variant - all start at variant_start }
+          fld_offset := nested_idx;  { reset To variant start }
 
-          while tok_type <> TOK_RPAREN do
-          begin
+          While tok_type <> TOK_RPAREN Do
+          Begin
             { Collect field names }
             first_fld := field_count;
-            repeat
-              if tok_type <> TOK_IDENT then
+            Repeat
+              If tok_type <> TOK_IDENT Then
                 Error(11);
               base_idx := field_count * 32;
-              for i := 0 to tok_len - 1 do
+              For i := 0 To tok_len - 1 Do
                 field_name[base_idx + i] := tok_str[i];
               field_name[base_idx + tok_len] := 0;
               field_count := field_count + 1;
               NextToken;
-              if tok_type = TOK_COMMA then
+              If tok_type = TOK_COMMA Then
                 NextToken
-            until tok_type = TOK_COLON;
+            Until tok_type = TOK_COLON;
 
             Expect(TOK_COLON);
 
-            { Parse field type }
+            { Parse field Type }
             lo_val := 8;  { reuse as field_size }
-            if tok_type = TOK_INTEGER_TYPE then
+            If tok_type = TOK_INTEGER_TYPE Then
               fld_type := TYPE_INTEGER
-            else if tok_type = TOK_CHAR_TYPE then
+            Else If tok_type = TOK_CHAR_TYPE Then
               fld_type := TYPE_CHAR
-            else if tok_type = TOK_BOOLEAN_TYPE then
+            Else If tok_type = TOK_BOOLEAN_TYPE Then
               fld_type := TYPE_BOOLEAN
-            else if tok_type = TOK_REAL_TYPE then
+            Else If tok_type = TOK_REAL_TYPE Then
               fld_type := TYPE_REAL
-            else if tok_type = TOK_IDENT then
-            begin
+            Else If tok_type = TOK_IDENT Then
+            Begin
               hi_val := SymLookup;  { reuse as lookup result }
-              if (hi_val >= 0) and (sym_kind[hi_val] = SYM_TYPEDEF) then
-              begin
-                if sym_type[hi_val] = TYPE_RECORD then
-                begin
+              If (hi_val >= 0) And (sym_kind[hi_val] = SYM_TYPEDEF) Then
+              Begin
+                If sym_type[hi_val] = TYPE_RECORD Then
+                Begin
                   fld_type := TYPE_RECORD;
                   lo_val := sym_label[hi_val]
-                end
-                else
+                End
+                Else
                   fld_type := sym_type[hi_val]
-              end
-              else
+              End
+              Else
                 fld_type := TYPE_INTEGER
-            end
-            else
+            End
+            Else
               fld_type := TYPE_INTEGER;
             NextToken;
 
             { Record fields }
-            for i := first_fld to field_count - 1 do
-            begin
+            For i := first_fld To field_count - 1 Do
+            Begin
               field_type[i] := fld_type;
               field_offset[i] := fld_offset;
               field_rec_idx[i] := type_idx;
-              if fld_type = TYPE_RECORD then
+              If fld_type = TYPE_RECORD Then
                 field_rec_type[i] := hi_val
-              else
+              Else
                 field_rec_type[i] := 0;
               fld_offset := fld_offset + lo_val
-            end;
+            End;
 
-            if tok_type = TOK_SEMICOLON then
+            If tok_type = TOK_SEMICOLON Then
               NextToken
-          end;
+          End;
 
           NextToken;  { consume ')' }
 
           { Track max variant size }
-          if (fld_offset - nested_idx) > nested_size then
+          If (fld_offset - nested_idx) > nested_size Then
             nested_size := fld_offset - nested_idx;
 
-          if tok_type = TOK_SEMICOLON then
+          If tok_type = TOK_SEMICOLON Then
             NextToken
-          end  { end if tok_type = TOK_COLON }
-        end;
+          End  { End If tok_type = TOK_COLON }
+        End;
 
         fld_offset := nested_idx + nested_size  { final size }
-      end;
+      End;
 
-      NextToken;  { consume 'end' }
-      sym_label[type_idx] := fld_offset  { total record size }
-    end
-    else if tok_type = TOK_LPAREN then
-    begin
-      { Enumerated type: (Red, Green, Blue) }
+      NextToken;  { consume 'End' }
+      sym_label[type_idx] := fld_offset  { total Record size }
+    End
+    Else If tok_type = TOK_LPAREN Then
+    Begin
+      { Enumerated Type: (Red, Green, Blue) }
       sym_type[type_idx] := TYPE_ENUM;
       sym_const_val[type_idx] := enum_count;  { index into enum arrays }
       enum_low[enum_count] := 0;
       enum_val := 0;
       NextToken;  { consume '(' }
-      while tok_type <> TOK_RPAREN do
-      begin
-        if tok_type <> TOK_IDENT then
+      While tok_type <> TOK_RPAREN Do
+      Begin
+        If tok_type <> TOK_IDENT Then
           Error(11);
         { Add enum value as a constant }
         base_idx := SymAdd(SYM_CONST, TYPE_ENUM, scope_level, 0);
         sym_const_val[base_idx] := enum_val;
-        sym_label[base_idx] := type_idx;  { link to enum type }
+        sym_label[base_idx] := type_idx;  { link To enum Type }
         enum_val := enum_val + 1;
         NextToken;
-        if tok_type = TOK_COMMA then
+        If tok_type = TOK_COMMA Then
           NextToken
-      end;
+      End;
       enum_high[enum_count] := enum_val - 1;
-      sym_label[type_idx] := enum_val;  { number of values }
+      sym_label[type_idx] := enum_val;  { number Of values }
       enum_count := enum_count + 1;
       NextToken  { consume ')' }
-    end
-    else if tok_type = TOK_SET then
-    begin
-      { Set type: set of char / set of EnumType / set of 0..63 }
+    End
+    Else If tok_type = TOK_SET Then
+    Begin
+      { Set Type: Set Of Char / Set Of EnumType / Set Of 0..63 }
       sym_type[type_idx] := TYPE_SET;
-      NextToken;  { consume 'set' }
+      NextToken;  { consume 'Set' }
       Expect(TOK_OF);
-      sym_const_val[type_idx] := set_count;  { index into set arrays }
-      if tok_type = TOK_CHAR_TYPE then
-      begin
+      sym_const_val[type_idx] := set_count;  { index into Set arrays }
+      If tok_type = TOK_CHAR_TYPE Then
+      Begin
         set_base[set_count] := TYPE_CHAR;
         set_low[set_count] := 0;
         set_high[set_count] := 255;
         NextToken
-      end
-      else if tok_type = TOK_IDENT then
-      begin
+      End
+      Else If tok_type = TOK_IDENT Then
+      Begin
         base_idx := SymLookup;
-        if (base_idx >= 0) and (sym_kind[base_idx] = SYM_TYPEDEF) then
-        begin
-          if sym_type[base_idx] = TYPE_ENUM then
-          begin
+        If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) Then
+        Begin
+          If sym_type[base_idx] = TYPE_ENUM Then
+          Begin
             set_base[set_count] := TYPE_ENUM;
             nested_idx := sym_const_val[base_idx];  { enum index }
             set_low[set_count] := enum_low[nested_idx];
             set_high[set_count] := enum_high[nested_idx]
-          end
-          else if sym_type[base_idx] = TYPE_SUBRANGE then
-          begin
+          End
+          Else If sym_type[base_idx] = TYPE_SUBRANGE Then
+          Begin
             set_base[set_count] := TYPE_SUBRANGE;
             nested_idx := sym_const_val[base_idx];  { subrange index }
             set_low[set_count] := subr_low[nested_idx];
             set_high[set_count] := subr_high[nested_idx]
-          end
-          else
+          End
+          Else
             Error(9);
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else if tok_type = TOK_INTEGER then
-      begin
-        { set of 0..63 - inline subrange }
+      End
+      Else If tok_type = TOK_INTEGER Then
+      Begin
+        { Set Of 0..63 - inline subrange }
         lo_val := tok_int;
         NextToken;
         Expect(TOK_DOTDOT);
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         hi_val := tok_int;
-        if hi_val - lo_val > 63 then
-          Error(16);  { set too large }
+        If hi_val - lo_val > 63 Then
+          Error(16);  { Set too large }
         set_base[set_count] := TYPE_SUBRANGE;
         set_low[set_count] := lo_val;
         set_high[set_count] := hi_val;
         NextToken
-      end
-      else
+      End
+      Else
         Error(9);
       set_count := set_count + 1
-    end
-    else if (tok_type = TOK_INTEGER) or (tok_type = TOK_MINUS) then
-    begin
-      { Subrange type: 0..9 or -10..10 }
-      if tok_type = TOK_MINUS then
-      begin
+    End
+    Else If (tok_type = TOK_INTEGER) Or (tok_type = TOK_MINUS) Then
+    Begin
+      { Subrange Type: 0..9 Or -10..10 }
+      If tok_type = TOK_MINUS Then
+      Begin
         NextToken;
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         lo_val := 0 - tok_int
-      end
-      else
+      End
+      Else
         lo_val := tok_int;
       NextToken;
       Expect(TOK_DOTDOT);
-      if tok_type = TOK_MINUS then
-      begin
+      If tok_type = TOK_MINUS Then
+      Begin
         NextToken;
-        if tok_type <> TOK_INTEGER then
+        If tok_type <> TOK_INTEGER Then
           Error(9);
         hi_val := 0 - tok_int
-      end
-      else if tok_type = TOK_INTEGER then
+      End
+      Else If tok_type = TOK_INTEGER Then
         hi_val := tok_int
-      else
+      Else
         Error(9);
       sym_type[type_idx] := TYPE_SUBRANGE;
       sym_const_val[type_idx] := subr_count;  { index into subrange arrays }
       subr_low[subr_count] := lo_val;
       subr_high[subr_count] := hi_val;
       subr_base[subr_count] := TYPE_INTEGER;
-      sym_label[type_idx] := hi_val - lo_val + 1;  { number of values }
+      sym_label[type_idx] := hi_val - lo_val + 1;  { number Of values }
       subr_count := subr_count + 1;
       NextToken
-    end
-    else if tok_type = TOK_IDENT then
-    begin
-      { Could be alias to another type, or subrange of enum }
+    End
+    Else If tok_type = TOK_IDENT Then
+    Begin
+      { Could be alias To another Type, Or subrange Of enum }
       base_idx := SymLookup;
-      if base_idx >= 0 then
-      begin
-        if sym_kind[base_idx] = SYM_CONST then
-        begin
-          { Subrange starting with enum constant }
+      If base_idx >= 0 Then
+      Begin
+        If sym_kind[base_idx] = SYM_CONST Then
+        Begin
+          { Subrange starting With enum constant }
           lo_val := sym_const_val[base_idx];
-          nested_idx := sym_label[base_idx];  { enum type }
+          nested_idx := sym_label[base_idx];  { enum Type }
           NextToken;
           Expect(TOK_DOTDOT);
-          if tok_type <> TOK_IDENT then
+          If tok_type <> TOK_IDENT Then
             Error(9);
           base_idx := SymLookup;
-          if (base_idx < 0) or (sym_kind[base_idx] <> SYM_CONST) then
+          If (base_idx < 0) Or (sym_kind[base_idx] <> SYM_CONST) Then
             Error(9);
           hi_val := sym_const_val[base_idx];
           sym_type[type_idx] := TYPE_SUBRANGE;
@@ -10858,677 +10858,677 @@ begin
           sym_label[type_idx] := hi_val - lo_val + 1;
           subr_count := subr_count + 1;
           NextToken
-        end
-        else if sym_kind[base_idx] = SYM_TYPEDEF then
-        begin
-          { Type alias - copy the type info }
+        End
+        Else If sym_kind[base_idx] = SYM_TYPEDEF Then
+        Begin
+          { Type alias - copy the Type info }
           sym_type[type_idx] := sym_type[base_idx];
           sym_const_val[type_idx] := sym_const_val[base_idx];
           sym_label[type_idx] := sym_label[base_idx];
           NextToken
-        end
-        else
+        End
+        Else
           Error(9)
-      end
-      else
+      End
+      Else
         Error(9)
-    end
-    else
+    End
+    Else
       Error(9);
     Expect(TOK_SEMICOLON)
-  end
-end;
+  End
+End;
 
-procedure ParseProcedureDeclaration; forward;
-procedure ParseFunctionDeclaration; forward;
+Procedure ParseProcedureDeclaration; Forward;
+Procedure ParseFunctionDeclaration; Forward;
 
-procedure ParseBlock;
-var
-  saved_offset: integer;
-  alloc_size: integer;
-  body_label: integer;
-begin
+Procedure ParseBlock;
+Var
+  saved_offset: Integer;
+  alloc_size: Integer;
+  body_label: Integer;
+Begin
   saved_offset := local_offset;
   body_label := 0;
 
-  while (tok_type = TOK_CONST) or (tok_type = TOK_VAR) or (tok_type = TOK_TYPE_KW) do
-  begin
-    if tok_type = TOK_CONST then
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_VAR) Or (tok_type = TOK_TYPE_KW) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else
+    Else
       ParseVarDeclarations
-  end;
+  End;
 
-  { If there are procedure/function declarations, jump over them }
-  if (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) then
-  begin
+  { If there are Procedure/Function declarations, jump over them }
+  If (tok_type = TOK_PROCEDURE) Or (tok_type = TOK_FUNCTION) Then
+  Begin
     body_label := NewLabel;
     EmitBranchLabel(body_label)
-  end;
+  End;
 
-  while (tok_type = TOK_PROCEDURE) or (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_PROCEDURE then
+  While (tok_type = TOK_PROCEDURE) Or (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_PROCEDURE Then
       ParseProcedureDeclaration
-    else
+    Else
       ParseFunctionDeclaration
-  end;
+  End;
 
-  if body_label > 0 then
+  If body_label > 0 Then
     EmitLabel(body_label);
 
-  { Allocate stack space - round up to 16 for alignment }
+  { Allocate stack space - round up To 16 For alignment }
   alloc_size := 0;
-  if local_offset < saved_offset then
-  begin
+  If local_offset < saved_offset Then
+  Begin
     alloc_size := saved_offset - local_offset;
-    alloc_size := ((alloc_size + 15) div 16) * 16;
+    alloc_size := ((alloc_size + 15) Div 16) * 16;
     EmitSubSP(alloc_size)
-  end;
+  End;
 
   Expect(TOK_BEGIN);
   ParseStatement;
-  while tok_type = TOK_SEMICOLON do
-  begin
+  While tok_type = TOK_SEMICOLON Do
+  Begin
     NextToken;
     ParseStatement
-  end;
+  End;
   Expect(TOK_END);
 
   { Deallocate stack space }
-  if alloc_size > 0 then
-  begin
+  If alloc_size > 0 Then
+  Begin
     EmitAddSP(alloc_size)
-  end
-end;
+  End
+End;
 
-procedure ParseProcedureDeclaration;
-var
-  idx, proc_label: integer;
-  saved_level, saved_offset: integer;
-  param_count, param_idx, i, j: integer;
-  param_indices: array[0..7] of integer;
-  is_var_group: integer;
-  saved_exit_label, proc_exit_label: integer;
-begin
-  NextToken;  { consume 'procedure' }
+Procedure ParseProcedureDeclaration;
+Var
+  idx, proc_label: Integer;
+  saved_level, saved_offset: Integer;
+  param_count, param_idx, i, j: Integer;
+  param_indices: Array[0..7] Of Integer;
+  is_var_group: Integer;
+  saved_exit_label, proc_exit_label: Integer;
+Begin
+  NextToken;  { consume 'Procedure' }
 
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
 
-  { Check if procedure already exists (forward declaration) }
+  { Check If Procedure already exists (Forward declaration) }
   idx := SymLookup;
-  if (idx >= 0) and (sym_kind[idx] = SYM_PROCEDURE) then
-  begin
-    { Reuse existing forward-declared procedure }
+  If (idx >= 0) And (sym_kind[idx] = SYM_PROCEDURE) Then
+  Begin
+    { Reuse existing Forward-declared Procedure }
     proc_label := sym_label[idx]
-  end
-  else
-  begin
-    { Create new procedure symbol }
+  End
+  Else
+  Begin
+    { Create New Procedure symbol }
     idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, scope_level, 0);
     proc_label := NewLabel;
     sym_label[idx] := proc_label
-  end;
+  End;
   NextToken;
 
-  { Save state and enter new scope for parameters }
+  { Save state And enter New scope For parameters }
   saved_level := scope_level;
   saved_offset := local_offset;
   scope_level := scope_level + 1;
-  local_offset := -8;  { Reserve -8 for static link }
+  local_offset := -8;  { Reserve -8 For static link }
   param_count := 0;
 
   { Handle optional parameters }
-  if tok_type = TOK_LPAREN then
-  begin
+  If tok_type = TOK_LPAREN Then
+  Begin
     NextToken;
-    if tok_type <> TOK_RPAREN then
-    begin
-      repeat
-        if tok_type = TOK_SEMICOLON then NextToken;
-        { Check for 'var' keyword - applies to all idents in this group }
+    If tok_type <> TOK_RPAREN Then
+    Begin
+      Repeat
+        If tok_type = TOK_SEMICOLON Then NextToken;
+        { Check For 'Var' keyword - applies To all idents In this group }
         is_var_group := 0;
-        if tok_type = TOK_VAR then
-        begin
+        If tok_type = TOK_VAR Then
+        Begin
           is_var_group := 1;
           NextToken
-        end;
-        { Parse identifier list for this parameter group }
-        if tok_type <> TOK_IDENT then Error(11);
-        repeat
-          if tok_type = TOK_COMMA then NextToken;
-          if tok_type <> TOK_IDENT then Error(11);
+        End;
+        { Parse identifier list For this parameter group }
+        If tok_type <> TOK_IDENT Then Error(11);
+        Repeat
+          If tok_type = TOK_COMMA Then NextToken;
+          If tok_type <> TOK_IDENT Then Error(11);
           { Add parameter }
           local_offset := local_offset - 8;
           param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-          if is_var_group = 1 then
+          If is_var_group = 1 Then
             sym_is_var_param[param_idx] := 1;
-          if param_count < 8 then
+          If param_count < 8 Then
             param_indices[param_count] := param_idx;
           param_count := param_count + 1;
           NextToken
-        until tok_type <> TOK_COMMA;
-        { Parse type annotation and set param types }
-        if tok_type = TOK_COLON then
-        begin
+        Until tok_type <> TOK_COMMA;
+        { Parse Type annotation And Set param types }
+        If tok_type = TOK_COLON Then
+        Begin
           NextToken;
-          if tok_type = TOK_REAL_TYPE then
-          begin
-            { Set all params in this group to TYPE_REAL }
-            { Find starting index of this group and set types }
-            { param_indices has the indices, but we need to know where this group started }
-            { For simplicity, set all recent params to real - this is approximate }
+          If tok_type = TOK_REAL_TYPE Then
+          Begin
+            { Set all params In this group To TYPE_REAL }
+            { Find starting index Of this group And Set types }
+            { param_indices has the indices, but we need To know where this group started }
+            { For simplicity, Set all recent params To Real - this is approximate }
             sym_type[param_idx] := TYPE_REAL;
             NextToken
-          end
-          else if tok_type = TOK_STRING_TYPE then
-          begin
+          End
+          Else If tok_type = TOK_STRING_TYPE Then
+          Begin
             { String parameter }
             sym_type[param_idx] := TYPE_STRING;
-            if is_var_group = 0 then
-            begin
+            If is_var_group = 0 Then
+            Begin
               { Value parameter - need 256 bytes total, already have 8, need 248 more }
               local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-in }
-            end;
-            { var string params keep the 8-byte slot for address }
+              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-In }
+            End;
+            { Var String params keep the 8-byte slot For address }
             NextToken
-          end
-          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-             (tok_type = TOK_BOOLEAN_TYPE) then
+          End
+          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+             (tok_type = TOK_BOOLEAN_TYPE) Then
             NextToken
-        end
-      until tok_type <> TOK_SEMICOLON
-    end;
+        End
+      Until tok_type <> TOK_SEMICOLON
+    End;
     Expect(TOK_RPAREN)
-  end;
+  End;
 
-  { Build var-param bitmap and store on procedure symbol }
+  { Build Var-param bitmap And store on Procedure symbol }
   sym_var_param_flags[idx] := 0;
-  for i := 0 to param_count - 1 do
-    if sym_is_var_param[param_indices[i]] = 1 then
-    begin
-      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
-      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
-      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
-      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
-      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
-      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
-      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
-      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
-    end;
+  For i := 0 To param_count - 1 Do
+    If sym_is_var_param[param_indices[i]] = 1 Then
+    Begin
+      If i = 0 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      If i = 1 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      If i = 2 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      If i = 3 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      If i = 4 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      If i = 5 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      If i = 6 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      If i = 7 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    End;
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration or interface declaration }
-  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
-  begin
-    if tok_type = TOK_FORWARD then
-    begin
+  { Check For Forward declaration Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  Begin
+    If tok_type = TOK_FORWARD Then
+    Begin
       NextToken;
       Expect(TOK_SEMICOLON)
-    end;
+    End;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
-  end
-  else
-  begin
+  End
+  Else
+  Begin
 
-  { Emit procedure label and prolog - save x29, x30, static link }
-  { For units, use named labels to avoid conflicts when linking }
-  if compiling_unit = 1 then
-  begin
+  { Emit Procedure label And prolog - save x29, x30, static link }
+  { For units, use named labels To avoid conflicts when linking }
+  If compiling_unit = 1 Then
+  Begin
     EmitGloblCurrentUnit(idx);  { Export the symbol }
     EmitUnitLabel(idx)
-  end
-  else
+  End
+  Else
     EmitLabel(proc_label);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(16);  { Allocate space for static link }
+  EmitSubSP(16);  { Allocate space For static link }
   EmitStoreStaticLink;
 
-  { Allocate space for parameters and copy from registers }
-  if param_count > 0 then
-  begin
+  { Allocate space For parameters And copy from registers }
+  If param_count > 0 Then
+  Begin
     { Allocate based on actual space needed (local_offset tracks it) }
     { param_space = -(local_offset) - 8 (static link already counted separately) }
     j := 0 - local_offset - 8;
-    j := ((j + 15) div 16) * 16;  { Align to 16 }
-    if j > 0 then
+    j := ((j + 15) Div 16) * 16;  { Align To 16 }
+    If j > 0 Then
       EmitSubSP(j);
-    for i := 0 to param_count - 1 do
-    begin
-      if i < 8 then
-      begin
-        { Check if this is a string value parameter (needs copy) }
-        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
-        begin
-          { String value param: xi has address of source, copy to local storage }
+    For i := 0 To param_count - 1 Do
+    Begin
+      If i < 8 Then
+      Begin
+        { Check If this is a String value parameter (needs copy) }
+        If (sym_type[param_indices[i]] = TYPE_STRING) And (sym_is_var_param[param_indices[i]] = 0) Then
+        Begin
+          { String value param: xi has address Of source, copy To local storage }
           { x9 = source (passed address), compute x8 = dest using large offset handling }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-          writechar(120); writechar(48 + i);  { xi }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(57); WriteChar(44); WriteChar(32);  { x9, }
+          WriteChar(120); WriteChar(48 + i);  { xi }
           EmitNL;
           { Compute dest address: x8 = x29 - offset (handle large negative offset) }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(35);
-          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(35);
+          Write(0 - sym_offset[param_indices[i]]);  { positive value }
           EmitNL;
           EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-          writechar(120); writechar(56);  { x8 }
+          WriteChar(115); WriteChar(117); WriteChar(98); WriteChar(32);  { sub }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(120); WriteChar(50); WriteChar(57); WriteChar(44); WriteChar(32);  { x29, }
+          WriteChar(120); WriteChar(56);  { x8 }
           EmitNL;
           EmitBL(rt_str_copy)
-        end
-        else
-        begin
-          { Normal param: store register to stack }
+        End
+        Else
+        Begin
+          { Normal param: store register To stack }
           EmitIndent;
-          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-          writechar(44); writechar(32); writechar(35);  { , # }
-          write(sym_offset[param_indices[i]]);
-          writechar(93);  { ] }
+          WriteChar(115); WriteChar(116); WriteChar(117); WriteChar(114); WriteChar(32);  { stur }
+          WriteChar(120); WriteChar(48 + i); WriteChar(44); WriteChar(32);  { xi, }
+          WriteChar(91); WriteChar(120); WriteChar(50); WriteChar(57);  { [x29 }
+          WriteChar(44); WriteChar(32); WriteChar(35);  { , # }
+          Write(sym_offset[param_indices[i]]);
+          WriteChar(93);  { ] }
           EmitNL
-        end
-      end
-    end
-  end;
+        End
+      End
+    End
+  End;
 
-  { Set up exit label for this procedure }
+  { Set up Exit label For this Procedure }
   saved_exit_label := exit_label;
   proc_exit_label := NewLabel;
   exit_label := proc_exit_label;
 
-  { Parse procedure body }
+  { Parse Procedure body }
   ParseBlock;
 
-  { Pop local symbols and restore scope }
+  { Pop local symbols And restore scope }
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
 
-  { Emit exit label for exit statements }
+  { Emit Exit label For Exit statements }
   EmitLabel(proc_exit_label);
   exit_label := saved_exit_label;
 
-  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  { Restore sp To frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-  writechar(120); writechar(50); writechar(57);  { x29 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(115); WriteChar(112); WriteChar(44); WriteChar(32);  { sp, }
+  WriteChar(120); WriteChar(50); WriteChar(57);  { x29 }
   EmitNL;
 
-  { Restore frame and return }
+  { Restore frame And return }
   EmitLdp;
   EmitIndent;
-  writechar(114); writechar(101); writechar(116);  { ret }
+  WriteChar(114); WriteChar(101); WriteChar(116);  { ret }
   EmitNL;
 
   Expect(TOK_SEMICOLON)
-  end  { end of else for non-forward declaration }
-end;
+  End  { End Of Else For non-Forward declaration }
+End;
 
-procedure ParseFunctionDeclaration;
-var
-  idx, func_label: integer;
-  saved_level, saved_offset: integer;
-  param_count, param_idx, i, j: integer;
-  param_indices: array[0..7] of integer;
-  is_var_group: integer;
-  saved_exit_label, func_exit_label: integer;
-begin
-  NextToken;  { consume 'function' }
+Procedure ParseFunctionDeclaration;
+Var
+  idx, func_label: Integer;
+  saved_level, saved_offset: Integer;
+  param_count, param_idx, i, j: Integer;
+  param_indices: Array[0..7] Of Integer;
+  is_var_group: Integer;
+  saved_exit_label, func_exit_label: Integer;
+Begin
+  NextToken;  { consume 'Function' }
 
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
 
-  { Check if function already exists (forward declaration) }
+  { Check If Function already exists (Forward declaration) }
   idx := SymLookup;
-  if (idx >= 0) and (sym_kind[idx] = SYM_FUNCTION) then
-  begin
-    { Reuse existing forward-declared function }
+  If (idx >= 0) And (sym_kind[idx] = SYM_FUNCTION) Then
+  Begin
+    { Reuse existing Forward-declared Function }
     func_label := sym_label[idx]
-  end
-  else
-  begin
-    { Create new function symbol }
+  End
+  Else
+  Begin
+    { Create New Function symbol }
     idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, scope_level, 0);
     func_label := NewLabel;
     sym_label[idx] := func_label
-  end;
+  End;
   NextToken;
 
-  { Save state and enter new scope for parameters }
+  { Save state And enter New scope For parameters }
   saved_level := scope_level;
   saved_offset := local_offset;
   scope_level := scope_level + 1;
-  local_offset := -16;  { Reserve -8 for static link, -16 for result }
+  local_offset := -16;  { Reserve -8 For static link, -16 For result }
   param_count := 0;
 
   { Handle optional parameters }
-  if tok_type = TOK_LPAREN then
-  begin
+  If tok_type = TOK_LPAREN Then
+  Begin
     NextToken;
-    if tok_type <> TOK_RPAREN then
-    begin
-      repeat
-        if tok_type = TOK_SEMICOLON then NextToken;
-        { Check for 'var' keyword - applies to all idents in this group }
+    If tok_type <> TOK_RPAREN Then
+    Begin
+      Repeat
+        If tok_type = TOK_SEMICOLON Then NextToken;
+        { Check For 'Var' keyword - applies To all idents In this group }
         is_var_group := 0;
-        if tok_type = TOK_VAR then
-        begin
+        If tok_type = TOK_VAR Then
+        Begin
           is_var_group := 1;
           NextToken
-        end;
-        { Parse identifier list for this parameter group }
-        if tok_type <> TOK_IDENT then Error(11);
-        repeat
-          if tok_type = TOK_COMMA then NextToken;
-          if tok_type <> TOK_IDENT then Error(11);
+        End;
+        { Parse identifier list For this parameter group }
+        If tok_type <> TOK_IDENT Then Error(11);
+        Repeat
+          If tok_type = TOK_COMMA Then NextToken;
+          If tok_type <> TOK_IDENT Then Error(11);
           { Add parameter }
           local_offset := local_offset - 8;
           param_idx := SymAdd(SYM_PARAM, TYPE_INTEGER, scope_level, local_offset);
-          if is_var_group = 1 then
+          If is_var_group = 1 Then
             sym_is_var_param[param_idx] := 1;
-          if param_count < 8 then
+          If param_count < 8 Then
             param_indices[param_count] := param_idx;
           param_count := param_count + 1;
           NextToken
-        until tok_type <> TOK_COMMA;
-        { Parse type annotation and set param types }
-        if tok_type = TOK_COLON then
-        begin
+        Until tok_type <> TOK_COMMA;
+        { Parse Type annotation And Set param types }
+        If tok_type = TOK_COLON Then
+        Begin
           NextToken;
-          if tok_type = TOK_REAL_TYPE then
-          begin
+          If tok_type = TOK_REAL_TYPE Then
+          Begin
             sym_type[param_idx] := TYPE_REAL;
             NextToken
-          end
-          else if tok_type = TOK_STRING_TYPE then
-          begin
+          End
+          Else If tok_type = TOK_STRING_TYPE Then
+          Begin
             { String parameter }
             sym_type[param_idx] := TYPE_STRING;
-            if is_var_group = 0 then
-            begin
+            If is_var_group = 0 Then
+            Begin
               { Value parameter - need 256 bytes total, already have 8, need 248 more }
               local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset to start of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-in }
-            end;
-            { var string params keep the 8-byte slot for address }
+              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
+              sym_label[param_idx] := 256  { Mark as needing copy-In }
+            End;
+            { Var String params keep the 8-byte slot For address }
             NextToken
-          end
-          else if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-             (tok_type = TOK_BOOLEAN_TYPE) then
+          End
+          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+             (tok_type = TOK_BOOLEAN_TYPE) Then
             NextToken
-        end
-      until tok_type <> TOK_SEMICOLON
-    end;
+        End
+      Until tok_type <> TOK_SEMICOLON
+    End;
     Expect(TOK_RPAREN)
-  end;
+  End;
 
-  { Build var-param bitmap and store on function symbol }
+  { Build Var-param bitmap And store on Function symbol }
   sym_var_param_flags[idx] := 0;
-  for i := 0 to param_count - 1 do
-    if sym_is_var_param[param_indices[i]] = 1 then
-    begin
-      if i = 0 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
-      if i = 1 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
-      if i = 2 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
-      if i = 3 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
-      if i = 4 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
-      if i = 5 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
-      if i = 6 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
-      if i = 7 then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
-    end;
+  For i := 0 To param_count - 1 Do
+    If sym_is_var_param[param_indices[i]] = 1 Then
+    Begin
+      If i = 0 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 1;
+      If i = 1 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 2;
+      If i = 2 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 4;
+      If i = 3 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 8;
+      If i = 4 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 16;
+      If i = 5 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 32;
+      If i = 6 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 64;
+      If i = 7 Then sym_var_param_flags[idx] := sym_var_param_flags[idx] + 128
+    End;
 
-  { Parse return type }
+  { Parse return Type }
   Expect(TOK_COLON);
-  if (tok_type = TOK_INTEGER_TYPE) or (tok_type = TOK_CHAR_TYPE) or
-     (tok_type = TOK_BOOLEAN_TYPE) then
+  If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
+     (tok_type = TOK_BOOLEAN_TYPE) Then
     NextToken
-  else if tok_type = TOK_REAL_TYPE then
-  begin
+  Else If tok_type = TOK_REAL_TYPE Then
+  Begin
     sym_type[idx] := TYPE_REAL;
     NextToken
-  end
-  else if tok_type = TOK_STRING_TYPE then
-  begin
+  End
+  Else If tok_type = TOK_STRING_TYPE Then
+  Begin
     sym_type[idx] := TYPE_STRING;
     NextToken
-  end
-  else
+  End
+  Else
     Error(9);
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration or interface declaration }
-  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
-  begin
-    if tok_type = TOK_FORWARD then
-    begin
+  { Check For Forward declaration Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  Begin
+    If tok_type = TOK_FORWARD Then
+    Begin
       NextToken;
       Expect(TOK_SEMICOLON)
-    end;
+    End;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
-  end
-  else
-  begin
+  End
+  Else
+  Begin
 
-  { Emit function label and prolog - save x29, x30, static link }
-  { For units, use named labels to avoid conflicts when linking }
-  if compiling_unit = 1 then
-  begin
+  { Emit Function label And prolog - save x29, x30, static link }
+  { For units, use named labels To avoid conflicts when linking }
+  If compiling_unit = 1 Then
+  Begin
     EmitGloblCurrentUnit(idx);  { Export the symbol }
     EmitUnitLabel(idx)
-  end
-  else
+  End
+  Else
     EmitLabel(func_label);
   EmitStp;
   EmitMovFP;
-  EmitSubSP(16);  { Allocate space for static link }
+  EmitSubSP(16);  { Allocate space For static link }
   EmitStoreStaticLink;
 
-  { Allocate space for parameters and copy from registers }
-  if param_count > 0 then
-  begin
+  { Allocate space For parameters And copy from registers }
+  If param_count > 0 Then
+  Begin
     { Allocate based on actual space needed (local_offset tracks it) }
     { For functions, local_offset includes return value at -16, params start at -24 }
-    j := 0 - local_offset - 16;  { -16 for return value slot }
-    j := ((j + 15) div 16) * 16;  { Align to 16 }
-    if j > 0 then
+    j := 0 - local_offset - 16;  { -16 For return value slot }
+    j := ((j + 15) Div 16) * 16;  { Align To 16 }
+    If j > 0 Then
       EmitSubSP(j);
-    for i := 0 to param_count - 1 do
-    begin
-      if i < 8 then
-      begin
-        { Check if this is a string value parameter (needs copy) }
-        if (sym_type[param_indices[i]] = TYPE_STRING) and (sym_is_var_param[param_indices[i]] = 0) then
-        begin
-          { String value param: xi has address of source, copy to local storage }
+    For i := 0 To param_count - 1 Do
+    Begin
+      If i < 8 Then
+      Begin
+        { Check If this is a String value parameter (needs copy) }
+        If (sym_type[param_indices[i]] = TYPE_STRING) And (sym_is_var_param[param_indices[i]] = 0) Then
+        Begin
+          { String value param: xi has address Of source, copy To local storage }
           { x9 = source (passed address), compute x8 = dest using large offset handling }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-          writechar(120); writechar(48 + i);  { xi }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(57); WriteChar(44); WriteChar(32);  { x9, }
+          WriteChar(120); WriteChar(48 + i);  { xi }
           EmitNL;
           { Compute dest address: x8 = x29 - offset (handle large negative offset) }
           EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(35);
-          write(0 - sym_offset[param_indices[i]]);  { positive value }
+          WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(35);
+          Write(0 - sym_offset[param_indices[i]]);  { positive value }
           EmitNL;
           EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-          writechar(120); writechar(56);  { x8 }
+          WriteChar(115); WriteChar(117); WriteChar(98); WriteChar(32);  { sub }
+          WriteChar(120); WriteChar(56); WriteChar(44); WriteChar(32);  { x8, }
+          WriteChar(120); WriteChar(50); WriteChar(57); WriteChar(44); WriteChar(32);  { x29, }
+          WriteChar(120); WriteChar(56);  { x8 }
           EmitNL;
           EmitBL(rt_str_copy)
-        end
-        else
-        begin
-          { Normal param: store register to stack }
+        End
+        Else
+        Begin
+          { Normal param: store register To stack }
           EmitIndent;
-          writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-          writechar(44); writechar(32); writechar(35);  { , # }
-          write(sym_offset[param_indices[i]]);
-          writechar(93);  { ] }
+          WriteChar(115); WriteChar(116); WriteChar(117); WriteChar(114); WriteChar(32);  { stur }
+          WriteChar(120); WriteChar(48 + i); WriteChar(44); WriteChar(32);  { xi, }
+          WriteChar(91); WriteChar(120); WriteChar(50); WriteChar(57);  { [x29 }
+          WriteChar(44); WriteChar(32); WriteChar(35);  { , # }
+          Write(sym_offset[param_indices[i]]);
+          WriteChar(93);  { ] }
           EmitNL
-        end
-      end
-    end
-  end;
+        End
+      End
+    End
+  End;
 
-  { Set up exit label for this function }
+  { Set up Exit label For this Function }
   saved_exit_label := exit_label;
   func_exit_label := NewLabel;
   exit_label := func_exit_label;
 
-  { Parse function body }
+  { Parse Function body }
   ParseBlock;
 
-  { Pop local symbols and restore scope }
+  { Pop local symbols And restore scope }
   PopScope(scope_level);
   scope_level := saved_level;
   local_offset := saved_offset;
 
-  { Emit exit label for exit statements }
+  { Emit Exit label For Exit statements }
   EmitLabel(func_exit_label);
   exit_label := saved_exit_label;
 
-  { Load result from local variable into x0 or d0 }
-  if sym_type[idx] = TYPE_REAL then
+  { Load result from local variable into x0 Or d0 }
+  If sym_type[idx] = TYPE_REAL Then
     EmitLdurD0(-16)
-  else
+  Else
     EmitLdurX0(-16);
 
-  { Restore sp to frame pointer (undoes static link + params + local allocations) }
+  { Restore sp To frame pointer (undoes static link + params + local allocations) }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-  writechar(120); writechar(50); writechar(57);  { x29 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(115); WriteChar(112); WriteChar(44); WriteChar(32);  { sp, }
+  WriteChar(120); WriteChar(50); WriteChar(57);  { x29 }
   EmitNL;
 
-  { Restore frame and return }
+  { Restore frame And return }
   EmitLdp;
   EmitIndent;
-  writechar(114); writechar(101); writechar(116);  { ret }
+  WriteChar(114); WriteChar(101); WriteChar(116);  { ret }
   EmitNL;
 
   Expect(TOK_SEMICOLON)
-  end  { end of else for non-forward declaration }
-end;
+  End  { End Of Else For non-Forward declaration }
+End;
 
-{ Write unit name to TPU file (from current_unit_name) }
-procedure TPUWriteUnitName;
-var
-  i: integer;
-begin
-  for i := 0 to current_unit_len - 1 do
+{ Write Unit name To TPU file (from current_unit_name) }
+Procedure TPUWriteUnitName;
+Var
+  i: Integer;
+Begin
+  For i := 0 To current_unit_len - 1 Do
     writefilechar(tpu_file, current_unit_name[i])
-end;
+End;
 
-{ Write an integer to TPU file }
-procedure TPUWriteInt(n: integer);
-var
-  neg: integer;
-  digits: array[0..19] of integer;
-  count, i: integer;
-begin
+{ Write an Integer To TPU file }
+Procedure TPUWriteInt(n: Integer);
+Var
+  neg: Integer;
+  digits: Array[0..19] Of Integer;
+  count, i: Integer;
+Begin
   neg := 0;
-  if n < 0 then
-  begin
+  If n < 0 Then
+  Begin
     neg := 1;
     n := 0 - n
-  end;
+  End;
   count := 0;
-  if n = 0 then
-  begin
+  If n = 0 Then
+  Begin
     digits[0] := 48;
     count := 1
-  end
-  else
-  begin
-    while n > 0 do
-    begin
-      digits[count] := 48 + (n mod 10);
-      n := n div 10;
+  End
+  Else
+  Begin
+    While n > 0 Do
+    Begin
+      digits[count] := 48 + (n Mod 10);
+      n := n Div 10;
       count := count + 1
-    end
-  end;
-  if neg = 1 then
+    End
+  End;
+  If neg = 1 Then
     writefilechar(tpu_file, 45);  { '-' }
-  for i := count - 1 downto 0 do
+  For i := count - 1 DownTo 0 Do
     writefilechar(tpu_file, digits[i])
-end;
+End;
 
-{ Write symbol name to TPU file }
-procedure TPUWriteSymName(idx: integer);
-var
-  base, i, c: integer;
-begin
+{ Write symbol name To TPU file }
+Procedure TPUWriteSymName(idx: Integer);
+Var
+  base, i, c: Integer;
+Begin
   base := idx * 32;
   i := 0;
   c := sym_name[base];
-  while c <> 0 do
-  begin
+  While c <> 0 Do
+  Begin
     writefilechar(tpu_file, c);
     i := i + 1;
     c := sym_name[base + i]
-  end
-end;
+  End
+End;
 
-{ Write type name to TPU file }
-procedure TPUWriteType(t: integer);
-begin
-  if t = TYPE_INTEGER then
-    write(tpu_file, 'INTEGER')
-  else if t = TYPE_CHAR then
-    write(tpu_file, 'CHAR')
-  else if t = TYPE_BOOLEAN then
-    write(tpu_file, 'BOOLEAN')
-  else if t = TYPE_STRING then
-    write(tpu_file, 'STRING')
-  else if t = TYPE_REAL then
-    write(tpu_file, 'REAL')
-  else if t = TYPE_VOID then
-    write(tpu_file, 'VOID')
-  else if t = TYPE_POINTER then
-    write(tpu_file, 'POINTER')
-  else if t = TYPE_RECORD then
-    write(tpu_file, 'RECORD')
-  else if t = TYPE_ARRAY then
-    write(tpu_file, 'ARRAY')
-  else
-    write(tpu_file, 'UNKNOWN')
-end;
+{ Write Type name To TPU file }
+Procedure TPUWriteType(t: Integer);
+Begin
+  If t = TYPE_INTEGER Then
+    Write(tpu_file, 'Integer')
+  Else If t = TYPE_CHAR Then
+    Write(tpu_file, 'Char')
+  Else If t = TYPE_BOOLEAN Then
+    Write(tpu_file, 'Boolean')
+  Else If t = TYPE_STRING Then
+    Write(tpu_file, 'String')
+  Else If t = TYPE_REAL Then
+    Write(tpu_file, 'Real')
+  Else If t = TYPE_VOID Then
+    Write(tpu_file, 'VOID')
+  Else If t = TYPE_POINTER Then
+    Write(tpu_file, 'POINTER')
+  Else If t = TYPE_RECORD Then
+    Write(tpu_file, 'Record')
+  Else If t = TYPE_ARRAY Then
+    Write(tpu_file, 'Array')
+  Else
+    Write(tpu_file, 'UNKNOWN')
+End;
 
-{ Write TPU file for current unit }
-procedure WriteTPUFile;
-var
-  i, base, c, j: integer;
-begin
-  { Build filename in tok_str: unitname.tpu (lowercase) }
-  for i := 0 to current_unit_len - 1 do
+{ Write TPU file For current Unit }
+Procedure WriteTPUFile;
+Var
+  i, base, c, j: Integer;
+Begin
+  { Build filename In tok_str: unitname.tpu (lowercase) }
+  For i := 0 To current_unit_len - 1 Do
     tok_str[i] := ToLower(current_unit_name[i]);
   tok_str[current_unit_len] := 46;      { . }
   tok_str[current_unit_len + 1] := 116; { t }
@@ -11536,295 +11536,295 @@ begin
   tok_str[current_unit_len + 3] := 117; { u }
   tok_str[current_unit_len + 4] := 0;
 
-  { Open file for writing using assigntokstr }
+  { Open file For writing using assigntokstr }
   assigntokstr(tpu_file, 0, current_unit_len + 4);
   rewrite(tpu_file);
 
   { Write header }
-  writeln(tpu_file, 'TUXPASCAL_UNIT_V1');
+  WriteLn(tpu_file, 'TUXPASCAL_UNIT_V1');
 
-  { Write unit name }
-  write(tpu_file, 'UNIT ');
+  { Write Unit name }
+  Write(tpu_file, 'Unit ');
   TPUWriteUnitName;
-  writeln(tpu_file);
+  WriteLn(tpu_file);
 
-  { Write interface section }
-  writeln(tpu_file, 'INTERFACE');
+  { Write Interface section }
+  WriteLn(tpu_file, 'Interface');
 
-  { Write interface symbols }
-  for i := interface_start to interface_end do
-  begin
-    if sym_kind[i] = SYM_CONST then
-    begin
-      write(tpu_file, 'CONST ');
+  { Write Interface symbols }
+  For i := interface_start To interface_end Do
+  Begin
+    If sym_kind[i] = SYM_CONST Then
+    Begin
+      Write(tpu_file, 'Const ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_const_val[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_VAR then
-    begin
-      write(tpu_file, 'VAR ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_VAR Then
+    Begin
+      Write(tpu_file, 'Var ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_offset[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_PROCEDURE then
-    begin
-      write(tpu_file, 'PROC ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_PROCEDURE Then
+    Begin
+      Write(tpu_file, 'PROC ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_var_param_flags[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_FUNCTION then
-    begin
-      write(tpu_file, 'FUNC ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_FUNCTION Then
+    Begin
+      Write(tpu_file, 'FUNC ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_var_param_flags[i]);
-      writeln(tpu_file)
-    end
-    else if sym_kind[i] = SYM_TYPEDEF then
-    begin
-      write(tpu_file, 'TYPE ');
+      WriteLn(tpu_file)
+    End
+    Else If sym_kind[i] = SYM_TYPEDEF Then
+    Begin
+      Write(tpu_file, 'Type ');
       TPUWriteSymName(i);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteType(sym_type[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_const_val[i]);
-      write(tpu_file, ' ');
+      Write(tpu_file, ' ');
       TPUWriteInt(sym_label[i]);
-      writeln(tpu_file)
-    end
-  end;
+      WriteLn(tpu_file)
+    End
+  End;
 
-  writeln(tpu_file, 'ENDINTERFACE');
+  WriteLn(tpu_file, 'ENDINTERFACE');
 
   close(tpu_file)
-end;
+End;
 
 { Read a line from TPU file into tpu_line buffer }
-function TPUReadLine: integer;
-var
-  c: integer;
-  done: integer;
-begin
+Function TPUReadLine: Integer;
+Var
+  c: Integer;
+  done: Integer;
+Begin
   tpu_line_len := 0;
   TPUReadLine := 0;
   done := 0;
-  if not eof(tpu_file) then
-  begin
-    while (not eof(tpu_file)) and (done = 0) do
-    begin
-      read(tpu_file, c);
-      if c = 10 then
+  If Not eof(tpu_file) Then
+  Begin
+    While (Not eof(tpu_file)) And (done = 0) Do
+    Begin
+      Read(tpu_file, c);
+      If c = 10 Then
         done := 1
-      else if c <> 13 then
-      begin
+      Else If c <> 13 Then
+      Begin
         tpu_line[tpu_line_len] := c;
         tpu_line_len := tpu_line_len + 1
-      end
-    end;
+      End
+    End;
     tpu_line[tpu_line_len] := 0;
-    if tpu_line_len > 0 then
+    If tpu_line_len > 0 Then
       TPUReadLine := 1
-    else if done = 1 then
+    Else If done = 1 Then
       TPUReadLine := 1  { empty line is still a line }
-  end
-end;
+  End
+End;
 
 { Note: TPULineStartsWith removed - checks are inlined using first 3 chars }
 
-{ Parse integer from tpu_line at tpu_pos (updates tpu_pos) }
-function TPUParseInt: integer;
-var
-  neg, result: integer;
-begin
+{ Parse Integer from tpu_line at tpu_pos (updates tpu_pos) }
+Function TPUParseInt: Integer;
+Var
+  neg, result: Integer;
+Begin
   neg := 0;
   result := 0;
-  if tpu_line[tpu_pos] = 45 then  { '-' }
-  begin
+  If tpu_line[tpu_pos] = 45 Then  { '-' }
+  Begin
     neg := 1;
     tpu_pos := tpu_pos + 1
-  end;
-  while (tpu_line[tpu_pos] >= 48) and (tpu_line[tpu_pos] <= 57) do
-  begin
+  End;
+  While (tpu_line[tpu_pos] >= 48) And (tpu_line[tpu_pos] <= 57) Do
+  Begin
     result := result * 10 + (tpu_line[tpu_pos] - 48);
     tpu_pos := tpu_pos + 1
-  end;
-  if neg = 1 then
+  End;
+  If neg = 1 Then
     TPUParseInt := 0 - result
-  else
+  Else
     TPUParseInt := result
-end;
+End;
 
-{ Skip spaces in tpu_line at tpu_pos (updates tpu_pos) }
-procedure TPUSkipSpaces;
-begin
-  while tpu_line[tpu_pos] = 32 do
+{ Skip spaces In tpu_line at tpu_pos (updates tpu_pos) }
+Procedure TPUSkipSpaces;
+Begin
+  While tpu_line[tpu_pos] = 32 Do
     tpu_pos := tpu_pos + 1
-end;
+End;
 
-{ Parse identifier from tpu_line at tpu_pos, store in tok_str (updates tpu_pos) }
-procedure TPUParseIdent;
-begin
+{ Parse identifier from tpu_line at tpu_pos, store In tok_str (updates tpu_pos) }
+Procedure TPUParseIdent;
+Begin
   tok_len := 0;
   TPUSkipSpaces;
-  while (tpu_line[tpu_pos] <> 32) and (tpu_line[tpu_pos] <> 0) do
-  begin
+  While (tpu_line[tpu_pos] <> 32) And (tpu_line[tpu_pos] <> 0) Do
+  Begin
     tok_str[tok_len] := tpu_line[tpu_pos];
     tok_len := tok_len + 1;
     tpu_pos := tpu_pos + 1
-  end;
+  End;
   tok_str[tok_len] := 0
-end;
+End;
 
-{ Parse type from tpu_line at tpu_pos, return TYPE_* constant }
-function TPUParseType: integer;
-begin
+{ Parse Type from tpu_line at tpu_pos, return TYPE_* constant }
+Function TPUParseType: Integer;
+Begin
   TPUParseIdent;
-  if (tok_str[0] = 73) and (tok_str[1] = 78) and (tok_str[2] = 84) then  { INT }
+  If (tok_str[0] = 73) And (tok_str[1] = 78) And (tok_str[2] = 84) Then  { INT }
     TPUParseType := TYPE_INTEGER
-  else if (tok_str[0] = 67) and (tok_str[1] = 72) and (tok_str[2] = 65) then  { CHA }
+  Else If (tok_str[0] = 67) And (tok_str[1] = 72) And (tok_str[2] = 65) Then  { CHA }
     TPUParseType := TYPE_CHAR
-  else if (tok_str[0] = 66) and (tok_str[1] = 79) and (tok_str[2] = 79) then  { BOO }
+  Else If (tok_str[0] = 66) And (tok_str[1] = 79) And (tok_str[2] = 79) Then  { BOO }
     TPUParseType := TYPE_BOOLEAN
-  else if (tok_str[0] = 83) and (tok_str[1] = 84) and (tok_str[2] = 82) then  { STR }
+  Else If (tok_str[0] = 83) And (tok_str[1] = 84) And (tok_str[2] = 82) Then  { STR }
     TPUParseType := TYPE_STRING
-  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 65) then  { REA }
+  Else If (tok_str[0] = 82) And (tok_str[1] = 69) And (tok_str[2] = 65) Then  { REA }
     TPUParseType := TYPE_REAL
-  else if (tok_str[0] = 86) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { VOI }
+  Else If (tok_str[0] = 86) And (tok_str[1] = 79) And (tok_str[2] = 73) Then  { VOI }
     TPUParseType := TYPE_VOID
-  else if (tok_str[0] = 80) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { POI }
+  Else If (tok_str[0] = 80) And (tok_str[1] = 79) And (tok_str[2] = 73) Then  { POI }
     TPUParseType := TYPE_POINTER
-  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 67) then  { REC }
+  Else If (tok_str[0] = 82) And (tok_str[1] = 69) And (tok_str[2] = 67) Then  { REC }
     TPUParseType := TYPE_RECORD
-  else if (tok_str[0] = 65) and (tok_str[1] = 82) and (tok_str[2] = 82) then  { ARR }
+  Else If (tok_str[0] = 65) And (tok_str[1] = 82) And (tok_str[2] = 82) Then  { ARR }
     TPUParseType := TYPE_ARRAY
-  else
+  Else
     TPUParseType := TYPE_INTEGER
-end;
+End;
 
-{ Load interface from a TPU file }
-function LoadTPUInterface: integer;
-var
-  idx: integer;
-  unit_base, i: integer;
-begin
+{ Load Interface from a TPU file }
+Function LoadTPUInterface: Integer;
+Var
+  idx: Integer;
+  unit_base, i: Integer;
+Begin
   LoadTPUInterface := 0;
 
-  { Read and verify header }
-  if TPUReadLine = 0 then
-  begin
+  { Read And verify header }
+  If TPUReadLine = 0 Then
+  Begin
     LoadTPUInterface := -1
-  end
-  else
-  begin
-    { Check for TUXPASCAL_UNIT_V1 }
-    if (tpu_line[0] <> 84) or (tpu_line[1] <> 85) or (tpu_line[2] <> 88) then
-    begin
+  End
+  Else
+  Begin
+    { Check For TUXPASCAL_UNIT_V1 }
+    If (tpu_line[0] <> 84) Or (tpu_line[1] <> 85) Or (tpu_line[2] <> 88) Then
+    Begin
       LoadTPUInterface := -1
-    end
-    else
-    begin
-      { Read UNIT line }
-      if TPUReadLine = 0 then
+    End
+    Else
+    Begin
+      { Read Unit line }
+      If TPUReadLine = 0 Then
         LoadTPUInterface := -1
-      else
-      begin
-        { Store unit name for symbol prefixing }
+      Else
+      Begin
+        { Store Unit name For symbol prefixing }
         unit_base := loaded_count * 32;
-        tpu_pos := 5;  { Skip 'UNIT ' }
+        tpu_pos := 5;  { Skip 'Unit ' }
         i := 0;
-        while (tpu_line[tpu_pos] <> 0) and (i < 31) do
-        begin
+        While (tpu_line[tpu_pos] <> 0) And (i < 31) Do
+        Begin
           loaded_units[unit_base + i] := tpu_line[tpu_pos];
           tpu_pos := tpu_pos + 1;
           i := i + 1
-        end;
+        End;
         loaded_units[unit_base + i] := 0;
 
         unit_sym_start[loaded_count] := sym_count;
 
-        { Read INTERFACE line }
-        if TPUReadLine = 0 then
+        { Read Interface line }
+        If TPUReadLine = 0 Then
           LoadTPUInterface := -1
-        else
-        begin
-          { Parse interface declarations until ENDINTERFACE }
-          while TPUReadLine = 1 do
-          begin
-            if (tpu_line[0] = 69) and (tpu_line[1] = 78) and (tpu_line[2] = 68) then
-            begin
+        Else
+        Begin
+          { Parse Interface declarations Until ENDINTERFACE }
+          While TPUReadLine = 1 Do
+          Begin
+            If (tpu_line[0] = 69) And (tpu_line[1] = 78) And (tpu_line[2] = 68) Then
+            Begin
               { ENDINTERFACE }
               unit_sym_end[loaded_count] := sym_count - 1;
               loaded_count := loaded_count + 1;
               LoadTPUInterface := 1
-            end
-            else if (tpu_line[0] = 67) and (tpu_line[1] = 79) and (tpu_line[2] = 78) then
-            begin
-              { CONST name type value }
-              tpu_pos := 6;  { Skip 'CONST ' }
+            End
+            Else If (tpu_line[0] = 67) And (tpu_line[1] = 79) And (tpu_line[2] = 78) Then
+            Begin
+              { Const name Type value }
+              tpu_pos := 6;  { Skip 'Const ' }
               TPUParseIdent;
               idx := SymAdd(SYM_CONST, TYPE_INTEGER, 0, 0);
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_const_val[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 86) and (tpu_line[1] = 65) and (tpu_line[2] = 82) then
-            begin
-              { VAR name type offset }
-              tpu_pos := 4;  { Skip 'VAR ' }
+            End
+            Else If (tpu_line[0] = 86) And (tpu_line[1] = 65) And (tpu_line[2] = 82) Then
+            Begin
+              { Var name Type offset }
+              tpu_pos := 4;  { Skip 'Var ' }
               TPUParseIdent;
               idx := SymAdd(SYM_VAR, TYPE_INTEGER, 0, 0);
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_offset[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 80) and (tpu_line[1] = 82) and (tpu_line[2] = 79) then
-            begin
+            End
+            Else If (tpu_line[0] = 80) And (tpu_line[1] = 82) And (tpu_line[2] = 79) Then
+            Begin
               { PROC name label flags }
               tpu_pos := 5;  { Skip 'PROC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, 0, 0);
-              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this Unit }
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_var_param_flags[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 70) and (tpu_line[1] = 85) and (tpu_line[2] = 78) then
-            begin
-              { FUNC name type label flags }
+            End
+            Else If (tpu_line[0] = 70) And (tpu_line[1] = 85) And (tpu_line[2] = 78) Then
+            Begin
+              { FUNC name Type label flags }
               tpu_pos := 5;  { Skip 'FUNC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, 0, 0);
-              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this Unit }
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_var_param_flags[idx] := TPUParseInt
-            end
-            else if (tpu_line[0] = 84) and (tpu_line[1] = 89) and (tpu_line[2] = 80) then
-            begin
-              { TYPE name kind const_val label }
-              tpu_pos := 5;  { Skip 'TYPE ' }
+            End
+            Else If (tpu_line[0] = 84) And (tpu_line[1] = 89) And (tpu_line[2] = 80) Then
+            Begin
+              { Type name kind const_val label }
+              tpu_pos := 5;  { Skip 'Type ' }
               TPUParseIdent;
               idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, 0, 0);
               TPUSkipSpaces;
@@ -11833,26 +11833,26 @@ begin
               sym_const_val[idx] := TPUParseInt;
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt
-            end
-          end
-        end
-      end
-    end
-  end
-end;
+            End
+          End
+        End
+      End
+    End
+  End
+End;
 
-{ Parse uses clause: uses Unit1, Unit2, ...; }
-procedure ParseUsesClause;
-var
-  i: integer;
-begin
-  NextToken;  { consume 'uses' }
-  repeat
-    if tok_type <> TOK_IDENT then
+{ Parse Uses clause: Uses Unit1, Unit2, ...; }
+Procedure ParseUsesClause;
+Var
+  i: Integer;
+Begin
+  NextToken;  { consume 'Uses' }
+  Repeat
+    If tok_type <> TOK_IDENT Then
       Error(6);  { expected identifier }
 
-    { Build TPU filename in tok_str: unitname.tpu (lowercase for case-insensitivity) }
-    for i := 0 to tok_len - 1 do
+    { Build TPU filename In tok_str: unitname.tpu (lowercase For Case-insensitivity) }
+    For i := 0 To tok_len - 1 Do
       tok_str[i] := ToLower(tok_str[i]);
     tok_str[tok_len] := 46;      { . }
     tok_str[tok_len + 1] := 116; { t }
@@ -11864,33 +11864,33 @@ begin
     assigntokstr(tpu_file, 0, tok_len + 4);
     reset(tpu_file);
 
-    { Load interface symbols }
-    if LoadTPUInterface < 0 then
-      Error(18);  { unit not found or invalid }
+    { Load Interface symbols }
+    If LoadTPUInterface < 0 Then
+      Error(18);  { Unit Not found Or invalid }
 
     close(tpu_file);
 
     NextToken;
-    if tok_type = TOK_COMMA then
+    If tok_type = TOK_COMMA Then
       NextToken
-  until tok_type = TOK_SEMICOLON;
+  Until tok_type = TOK_SEMICOLON;
   Expect(TOK_SEMICOLON)
-end;
+End;
 
-{ Parse a unit: unit Name; interface ... implementation ... end. }
-procedure ParseUnit;
-var
-  unit_lbl: integer;
-  i: integer;
-begin
-  { unit Name; }
-  NextToken;  { consume 'unit' }
-  if tok_type <> TOK_IDENT then
+{ Parse a Unit: Unit Name; Interface ... Implementation ... End. }
+Procedure ParseUnit;
+Var
+  unit_lbl: Integer;
+  i: Integer;
+Begin
+  { Unit Name; }
+  NextToken;  { consume 'Unit' }
+  If tok_type <> TOK_IDENT Then
     Error(6);  { expected identifier }
 
-  { Store unit name for qualified symbol names }
+  { Store Unit name For qualified symbol names }
   current_unit_len := tok_len;
-  for i := 0 to tok_len - 1 do
+  For i := 0 To tok_len - 1 Do
     current_unit_name[i] := tok_str[i];
   current_unit_name[tok_len] := 0;
 
@@ -11898,14 +11898,14 @@ begin
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Emit unit header - no _main, just label for unit init }
+  { Emit Unit header - no _main, just label For Unit init }
   EmitAlign4;
 
-  { Jump over runtime routines (units still need runtime for their code) }
+  { Jump over runtime routines (units still need runtime For their code) }
   unit_lbl := NewLabel;
   EmitBranchLabel(unit_lbl);
 
-  { Emit runtime routines needed by unit code }
+  { Emit runtime routines needed by Unit code }
   rt_print_int := NewLabel;
   rt_newline := NewLabel;
   rt_readchar := NewLabel;
@@ -12010,106 +12010,106 @@ begin
 
   EmitLabel(unit_lbl);
 
-  { interface section }
+  { Interface section }
   Expect(TOK_INTERFACE);
   in_interface := 1;
-  interface_start := sym_count;  { Track first interface symbol }
+  interface_start := sym_count;  { Track first Interface symbol }
 
-  { Parse interface declarations (const, type, var, procedure/function headers) }
-  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
-        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
-        (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_CONST then
+  { Parse Interface declarations (Const, Type, Var, Procedure/Function headers) }
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_TYPE_KW) Or
+        (tok_type = TOK_VAR) Or (tok_type = TOK_PROCEDURE) Or
+        (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else if tok_type = TOK_VAR then
+    Else If tok_type = TOK_VAR Then
       ParseVarDeclarations
-    else if tok_type = TOK_PROCEDURE then
-    begin
-      { In interface, only parse the header }
+    Else If tok_type = TOK_PROCEDURE Then
+    Begin
+      { In Interface, only parse the header }
       ParseProcedureDeclaration
-    end
-    else if tok_type = TOK_FUNCTION then
-    begin
+    End
+    Else If tok_type = TOK_FUNCTION Then
+    Begin
       ParseFunctionDeclaration
-    end
-  end;
+    End
+  End;
 
-  interface_end := sym_count - 1;  { Track last interface symbol }
+  interface_end := sym_count - 1;  { Track last Interface symbol }
   in_interface := 0;
 
-  { implementation section }
+  { Implementation section }
   Expect(TOK_IMPLEMENTATION);
 
-  { Parse implementation (full procedure/function bodies) }
-  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
-        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
-        (tok_type = TOK_FUNCTION) do
-  begin
-    if tok_type = TOK_CONST then
+  { Parse Implementation (full Procedure/Function bodies) }
+  While (tok_type = TOK_CONST) Or (tok_type = TOK_TYPE_KW) Or
+        (tok_type = TOK_VAR) Or (tok_type = TOK_PROCEDURE) Or
+        (tok_type = TOK_FUNCTION) Do
+  Begin
+    If tok_type = TOK_CONST Then
       ParseConstDeclarations
-    else if tok_type = TOK_TYPE_KW then
+    Else If tok_type = TOK_TYPE_KW Then
       ParseTypeDeclarations
-    else if tok_type = TOK_VAR then
+    Else If tok_type = TOK_VAR Then
       ParseVarDeclarations
-    else if tok_type = TOK_PROCEDURE then
+    Else If tok_type = TOK_PROCEDURE Then
       ParseProcedureDeclaration
-    else if tok_type = TOK_FUNCTION then
+    Else If tok_type = TOK_FUNCTION Then
       ParseFunctionDeclaration
-  end;
+  End;
 
-  { Unit initialization entry point - always emit even if no init code }
+  { Unit initialization entry point - always emit even If no init code }
   EmitGloblUnitInit;
   EmitUnitInitLabel;
   EmitStp;
   EmitMovFP;
 
   { Optional initialization section }
-  if tok_type = TOK_BEGIN then
-  begin
+  If tok_type = TOK_BEGIN Then
+  Begin
     NextToken;
-    while tok_type <> TOK_END do
-    begin
+    While tok_type <> TOK_END Do
+    Begin
       ParseStatement;
-      if tok_type = TOK_SEMICOLON then
+      If tok_type = TOK_SEMICOLON Then
         NextToken
-    end;
+    End;
     Expect(TOK_END)
-  end;
+  End;
 
   Expect(TOK_DOT);
 
-  { Unit init returns to caller }
+  { Unit init returns To caller }
   EmitLdp;
   EmitRet;
 
-  { Write TPU file with interface information }
+  { Write TPU file With Interface information }
   WriteTPUFile;
 
   compiling_unit := 0
-end;
+End;
 
-procedure ParseProgram;
-var
-  main_lbl, i: integer;
-begin
-  { Check if this is a unit or program }
-  if tok_type = TOK_UNIT then
-  begin
+Procedure ParseProgram;
+Var
+  main_lbl, i: Integer;
+Begin
+  { Check If this is a Unit Or Program }
+  If tok_type = TOK_UNIT Then
+  Begin
     ParseUnit;
-    halt(0)  { Unit compilation done }
-  end;
+    Halt(0)  { Unit compilation done }
+  End;
 
   Expect(TOK_PROGRAM);
-  if tok_type <> TOK_IDENT then
+  If tok_type <> TOK_IDENT Then
     Error(11);
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Check for uses clause }
-  if tok_type = TOK_USES then
+  { Check For Uses clause }
+  If tok_type = TOK_USES Then
     ParseUsesClause;
 
   { Emit header }
@@ -12224,30 +12224,30 @@ begin
   EmitArccosRuntime;
   EmitParamStrRuntime;
 
-  { Main program entry }
+  { Main Program entry }
   EmitLabel(main_lbl);
   EmitStp;
   EmitMovFP;
 
-  { Save argc to x25, argv to x26 (before any calls clobber x0/x1) }
+  { Save argc To x25, argv To x26 (before any calls clobber x0/x1) }
   { mov x25, x0 }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
-  writechar(120); writechar(48);  { x0 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(120); WriteChar(50); WriteChar(53); WriteChar(44); WriteChar(32);  { x25, }
+  WriteChar(120); WriteChar(48);  { x0 }
   EmitNL;
   { mov x26, x1 }
   EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);  { x26, }
-  writechar(120); writechar(49);  { x1 }
+  WriteChar(109); WriteChar(111); WriteChar(118); WriteChar(32);  { mov }
+  WriteChar(120); WriteChar(50); WriteChar(54); WriteChar(44); WriteChar(32);  { x26, }
+  WriteChar(120); WriteChar(49);  { x1 }
   EmitNL;
 
   EmitFileOpenInit;
   EmitBL(rt_heap_init);
 
-  { Call unit initialization routines }
-  for i := 0 to loaded_count - 1 do
+  { Call Unit initialization routines }
+  For i := 0 To loaded_count - 1 Do
     EmitBLUnitInit(i);
 
   ParseBlock;
@@ -12258,11 +12258,11 @@ begin
   EmitMovX0(0);
   EmitMovX16(33554433);  { 0x2000001 }
   EmitSvc
-end;
+End;
 
 { ----- Main ----- }
 
-begin
+Begin
   { Initialize }
   line_num := 1;
   col_num := 0;
@@ -12314,10 +12314,10 @@ begin
   tpu_line_len := 0;
   tpu_pos := 0;
 
-  { Read first character and token }
+  { Read first character And token }
   NextChar;
   NextToken;
 
-  { Compile the program }
+  { Compile the Program }
   ParseProgram
-end.
+End.

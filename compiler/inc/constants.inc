@@ -1,4 +1,4 @@
-const
+Const
   MAX_TOKENS = 1000;
   MAX_SYMBOLS = 100;
   MAX_STRINGS = 64;
@@ -29,8 +29,8 @@ const
   TOK_COMMA = 21;
   TOK_DOT = 22;
   TOK_DOTDOT = 23;
-  TOK_CARET = 24;    { ^ - dereference/pointer type }
-  TOK_AT = 25;       { @ - address-of }
+  TOK_CARET = 24;    { ^ - dereference/pointer Type }
+  TOK_AT = 25;       { @ - address-Of }
 
   { Keywords - starting at 100 }
   TOK_PROGRAM = 100;
@@ -68,19 +68,19 @@ const
   TOK_READLN = 132;
   TOK_REAL_TYPE = 133;
   TOK_FLOAT_LITERAL = 134;
-  TOK_NIL = 135;     { nil keyword }
-  TOK_RECORD = 136;  { record keyword }
-  TOK_TYPE_KW = 137;    { type keyword }
-  TOK_CASE = 138;    { case keyword }
-  TOK_WITH = 139;    { with keyword }
-  TOK_TEXT = 140;    { text file type }
+  TOK_NIL = 135;     { Nil keyword }
+  TOK_RECORD = 136;  { Record keyword }
+  TOK_TYPE_KW = 137;    { Type keyword }
+  TOK_CASE = 138;    { Case keyword }
+  TOK_WITH = 139;    { With keyword }
+  TOK_TEXT = 140;    { Text file Type }
   TOK_FILE = 141;    { file keyword }
-  TOK_SET = 142;     { set keyword }
-  TOK_IN = 143;      { in keyword (set membership) }
-  TOK_UNIT = 144;    { unit keyword }
-  TOK_INTERFACE = 145;      { interface keyword }
-  TOK_IMPLEMENTATION = 146; { implementation keyword }
-  TOK_USES = 147;    { uses keyword }
+  TOK_SET = 142;     { Set keyword }
+  TOK_IN = 143;      { In keyword (Set membership) }
+  TOK_UNIT = 144;    { Unit keyword }
+  TOK_INTERFACE = 145;      { Interface keyword }
+  TOK_IMPLEMENTATION = 146; { Implementation keyword }
+  TOK_USES = 147;    { Uses keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -88,7 +88,7 @@ const
   SYM_PROCEDURE = 2;
   SYM_FUNCTION = 3;
   SYM_PARAM = 4;
-  SYM_TYPEDEF = 5;       { type definition (for records) }
+  SYM_TYPEDEF = 5;       { Type definition (For records) }
 
   { Type kinds }
   TYPE_INTEGER = 0;
@@ -100,226 +100,226 @@ const
   TYPE_REAL = 6;
   TYPE_POINTER = 7;
   TYPE_RECORD = 8;
-  TYPE_FILE = 9;      { file of T - typed file }
-  TYPE_TEXT = 10;     { text file }
-  TYPE_ENUM = 11;     { enumerated type }
-  TYPE_SUBRANGE = 12; { subrange type }
-  TYPE_SET = 13;      { set type }
+  TYPE_FILE = 9;      { file Of T - typed file }
+  TYPE_TEXT = 10;     { Text file }
+  TYPE_ENUM = 11;     { enumerated Type }
+  TYPE_SUBRANGE = 12; { subrange Type }
+  TYPE_SET = 13;      { Set Type }
 
-var
+Var
   { Source input }
-  ch: integer;
-  line_num, col_num: integer;
-  pushback_ch: integer;  { -1 means no pushback }
+  ch: Integer;
+  line_num, col_num: Integer;
+  pushback_ch: Integer;  { -1 means no pushback }
 
   { Current token }
-  tok_type: integer;
-  tok_int: integer;
-  tok_str: array[0..255] of integer;  { string as array of chars }
-  tok_len: integer;
+  tok_type: Integer;
+  tok_int: Integer;
+  tok_str: Array[0..255] Of Integer;  { String as Array Of chars }
+  tok_len: Integer;
 
-  { Symbol table - flattened 2D array: sym_name[idx * 32 + char_pos] }
-  sym_name: array[0..15999] of integer;  { 500 symbols * 32 chars each }
-  sym_kind: array[0..499] of integer;
-  sym_type: array[0..499] of integer;
-  sym_level: array[0..499] of integer;
-  sym_offset: array[0..499] of integer;
-  sym_const_val: array[0..499] of integer;
-  sym_label: array[0..499] of integer;
-  sym_is_var_param: array[0..499] of integer;  { 1 if var parameter (pass by ref) }
-  sym_var_param_flags: array[0..499] of integer;  { bitmap: bit i = 1 if param i is var (for proc/func) }
-  sym_unit_idx: array[0..499] of integer;  { unit index for imported symbols, -1 for local }
-  sym_count: integer;
+  { Symbol table - flattened 2D Array: sym_name[idx * 32 + char_pos] }
+  sym_name: Array[0..15999] Of Integer;  { 500 symbols * 32 chars each }
+  sym_kind: Array[0..499] Of Integer;
+  sym_type: Array[0..499] Of Integer;
+  sym_level: Array[0..499] Of Integer;
+  sym_offset: Array[0..499] Of Integer;
+  sym_const_val: Array[0..499] Of Integer;
+  sym_label: Array[0..499] Of Integer;
+  sym_is_var_param: Array[0..499] Of Integer;  { 1 If Var parameter (pass by ref) }
+  sym_var_param_flags: Array[0..499] Of Integer;  { bitmap: bit i = 1 If param i is Var (For proc/func) }
+  sym_unit_idx: Array[0..499] Of Integer;  { Unit index For imported symbols, -1 For local }
+  sym_count: Integer;
 
   { Record field table }
-  field_name: array[0..6399] of integer;   { 200 fields * 32 chars each }
-  field_type: array[0..199] of integer;    { type of each field }
-  field_offset: array[0..199] of integer;  { offset within record }
-  field_rec_idx: array[0..199] of integer; { which record type this field belongs to }
-  field_rec_type: array[0..199] of integer; { for TYPE_RECORD fields, the nested record type index }
-  field_count: integer;                    { total fields defined }
+  field_name: Array[0..6399] Of Integer;   { 200 fields * 32 chars each }
+  field_type: Array[0..199] Of Integer;    { Type Of each field }
+  field_offset: Array[0..199] Of Integer;  { offset within Record }
+  field_rec_idx: Array[0..199] Of Integer; { which Record Type this field belongs To }
+  field_rec_type: Array[0..199] Of Integer; { For TYPE_RECORD fields, the nested Record Type index }
+  field_count: Integer;                    { total fields defined }
 
-  { Pointer metadata for multi-level pointers and pointer-to-array }
-  ptr_depth: array[0..499] of integer;        { pointer indirection depth (1=^T, 2=^^T) }
-  ptr_ultimate_type: array[0..499] of integer; { ultimate base type after all derefs }
-  ptr_ultimate_rec: array[0..499] of integer;  { if ultimate base is record, the type index }
-  ptr_arr_lo: array[0..99] of integer;     { low bound for pointer-to-array }
-  ptr_arr_hi: array[0..99] of integer;     { high bound for pointer-to-array }
-  ptr_arr_elem: array[0..99] of integer;   { element type for pointer-to-array }
-  ptr_arr_rec: array[0..99] of integer;    { if element is record, the type index }
-  ptr_arr_count: integer;                  { count of pointer-to-array types }
+  { Pointer metadata For multi-level pointers And pointer-To-Array }
+  ptr_depth: Array[0..499] Of Integer;        { pointer indirection depth (1=^T, 2=^^T) }
+  ptr_ultimate_type: Array[0..499] Of Integer; { ultimate base Type after all derefs }
+  ptr_ultimate_rec: Array[0..499] Of Integer;  { If ultimate base is Record, the Type index }
+  ptr_arr_lo: Array[0..99] Of Integer;     { low bound For pointer-To-Array }
+  ptr_arr_hi: Array[0..99] Of Integer;     { high bound For pointer-To-Array }
+  ptr_arr_elem: Array[0..99] Of Integer;   { element Type For pointer-To-Array }
+  ptr_arr_rec: Array[0..99] Of Integer;    { If element is Record, the Type index }
+  ptr_arr_count: Integer;                  { count Of pointer-To-Array types }
 
-  { Runtime labels for allocator }
-  rt_alloc: integer;
-  rt_free: integer;
+  { Runtime labels For allocator }
+  rt_alloc: Integer;
+  rt_free: Integer;
 
   { Scope tracking }
-  scope_level: integer;
-  local_offset: integer;
+  scope_level: Integer;
+  local_offset: Integer;
 
   { Code generation }
-  label_count: integer;
+  label_count: Integer;
 
-  { String table - not used yet, simplified }
-  string_count: integer;
+  { String table - Not used yet, simplified }
+  string_count: Integer;
 
   { Runtime labels }
-  rt_print_int: integer;
-  rt_newline: integer;
-  rt_readchar: integer;
-  rt_print_char: integer;
-  rt_write_char_fd: integer;  { write single char to file: x0=fd, x1=char }
-  rt_read_int: integer;
-  rt_skip_line: integer;
-  rt_print_string: integer;
-  rt_print_real: integer;
-  rt_read_real: integer;
-  rt_read_string: integer;
+  rt_print_int: Integer;
+  rt_newline: Integer;
+  rt_readchar: Integer;
+  rt_print_char: Integer;
+  rt_write_char_fd: Integer;  { Write single Char To file: x0=fd, x1=Char }
+  rt_read_int: Integer;
+  rt_skip_line: Integer;
+  rt_print_string: Integer;
+  rt_print_real: Integer;
+  rt_read_real: Integer;
+  rt_read_string: Integer;
 
   { Float literal parsing }
-  tok_float_int: integer;   { integer part of float }
-  tok_float_frac: integer;  { fractional part (scaled by 1000000) }
-  tok_float_neg: integer;   { 1 if negative }
+  tok_float_int: Integer;   { Integer part Of float }
+  tok_float_frac: Integer;  { fractional part (scaled by 1000000) }
+  tok_float_neg: Integer;   { 1 If negative }
 
-  { Expression type tracking }
-  expr_type: integer;
+  { Expression Type tracking }
+  expr_type: Integer;
 
-  { Pointer base type tracking for arithmetic }
-  ptr_base_type: integer;
+  { Pointer base Type tracking For arithmetic }
+  ptr_base_type: Integer;
 
-  { Output file descriptor - x20 is used to store it }
-  out_fd: integer;
+  { Output file descriptor - x20 is used To store it }
+  out_fd: Integer;
 
   { Error flag }
-  had_error: integer;
+  had_error: Integer;
 
-  { WITH statement tracking }
-  with_rec_idx: integer;    { symbol index of active with record, -1 if none }
-  with_rec_type: integer;   { type index for field lookup }
+  { With statement tracking }
+  with_rec_idx: Integer;    { symbol index Of active With Record, -1 If none }
+  with_rec_type: Integer;   { Type index For field lookup }
 
-  { Loop control for break/continue }
-  break_label: integer;     { label to jump to for break, 0 if not in loop }
-  continue_label: integer;  { label to jump to for continue, 0 if not in loop }
+  { Loop control For Break/Continue }
+  break_label: Integer;     { label To jump To For Break, 0 If Not In loop }
+  continue_label: Integer;  { label To jump To For Continue, 0 If Not In loop }
 
-  { Exit label for current procedure/function }
-  exit_label: integer;      { label to jump to for exit, 0 if in main program }
+  { Exit label For current Procedure/Function }
+  exit_label: Integer;      { label To jump To For Exit, 0 If In main Program }
 
-  { Runtime labels for heap }
-  rt_heap_init: integer;
+  { Runtime labels For heap }
+  rt_heap_init: Integer;
 
-  { Runtime labels for string operations }
-  rt_str_copy: integer;
-  rt_str_compare: integer;
-  rt_str_concat: integer;
-  rt_str_cmp: integer;  { lexicographic compare: returns -1, 0, or 1 }
-  rt_str_pos: integer;  { find substring: returns position or 0 }
-  rt_str_delete: integer;  { delete chars from string in place }
-  rt_str_insert: integer;  { insert string into another }
-  rt_int_to_str: integer;  { convert integer to string }
-  rt_str_to_int: integer;  { convert string to integer with error code }
-  rt_str_ltrim: integer;  { trim leading whitespace }
-  rt_str_rtrim: integer;  { trim trailing whitespace }
-  rt_str_trim: integer;   { trim both leading and trailing whitespace }
+  { Runtime labels For String operations }
+  rt_str_copy: Integer;
+  rt_str_compare: Integer;
+  rt_str_concat: Integer;
+  rt_str_cmp: Integer;  { lexicographic compare: returns -1, 0, Or 1 }
+  rt_str_pos: Integer;  { find substring: returns position Or 0 }
+  rt_str_delete: Integer;  { delete chars from String In place }
+  rt_str_insert: Integer;  { insert String into another }
+  rt_int_to_str: Integer;  { convert Integer To String }
+  rt_str_to_int: Integer;  { convert String To Integer With error code }
+  rt_str_ltrim: Integer;  { trim leading whitespace }
+  rt_str_rtrim: Integer;  { trim trailing whitespace }
+  rt_str_trim: Integer;   { trim both leading And trailing whitespace }
 
-  { Runtime labels for screen/terminal control }
-  rt_clrscr: integer;     { clear screen and home cursor }
-  rt_gotoxy: integer;     { move cursor to x,y position }
-  rt_clreol: integer;     { clear to end of line }
-  rt_textcolor: integer;  { set foreground color }
-  rt_textbackground: integer;  { set background color }
-  rt_normvideo: integer;  { reset attributes }
-  rt_highvideo: integer;  { bold/bright }
-  rt_lowvideo: integer;   { dim }
-  rt_hidecursor: integer; { hide cursor }
-  rt_showcursor: integer; { show cursor }
-  rt_sleep: integer;      { sleep for N milliseconds using nanosleep syscall }
-  rt_keypressed: integer; { check if key available (non-blocking) }
-  rt_initkeyboard: integer;  { set terminal to raw mode }
-  rt_donekeyboard: integer;  { restore terminal to cooked mode }
+  { Runtime labels For screen/terminal control }
+  rt_clrscr: Integer;     { clear screen And home cursor }
+  rt_gotoxy: Integer;     { move cursor To x,y position }
+  rt_clreol: Integer;     { clear To End Of line }
+  rt_textcolor: Integer;  { Set foreground color }
+  rt_textbackground: Integer;  { Set background color }
+  rt_normvideo: Integer;  { reset attributes }
+  rt_highvideo: Integer;  { bold/bright }
+  rt_lowvideo: Integer;   { dim }
+  rt_hidecursor: Integer; { hide cursor }
+  rt_showcursor: Integer; { show cursor }
+  rt_sleep: Integer;      { sleep For N milliseconds using nanosleep syscall }
+  rt_keypressed: Integer; { check If key available (non-blocking) }
+  rt_initkeyboard: Integer;  { Set terminal To raw mode }
+  rt_donekeyboard: Integer;  { restore terminal To cooked mode }
 
-  { Runtime labels for math functions }
-  rt_sin: integer;     { sin(x) - Taylor series }
-  rt_cos: integer;     { cos(x) - Taylor series }
-  rt_tan: integer;     { tan(x) = sin/cos }
-  rt_exp: integer;     { exp(x) - Taylor series }
-  rt_ln: integer;      { ln(x) - Newton iteration }
-  rt_random: integer;  { random - returns random integer }
-  rt_arctan: integer;  { arctan(x) - Taylor series }
-  rt_arcsin: integer;  { arcsin(x) - derived from arctan }
-  rt_arccos: integer;  { arccos(x) - pi/2 - arcsin }
+  { Runtime labels For math functions }
+  rt_sin: Integer;     { sin(x) - Taylor series }
+  rt_cos: Integer;     { cos(x) - Taylor series }
+  rt_tan: Integer;     { tan(x) = sin/cos }
+  rt_exp: Integer;     { exp(x) - Taylor series }
+  rt_ln: Integer;      { ln(x) - Newton iteration }
+  rt_random: Integer;  { random - returns random Integer }
+  rt_arctan: Integer;  { arctan(x) - Taylor series }
+  rt_arcsin: Integer;  { arcsin(x) - derived from arctan }
+  rt_arccos: Integer;  { arccos(x) - pi/2 - arcsin }
 
-  { Runtime labels for command line }
-  rt_paramstr: integer;  { paramstr(n) - get command line argument as Pascal string }
+  { Runtime labels For command line }
+  rt_paramstr: Integer;  { paramstr(n) - get command line argument as Pascal String }
 
   { Register usage:
-    x25 = argc (saved at program start)
-    x26 = argv (saved at program start)
+    x25 = argc (saved at Program start)
+    x26 = argv (saved at Program start)
     x27 = random seed }
 
-  { Saved terminal settings for restore }
-  saved_termios: array[0..79] of integer;  { 80 bytes for termios struct }
+  { Saved terminal settings For restore }
+  saved_termios: Array[0..79] Of Integer;  { 80 bytes For termios struct }
 
-  { String temp index (0-3) for copy/concat results }
-  string_temp_idx: integer;
+  { String temp index (0-3) For copy/concat results }
+  string_temp_idx: Integer;
 
-  { File I/O metadata - element type and size for typed files }
-  file_elem_type: array[0..99] of integer;  { element type for file of T }
-  file_elem_size: array[0..99] of integer;  { element size in bytes }
-  file_rec_idx: array[0..99] of integer;    { if element is record, type index }
-  file_count: integer;                      { count of file types defined }
+  { File I/O metadata - element Type And size For typed files }
+  file_elem_type: Array[0..99] Of Integer;  { element Type For file Of T }
+  file_elem_size: Array[0..99] Of Integer;  { element size In bytes }
+  file_rec_idx: Array[0..99] Of Integer;    { If element is Record, Type index }
+  file_count: Integer;                      { count Of file types defined }
 
-  { Enumerated type metadata }
-  enum_low: array[0..99] of integer;        { first value (always 0) }
-  enum_high: array[0..99] of integer;       { last value }
-  enum_count: integer;                      { count of enum types defined }
+  { Enumerated Type metadata }
+  enum_low: Array[0..99] Of Integer;        { first value (always 0) }
+  enum_high: Array[0..99] Of Integer;       { last value }
+  enum_count: Integer;                      { count Of enum types defined }
 
-  { Subrange type metadata }
-  subr_low: array[0..99] of integer;        { low bound }
-  subr_high: array[0..99] of integer;       { high bound }
-  subr_base: array[0..99] of integer;       { base type (integer, char, enum) }
-  subr_count: integer;                      { count of subrange types defined }
+  { Subrange Type metadata }
+  subr_low: Array[0..99] Of Integer;        { low bound }
+  subr_high: Array[0..99] Of Integer;       { high bound }
+  subr_base: Array[0..99] Of Integer;       { base Type (Integer, Char, enum) }
+  subr_count: Integer;                      { count Of subrange types defined }
 
-  { Set type metadata - sets limited to 64 elements (fits in one register) }
-  set_base: array[0..99] of integer;        { base type (char, enum, subrange) }
-  set_low: array[0..99] of integer;         { low bound of base type }
-  set_high: array[0..99] of integer;        { high bound of base type }
-  set_count: integer;                       { count of set types defined }
+  { Set Type metadata - sets limited To 64 elements (fits In one register) }
+  set_base: Array[0..99] Of Integer;        { base Type (Char, enum, subrange) }
+  set_low: Array[0..99] Of Integer;         { low bound Of base Type }
+  set_high: Array[0..99] Of Integer;        { high bound Of base Type }
+  set_count: Integer;                       { count Of Set types defined }
 
-  { File variable structure (at runtime, 272 bytes per file var):
-    offset 0: fd (8 bytes) - file descriptor, -1 if not open
-    offset 8: mode (8 bytes) - 0=closed, 1=read, 2=write, 3=append
-    offset 16: filename (256 bytes) - null-terminated string }
+  { File variable structure (at runtime, 272 bytes per file Var):
+    offset 0: fd (8 bytes) - file descriptor, -1 If Not open
+    offset 8: mode (8 bytes) - 0=closed, 1=Read, 2=Write, 3=append
+    offset 16: filename (256 bytes) - null-terminated String }
 
-  { Include file support - using individual variables since bootstrap doesn't support array subscripts with eof }
-  include_file0, include_file1, include_file2, include_file3: text;
-  include_file4, include_file5, include_file6, include_file7: text;
-  include_depth: integer;                   { 0 = reading from stdin, >0 = in include }
-  include_line: array[0..7] of integer;     { Line number in each include file }
-  include_col: array[0..7] of integer;      { Column number in each include file }
-  include_ch: array[0..7] of integer;       { Current char in each include file }
-  include_pushback: array[0..7] of integer; { Pushback char for each include file }
-  include_path: array[0..2047] of integer;  { Paths of included files (256 chars * 8 files) }
+  { Include file support - using individual variables since bootstrap doesn't support Array subscripts With eof }
+  include_file0, include_file1, include_file2, include_file3: Text;
+  include_file4, include_file5, include_file6, include_file7: Text;
+  include_depth: Integer;                   { 0 = reading from stdin, >0 = In include }
+  include_line: Array[0..7] Of Integer;     { Line number In each include file }
+  include_col: Array[0..7] Of Integer;      { Column number In each include file }
+  include_ch: Array[0..7] Of Integer;       { Current Char In each include file }
+  include_pushback: Array[0..7] Of Integer; { Pushback Char For each include file }
+  include_path: Array[0..2047] Of Integer;  { Paths Of included files (256 chars * 8 files) }
 
   { Unit/module support }
-  compiling_unit: integer;       { 0=program, 1=unit }
-  in_interface: integer;         { 1=in interface section }
-  current_unit_name: array[0..31] of integer;  { Name of current unit being compiled }
-  current_unit_len: integer;
+  compiling_unit: Integer;       { 0=Program, 1=Unit }
+  in_interface: Integer;         { 1=In Interface section }
+  current_unit_name: Array[0..31] Of Integer;  { Name Of current Unit being compiled }
+  current_unit_len: Integer;
 
   { TPU file support }
-  tpu_file: text;                { File handle for reading/writing TPU }
-  tpu_line: array[0..1023] of integer;  { Buffer for reading TPU lines }
-  tpu_line_len: integer;         { Length of current line }
-  tpu_pos: integer;              { Current parse position in tpu_line }
+  tpu_file: Text;                { File handle For reading/writing TPU }
+  tpu_line: Array[0..1023] Of Integer;  { Buffer For reading TPU lines }
+  tpu_line_len: Integer;         { Length Of current line }
+  tpu_pos: Integer;              { Current parse position In tpu_line }
 
   { Interface symbol tracking - marks which symbols are exported }
-  interface_start: integer;      { First symbol index in interface section }
-  interface_end: integer;        { Last symbol index in interface section }
+  interface_start: Integer;      { First symbol index In Interface section }
+  interface_end: Integer;        { Last symbol index In Interface section }
 
   { Loaded units tracking }
-  loaded_units: array[0..511] of integer;  { Unit names (16 units * 32 chars) }
-  loaded_count: integer;         { Number of loaded units }
-  unit_sym_start: array[0..15] of integer;  { First symbol index for each unit }
-  unit_sym_end: array[0..15] of integer;    { Last symbol index for each unit }
-  unit_init_label: array[0..15] of integer; { Initialization label for each unit }
+  loaded_units: Array[0..511] Of Integer;  { Unit names (16 units * 32 chars) }
+  loaded_count: Integer;         { Number Of loaded units }
+  unit_sym_start: Array[0..15] Of Integer;  { First symbol index For each Unit }
+  unit_sym_end: Array[0..15] Of Integer;    { Last symbol index For each Unit }
+  unit_init_label: Array[0..15] Of Integer; { Initialization label For each Unit }
 

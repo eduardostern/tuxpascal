@@ -1,125 +1,125 @@
 { ----- Utility ----- }
 
 { Emit helpers - output multiple chars at once }
-procedure E2(a, b: integer);
-begin writechar(a); writechar(b) end;
+Procedure E2(a, b: Integer);
+Begin WriteChar(a); WriteChar(b) End;
 
-procedure E3(a, b, c: integer);
-begin writechar(a); writechar(b); writechar(c) end;
+Procedure E3(a, b, c: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c) End;
 
-procedure E4(a, b, c, d: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d) end;
+Procedure E4(a, b, c, d: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d) End;
 
-procedure E5(a, b, c, d, e: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e) end;
+Procedure E5(a, b, c, d, e: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d); WriteChar(e) End;
 
-procedure E6(a, b, c, d, e, f: integer);
-begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e); writechar(f) end;
+Procedure E6(a, b, c, d, e, f: Integer);
+Begin WriteChar(a); WriteChar(b); WriteChar(c); WriteChar(d); WriteChar(e); WriteChar(f) End;
 
-procedure Error(msg: integer);
-var
-  i: integer;
-begin
-  write('Error ');
-  write(msg);
-  write(' at line ');
-  write(line_num);
-  write(' tok_type=');
-  write(tok_type);
-  write(' tok_len=');
-  write(tok_len);
-  write(' scope=');
-  write(scope_level);
-  write(' offset=');
-  write(local_offset);
-  write(' sym_count=');
-  write(sym_count);
-  write(' ch=');
-  write(ch);
-  write(' tok=');
-  for i := 0 to tok_len - 1 do
-    writechar(tok_str[i]);
-  writeln(0);
-  halt(1)
-end;
+Procedure Error(msg: Integer);
+Var
+  i: Integer;
+Begin
+  Write('Error ');
+  Write(msg);
+  Write(' at line ');
+  Write(line_num);
+  Write(' tok_type=');
+  Write(tok_type);
+  Write(' tok_len=');
+  Write(tok_len);
+  Write(' scope=');
+  Write(scope_level);
+  Write(' offset=');
+  Write(local_offset);
+  Write(' sym_count=');
+  Write(sym_count);
+  Write(' ch=');
+  Write(ch);
+  Write(' tok=');
+  For i := 0 To tok_len - 1 Do
+    WriteChar(tok_str[i]);
+  WriteLn(0);
+  Halt(1)
+End;
 
-function IsDigit(c: integer): integer;
-begin
-  if (c >= 48) and (c <= 57) then
+Function IsDigit(c: Integer): Integer;
+Begin
+  If (c >= 48) And (c <= 57) Then
     IsDigit := 1
-  else
+  Else
     IsDigit := 0
-end;
+End;
 
-function IsAlpha(c: integer): integer;
-begin
-  if ((c >= 65) and (c <= 90)) or ((c >= 97) and (c <= 122)) or (c = 95) then
+Function IsAlpha(c: Integer): Integer;
+Begin
+  If ((c >= 65) And (c <= 90)) Or ((c >= 97) And (c <= 122)) Or (c = 95) Then
     IsAlpha := 1
-  else
+  Else
     IsAlpha := 0
-end;
+End;
 
-function ToLower(c: integer): integer;
-begin
-  if (c >= 65) and (c <= 90) then
+Function ToLower(c: Integer): Integer;
+Begin
+  If (c >= 65) And (c <= 90) Then
     ToLower := c + 32
-  else
+  Else
     ToLower := c
-end;
+End;
 
-function StrEqual(idx: integer): integer;
-var
-  i: integer;
-  match: integer;
-  base: integer;
-  c1, c2: integer;
-begin
-  { Compare tok_str with sym_name[idx] }
+Function StrEqual(idx: Integer): Integer;
+Var
+  i: Integer;
+  match: Integer;
+  base: Integer;
+  c1, c2: Integer;
+Begin
+  { Compare tok_str With sym_name[idx] }
   { sym_name is flattened: base = idx * 32 }
   base := idx * 32;
   match := 1;
   i := 0;
-  while (i < tok_len) and (match = 1) do
-  begin
+  While (i < tok_len) And (match = 1) Do
+  Begin
     c1 := tok_str[i];
     c2 := sym_name[base + i];
-    if ToLower(c1) <> ToLower(c2) then
+    If ToLower(c1) <> ToLower(c2) Then
       match := 0;
     i := i + 1
-  end;
-  if match = 1 then
-    if sym_name[base + tok_len] <> 0 then
+  End;
+  If match = 1 Then
+    If sym_name[base + tok_len] <> 0 Then
       match := 0;
   StrEqual := match
-end;
+End;
 
-{ Check if current token matches a string (case insensitive) }
-{ s1-s8 are ASCII codes of the expected string, 0 marks end }
-function TokIs8(s1, s2, s3, s4, s5, s6, s7, s8: integer): integer;
-var
-  i, match, slen: integer;
-  s: array[0..7] of integer;
-begin
+{ Check If current token matches a String (Case insensitive) }
+{ s1-s8 are ASCII codes Of the expected String, 0 marks End }
+Function TokIs8(s1, s2, s3, s4, s5, s6, s7, s8: Integer): Integer;
+Var
+  i, match, slen: Integer;
+  s: Array[0..7] Of Integer;
+Begin
   s[0] := s1; s[1] := s2; s[2] := s3; s[3] := s4;
   s[4] := s5; s[5] := s6; s[6] := s7; s[7] := s8;
-  { Find length of expected string }
+  { Find Length Of expected String }
   slen := 0;
-  while (slen < 8) and (s[slen] <> 0) do
+  While (slen < 8) And (s[slen] <> 0) Do
     slen := slen + 1;
-  { Check length match }
-  if tok_len <> slen then
+  { Check Length match }
+  If tok_len <> slen Then
     match := 0
-  else
-  begin
+  Else
+  Begin
     match := 1;
     i := 0;
-    while (i < slen) and (match = 1) do
-    begin
-      if ToLower(tok_str[i]) <> ToLower(s[i]) then
+    While (i < slen) And (match = 1) Do
+    Begin
+      If ToLower(tok_str[i]) <> ToLower(s[i]) Then
         match := 0;
       i := i + 1
-    end
-  end;
+    End
+  End;
   TokIs8 := match
-end;
+End;
 
