@@ -1,5 +1,21 @@
 { ----- Utility ----- }
 
+{ Emit helpers - output multiple chars at once }
+procedure E2(a, b: integer);
+begin writechar(a); writechar(b) end;
+
+procedure E3(a, b, c: integer);
+begin writechar(a); writechar(b); writechar(c) end;
+
+procedure E4(a, b, c, d: integer);
+begin writechar(a); writechar(b); writechar(c); writechar(d) end;
+
+procedure E5(a, b, c, d, e: integer);
+begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e) end;
+
+procedure E6(a, b, c, d, e, f: integer);
+begin writechar(a); writechar(b); writechar(c); writechar(d); writechar(e); writechar(f) end;
+
 procedure Error(msg: integer);
 var
   i: integer;

@@ -15,16 +15,9 @@ begin
   { Handle negative }
   neg_lbl := NewLabel;
   done_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #0 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
+  writeln('    cmp x0, #0');
 
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge Lxx }
-  writechar(76); write(neg_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(neg_lbl);
 
   { Print minus sign }
   EmitMovX0(1);
@@ -33,17 +26,8 @@ begin
   EmitSturX0(-8);
   EmitMovX16(33554436); { 0x2000004 }
   EmitMovX0X20;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #8 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(56);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    sub x1, x29, #8');
+  writeln('    mov x2, #1');
   EmitSvc;
 
   { Negate }
@@ -78,48 +62,18 @@ begin
   EmitMsub;
 
   { Store digit }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x0, x0, #48 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
+  writeln('    add x0, x0, #48');
 
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur x1, [x29, #-40] }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);
-  EmitNL;
+  writeln('    ldur x1, [x29, #-40]');
 
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x2, x29, #48 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
+  writeln('    sub x2, x29, #48');
 
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb w0, [x2, x1] }
-  writechar(119); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(93);
-  EmitNL;
+  writeln('    strb w0, [x2, x1]');
 
   { digit count++ }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x1, x1, #1 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    add x1, x1, #1');
 
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur x1, [x29, #-40] }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);
-  EmitNL;
+  writeln('    stur x1, [x29, #-40]');
 
   { val /= 10 }
   EmitLdurX0(-24);
@@ -151,44 +105,20 @@ begin
   EmitBranchLabelZ(done_lbl);
 
   { digit count-- }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x0, x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    sub x0, x0, #1');
   EmitSturX0(-40);
 
   { Load digit }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #48 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
+  writeln('    sub x1, x29, #48');
 
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w0, [x1, x0] }
-  writechar(119); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(48); writechar(93);
-  EmitNL;
+  writeln('    ldrb w0, [x1, x0]');
 
   { Print char }
   EmitSturX0(-8);
   EmitMovX16(33554436);
   EmitMovX0X20;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #8 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(56);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    sub x1, x29, #8');
+  writeln('    mov x2, #1');
   EmitSvc;
 
   EmitBranchLabel(loop_lbl);
@@ -212,17 +142,8 @@ begin
   EmitSturX0(-9);
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x1, x29, #9 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    sub x1, x29, #9');
+  writeln('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -237,42 +158,19 @@ begin
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
   { Check if read returned >= 1 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge Lxx }
-  writechar(76); write(label_count);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.ge L'); writeln(label_count);
   EmitMovX0(-1);  { EOF }
   EmitBranchLabel(label_count + 1);
   EmitLabel(label_count);
   label_count := label_count + 1;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w0, [sp] }
-  writechar(119); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    ldrb w0, [sp]');
   EmitLabel(label_count);
   label_count := label_count + 1;
   EmitAddSP(16);
@@ -287,23 +185,11 @@ begin
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb w0, [sp] }
-  writechar(119); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    strb w0, [sp]');
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -318,23 +204,11 @@ begin
   EmitMovFP;
   EmitSubSP(16);
   { Store char on stack }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb w1, [sp] }
-  writechar(119); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    strb w1, [sp]');
   { x0 already has fd, set up rest of syscall }
   EmitMovX16(33554436);  { 0x2000004 = write }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -353,106 +227,32 @@ begin
   EmitMovFP;
   EmitSubSP(32);
   { Save base address to [x29, #-8] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
+  writeln('    stur x0, [x29, #-8]');
   { Load length from [x0] into x1 and save to [x29, #-16] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldrb w1, [x0]');
+  writeln('    stur x1, [x29, #-16]');
   { Initialize index to 0 at [x29, #-24] }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    mov x2, #0');
+  writeln('    stur x2, [x29, #-24]');
   { Loop label }
   EmitLabel(loop_lbl);
   { Load index and length, compare }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    cmp x2, x1');
   { b.ge done_lbl }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(done_lbl);
   { Load char at [base + index + 1] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-8]');
+  writeln('    add x0, x0, x2');
+  writeln('    add x0, x0, #1');
+  writeln('    ldrb w0, [x0]');
   { Call print_char }
   EmitBL(rt_print_char);
   { Increment index }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    add x2, x2, #1');
+  writeln('    stur x2, [x29, #-24]');
   { Branch back to loop }
   EmitBranchLabel(loop_lbl);
   { Done label }
@@ -474,250 +274,89 @@ begin
   EmitSubSP(48);
 
   { x21 = accumulated value, x22 = negative flag }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, #0 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #0 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
+  writeln('    mov x21, #0');
+  writeln('    mov x22, #0');
 
   { Skip whitespace loop }
   skip_ws_lbl := NewLabel;
   EmitLabel(skip_ws_lbl);
   { Read one char }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
   { Check if read failed }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    cmp x0, #1');
   done_lbl := NewLabel;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(done_lbl);
   { Load char into x23 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w23, [sp] }
-  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    ldrb w23, [sp]');
   { Check if space (32), tab (9), newline (10), or carriage return (13) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #32 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(51); writechar(50);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #10 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #13 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(51);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
+  writeln('    cmp x23, #32');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x23, #9');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x23, #10');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x23, #13');
+  write('    b.eq L'); writeln(skip_ws_lbl);
 
   { Check for minus sign (45) }
   neg_lbl := NewLabel;
   not_neg_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #45 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(53);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne not_neg }
-  writechar(76); write(not_neg_lbl);
-  EmitNL;
+  writeln('    cmp x23, #45');
+  write('    b.ne L'); writeln(not_neg_lbl);
   { Set negative flag }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #1 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x22, #1');
   EmitBranchLabel(neg_lbl);
   EmitLabel(not_neg_lbl);
   { Not a minus, so it should be a digit - process it }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x23, x23, #48 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
+  writeln('    sub x23, x23, #48');
   { Check if valid digit (0-9) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done (unsigned >9) }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x23, #9');
+  write('    b.hi L'); writeln(done_lbl);
   { Add to accumulated value: x21 = x21 * 10 + x23 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #10 }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x24 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(52);
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x23 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(51);
-  EmitNL;
+  writeln('    mov x24, #10');
+  writeln('    mul x21, x21, x24');
+  writeln('    add x21, x21, x23');
 
   { Read digit loop }
   EmitLabel(neg_lbl);
   read_digit_lbl := NewLabel;
   EmitLabel(read_digit_lbl);
   { Read one char }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
   { Check if read failed }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
   { Load char into x23 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w23, [sp] }
-  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    ldrb w23, [sp]');
   { Save original char to x18 for pushback }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, x23 }
-  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(51);
-  EmitNL;
+  writeln('    mov x18, x23');
   { Convert to digit }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x23, x23, #48 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
+  writeln('    sub x23, x23, #48');
   { Check if valid digit (0-9) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x23, #9 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x23, #9');
+  write('    b.hi L'); writeln(done_lbl);
   { Add to accumulated value: x21 = x21 * 10 + x23 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #10 }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x24 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(52);
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x23 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(51);
-  EmitNL;
+  writeln('    mov x24, #10');
+  writeln('    mul x21, x21, x24');
+  writeln('    add x21, x21, x23');
   EmitBranchLabel(read_digit_lbl);
 
   { Done - apply negative if needed }
   EmitLabel(done_lbl);
   skip_neg_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz x22, Lxx (skip neg) }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(76); write(skip_neg_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(110); writechar(101); writechar(103); writechar(32);  { neg x21, x21 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49);
-  EmitNL;
+  write('    cbz x22, L'); writeln(skip_neg_lbl);
+  writeln('    neg x21, x21');
   EmitLabel(skip_neg_lbl);
   { Move result to x0 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x21 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x21');
   EmitAddSP(48);
   EmitLdp;
   EmitRet
@@ -739,77 +378,29 @@ begin
   check_pb_lbl := NewLabel;
 
   { First check if pushback character is available }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x18, #0 }
-  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt loop (no pushback) }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    cmp x18, #0');
+  write('    b.lt L'); writeln(loop_lbl);
   { Check if pushback is newline }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x18, #10 }
-  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
+  writeln('    cmp x18, #10');
   { Clear pushback }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, #-1 }
-  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
-  writechar(35); writechar(45); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq done (was newline, done) }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    mov x18, #-1');
+  write('    b.eq L'); writeln(done_lbl);
 
   EmitLabel(loop_lbl);
   { Read one char }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
   { Check if read failed }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
   { Load char }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w0, [sp] }
-  writechar(119); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    ldrb w0, [sp]');
   { Check if newline (10) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #10 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne loop }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    cmp x0, #10');
+  write('    b.ne L'); writeln(loop_lbl);
 
   EmitLabel(done_lbl);
   EmitAddSP(16);
@@ -828,66 +419,34 @@ begin
   EmitSubSP(64);
 
   { Save original value to [x29, #-16] as double }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-16]');
 
   { Check for negative }
   neg_lbl := NewLabel;
   skip_neg_lbl := NewLabel;
   { fcmp d0, #0.0 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(35); writechar(48); writechar(46); writechar(48);  { #0.0 }
-  EmitNL;
+  writeln('    fcmp d0, #0.0');
   { b.ge skip_neg }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(neg_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(neg_lbl);
 
   { Print '-' and negate }
   EmitMovX0(45);  { '-' }
   EmitBL(rt_print_char);
   { fneg d0, d0 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-16]');
   EmitFNeg;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-16]');
 
   EmitLabel(neg_lbl);
 
   { Load value and get integer part }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-16]');
 
   { fcvtzs x0, d0 - truncate to integer }
   EmitFcvtzsX0D0;
 
   { Save integer part to [x29, #-24] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x0, [x29, #-24]');
 
   { Print integer part }
   EmitBL(rt_print_int);
@@ -897,66 +456,28 @@ begin
   EmitBL(rt_print_char);
 
   { Calculate fractional part: (original - int_part) * 1000000 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-16]');
 
   { Load integer part and convert to float }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-24]');
 
   { scvtf d1, x0 }
-  EmitIndent;
-  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    scvtf d1, x0');
 
   { fsub d0, d0, d1 - fractional part (d0 = original - int_part) }
   { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fsub d0, d0, d1');
 
   { Multiply by 1000000 }
   EmitMovX0(1000000);
   EmitScvtfD0X0;  { d0 = 1000000.0 }
   EmitPushD0;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-16]');
+  writeln('    ldur x0, [x29, #-24]');
+  writeln('    scvtf d1, x0');
   { fsub d0, d0, d1 - d0 = frac part (original - int_part) }
   { EmitFSub does d0=d1-d0, so emit inline for d0=d0-d1 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fsub d0, d0, d1');
   EmitPopD1;  { d1 = 1000000.0 }
   EmitFMul;  { d0 = frac * 1000000 }
 
@@ -964,12 +485,7 @@ begin
   EmitFcvtzsX0D0;
 
   { Save fractional digits to [x29, #-32] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    stur x0, [x29, #-32]');
 
   { Print fractional part with leading zeros (6 digits) }
   { Count digits needed }
@@ -977,52 +493,22 @@ begin
   print_frac_lbl := NewLabel;
 
   { Print leading zeros: if frac < 100000, print '0', etc }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-32]');
 
   { x1 = 100000 - use movz since 100000 > 65535 }
   { movz x1, #34464; movk x1, #1, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(51); writechar(52); writechar(52); writechar(54); writechar(52);  { #34464 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(49);  { #1 }
-  writechar(44); writechar(32);
-  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x1, #34464');
+  writeln('    movk x1, #1, lsl #16');
 
   EmitLabel(frac_loop_lbl);
   { cmp x1, #10 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
+  writeln('    cmp x1, #10');
   { b.lt print_frac }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(print_frac_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(print_frac_lbl);
   { cmp x0, x1 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    cmp x0, x1');
   { b.ge print_frac }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(print_frac_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(print_frac_lbl);
   { Print '0' }
   EmitPushX0;
   EmitPushX1;
@@ -1031,27 +517,13 @@ begin
   EmitPopX1;
   EmitPopX0;
   { x1 = x1 / 10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    mov x2, #10');
+  writeln('    udiv x1, x1, x2');
   EmitBranchLabel(frac_loop_lbl);
 
   EmitLabel(print_frac_lbl);
   { Load and print the fractional value }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-32]');
   { Only print if non-zero }
   EmitBranchLabelZ(label_count);
   EmitBL(rt_print_int);
@@ -1074,355 +546,120 @@ begin
   EmitSubSP(64);
 
   { x21 = integer part, x22 = fractional part (scaled), x23 = neg flag, x24 = frac scale }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, #0 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, #0 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x23, #0 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x24, #1 }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x21, #0');
+  writeln('    mov x22, #0');
+  writeln('    mov x23, #0');
+  writeln('    mov x24, #1');
 
   { Skip whitespace }
   skip_ws_lbl := NewLabel;
   EmitLabel(skip_ws_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
   done_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
   { Load char }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
-  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    ldrb w25, [sp]');
   { Check whitespace }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #32 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(51); writechar(50);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #10 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #13 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(51);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq skip_ws }
-  writechar(76); write(skip_ws_lbl);
-  EmitNL;
+  writeln('    cmp x25, #32');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x25, #9');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x25, #10');
+  write('    b.eq L'); writeln(skip_ws_lbl);
+  writeln('    cmp x25, #13');
+  write('    b.eq L'); writeln(skip_ws_lbl);
 
   { Check for minus }
   neg_lbl := NewLabel;
   not_neg_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #45 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(53);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne not_neg }
-  writechar(76); write(not_neg_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x23, #1 }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    cmp x25, #45');
+  write('    b.ne L'); writeln(not_neg_lbl);
+  writeln('    mov x23, #1');
   EmitBranchLabel(neg_lbl);
   EmitLabel(not_neg_lbl);
 
   { First char is a digit - process it }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    sub x25, x25, #48');
+  writeln('    cmp x25, #9');
+  write('    b.hi L'); writeln(done_lbl);
   { x21 = x21 * 10 + x25 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
-  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x26 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(54);
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x25 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53);
-  EmitNL;
+  writeln('    mov x26, #10');
+  writeln('    mul x21, x21, x26');
+  writeln('    add x21, x21, x25');
 
   { Read integer part loop }
   EmitLabel(neg_lbl);
   read_int_lbl := NewLabel;
   read_frac_lbl := NewLabel;
   EmitLabel(read_int_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
-  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
+  writeln('    ldrb w25, [sp]');
 
   { Check for '.' }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #46 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(54);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq read_frac }
-  writechar(76); write(read_frac_lbl);
-  EmitNL;
+  writeln('    cmp x25, #46');
+  write('    b.eq L'); writeln(read_frac_lbl);
 
   { Check if digit }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    sub x25, x25, #48');
+  writeln('    cmp x25, #9');
+  write('    b.hi L'); writeln(done_lbl);
   { x21 = x21 * 10 + x25 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
-  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x21, x21, x26 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(54);
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x21, x21, x25 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53);
-  EmitNL;
+  writeln('    mov x26, #10');
+  writeln('    mul x21, x21, x26');
+  writeln('    add x21, x21, x25');
   EmitBranchLabel(read_int_lbl);
 
   { Read fractional part }
   EmitLabel(read_frac_lbl);
   skip_neg_lbl := NewLabel;
   EmitLabel(skip_neg_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x0, x19 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(49); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(115); writechar(112);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read }
   EmitSvc;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x0, #1 }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt done }
-  writechar(76); write(done_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w25, [sp] }
-  writechar(119); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(91); writechar(115); writechar(112); writechar(93);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
+  writeln('    ldrb w25, [sp]');
 
   { Check if digit }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub x25, x25, #48 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(56);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x25, #9 }
-  writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);
-  writechar(35); writechar(57);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(104); writechar(105); writechar(32);  { b.hi done }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    sub x25, x25, #48');
+  writeln('    cmp x25, #9');
+  write('    b.hi L'); writeln(done_lbl);
   { x22 = x22 * 10 + x25, x24 = x24 * 10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x26, #10 }
-  writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x22, x22, x26 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(54);
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add x22, x22, x25 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(53);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul x24, x24, x26 }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);
-  writechar(120); writechar(50); writechar(54);
-  EmitNL;
+  writeln('    mov x26, #10');
+  writeln('    mul x22, x22, x26');
+  writeln('    add x22, x22, x25');
+  writeln('    mul x24, x24, x26');
   EmitBranchLabel(skip_neg_lbl);
 
   { Done - combine integer and fractional parts }
   EmitLabel(done_lbl);
   { d0 = x21 (integer part) }
-  EmitIndent;
-  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(120); writechar(50); writechar(49);  { x21 }
-  EmitNL;
+  writeln('    scvtf d0, x21');
   { d1 = x22 (fractional part) }
-  EmitIndent;
-  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(50); writechar(50);  { x22 }
-  EmitNL;
+  writeln('    scvtf d1, x22');
   { d2 = x24 (scale) }
-  EmitIndent;
-  writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(120); writechar(50); writechar(52);  { x24 }
-  EmitNL;
+  writeln('    scvtf d2, x24');
   { d1 = d1 / d2 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fdiv d1, d1, d2');
   { d0 = d0 + d1 }
   EmitFAdd;
 
   { Apply negative if needed }
   skip_neg_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz x23, skip }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);
-  writechar(76); write(skip_neg_lbl);
-  EmitNL;
+  write('    cbz x23, L'); writeln(skip_neg_lbl);
   EmitFNeg;
   EmitLabel(skip_neg_lbl);
 
@@ -1444,18 +681,10 @@ begin
   EmitSubSP(32);
 
   { Save string buffer address in x21 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x21, x0');
 
   { x22 = character count (starts at 0) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x22, #0');
 
   { Read loop }
   loop_lbl := NewLabel;
@@ -1463,114 +692,44 @@ begin
   EmitLabel(loop_lbl);
 
   { Check if count >= 255 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x22, #255');
+  write('    b.ge L'); writeln(done_lbl);
 
   { Read one character: read(x19, sp, 1) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(57);  { x19 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    mov x0, x19');
+  writeln('    mov x1, sp');
+  writeln('    mov x2, #1');
   EmitMovX16(33554435);  { 0x2000003 = read syscall }
   EmitSvc;
 
   { Check if read failed or EOF (x0 < 1) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x0, #1');
+  write('    b.lt L'); writeln(done_lbl);
 
   { Load character into x23 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);  { w23, }
-  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-  EmitNL;
+  writeln('    ldrb w23, [sp]');
 
   { Check if newline (10) or carriage return (13) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(done_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-  writechar(35); writechar(49); writechar(51);  { #13 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x23, #10');
+  write('    b.eq L'); writeln(done_lbl);
+  writeln('    cmp x23, #13');
+  write('    b.eq L'); writeln(done_lbl);
 
   { Store character at buffer[count+1] }
   { x24 = x21 + x22 + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(50); writechar(50);  { x22 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-  writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(50); writechar(51); writechar(44); writechar(32);  { w23, }
-  writechar(91); writechar(120); writechar(50); writechar(52); writechar(93);  { [x24] }
-  EmitNL;
+  writeln('    add x24, x21, x22');
+  writeln('    add x24, x24, #1');
+  writeln('    strb w23, [x24]');
 
   { Increment count }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x22, x22, #1');
 
   { Loop back }
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  write('    b L'); writeln(loop_lbl);
 
   { Done - store length at buffer[0] }
   EmitLabel(done_lbl);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(50); writechar(50); writechar(44); writechar(32);  { w22, }
-  writechar(91); writechar(120); writechar(50); writechar(49); writechar(93);  { [x21] }
-  EmitNL;
+  writeln('    strb w22, [x21]');
 
   EmitAddSP(32);
   EmitLdp;
@@ -1588,154 +747,58 @@ begin
   skip_output_lbl := NewLabel;
 
   { Save argc and argv to callee-saved registers }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x21, x0 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(120); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x22, x1 }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(120); writechar(49);
-  EmitNL;
+  writeln('    mov x21, x0');
+  writeln('    mov x22, x1');
 
   { Default: x19 = 0 (stdin), x20 = 1 (stdout), x18 = -1 (no pushback) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x19, #0 }
-  writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x20, #1 }
-  writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x18, #-1 }
-  writechar(120); writechar(49); writechar(56); writechar(44); writechar(32);
-  writechar(35); writechar(45); writechar(49);
-  EmitNL;
+  writeln('    mov x19, #0');
+  writeln('    mov x20, #1');
+  writeln('    mov x18, #-1');
 
   { If argc < 2, skip input file open }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x21, #2 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(50);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt Lxx }
-  writechar(76); write(skip_input_lbl);
-  EmitNL;
+  writeln('    cmp x21, #2');
+  write('    b.lt L'); writeln(skip_input_lbl);
 
   { Load argv[1] into x0 (input filename) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #8] }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(56); writechar(93);
-  EmitNL;
+  writeln('    ldr x0, [x22, #8]');
 
   { Open input file: open(filename, O_RDONLY, 0) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, #0 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #0 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(48);
-  EmitNL;
+  writeln('    mov x1, #0');
+  writeln('    mov x2, #0');
   EmitMovX16(33554437);  { 0x2000005 = open }
   EmitSvc;
 
   { Move input fd to x19 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x19, x0 }
-  writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);
-  writechar(120); writechar(48);
-  EmitNL;
+  writeln('    mov x19, x0');
 
   { If argc < 4, skip output file open (need: prog input.pas -o output.s) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp x21, #4 }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(52);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt Lxx }
-  writechar(76); write(skip_output_lbl);
-  EmitNL;
+  writeln('    cmp x21, #4');
+  write('    b.lt L'); writeln(skip_output_lbl);
 
   { Check if argv[2] == "-o": load argv[2], check first two bytes }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #16] }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(54); writechar(93);
-  EmitNL;
+  writeln('    ldr x0, [x22, #16]');
   { Load first byte, check for '-' (45) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w1, [x0] }
-  writechar(119); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(48); writechar(93);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp w1, #45 }
-  writechar(119); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(53);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne skip }
-  writechar(76); write(skip_output_lbl);
-  EmitNL;
+  writeln('    ldrb w1, [x0]');
+  writeln('    cmp w1, #45');
+  write('    b.ne L'); writeln(skip_output_lbl);
   { Load second byte, check for 'o' (111) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb w1, [x0, #1] }
-  writechar(119); writechar(49); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(93);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp w1, #111 }
-  writechar(119); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(49); writechar(49);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne skip }
-  writechar(76); write(skip_output_lbl);
-  EmitNL;
+  writeln('    ldrb w1, [x0, #1]');
+  writeln('    cmp w1, #111');
+  write('    b.ne L'); writeln(skip_output_lbl);
 
   { Load argv[3] into x0 (output filename) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr x0, [x22, #24] }
-  writechar(120); writechar(48); writechar(44); writechar(32);
-  writechar(91); writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(50); writechar(52); writechar(93);
-  EmitNL;
+  writeln('    ldr x0, [x22, #24]');
 
   { Open output file: open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644) }
   { O_WRONLY=1, O_CREAT=0x200, O_TRUNC=0x400 => 0x601 = 1537 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, #1537 }
-  writechar(120); writechar(49); writechar(44); writechar(32);
-  writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);
-  EmitNL;
+  writeln('    mov x1, #1537');
   { mode 0644 = 420 decimal }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #420 }
-  writechar(120); writechar(50); writechar(44); writechar(32);
-  writechar(35); writechar(52); writechar(50); writechar(48);
-  EmitNL;
+  writeln('    mov x2, #420');
   EmitMovX16(33554437);  { 0x2000005 = open }
   EmitSvc;
 
   { Move output fd to x20 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x20, x0 }
-  writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);
-  writechar(120); writechar(48);
-  EmitNL;
+  writeln('    mov x20, x0');
 
   EmitLabel(skip_output_lbl);
   EmitLabel(skip_input_lbl)
@@ -1752,116 +815,46 @@ begin
   EmitSubSP(16);
 
   { mov x0, #0  - addr = NULL (let kernel choose) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { mov x1, #1048576  - length = 1MB (0x100000) }
   { Need movz + movk since 1048576 > 65535 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  writechar(44); writechar(32);
-  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x1, #0');
+  writeln('    movk x1, #16, lsl #16');
 
   { mov x2, #3  - PROT_READ | PROT_WRITE }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(51);  { #3 }
-  EmitNL;
+  writeln('    mov x2, #3');
 
   { mov x3, #4098  - MAP_PRIVATE | MAP_ANON (0x1002) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(52); writechar(48); writechar(57); writechar(56);  { #4098 }
-  EmitNL;
+  writeln('    mov x3, #4098');
 
   { mov x4, #-1  - fd = -1 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(110); writechar(32);  { movn }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    movn x4, #0');
 
   { mov x5, #0  - offset = 0 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x5, #0');
 
   { mmap syscall: 0x20000C5 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-  writechar(35); writechar(48); writechar(120); writechar(67); writechar(53);  { #0xC5 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-  writechar(44); writechar(32);
-  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x16, #0xC5');
+  writeln('    movk x16, #0x200, lsl #16');
 
   EmitSvc;
 
   { mov x21, x0  - store heap base in x21 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x21, x0');
 
   { Initialize free list: x22 = x21 (free list head points to heap base) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(120); writechar(50); writechar(49);  { x21 }
-  EmitNL;
+  writeln('    mov x22, x21');
 
   { Store block size (1MB) at [x21]: first free block header }
   { movz x1, #0; movk x1, #16, lsl #16 = 1048576 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  writechar(44); writechar(32);
-  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x1, #0');
+  writeln('    movk x1, #16, lsl #16');
   { str x1, [x21] - store size }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(49); writechar(93);  { [x21] }
-  EmitNL;
+  writeln('    str x1, [x21]');
 
   { Store next=0 at [x21, #8]: no next free block }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(122); writechar(114); writechar(44); writechar(32);  { xzr, }
-  writechar(91); writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { [x21, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str xzr, [x21, #8]');
 
   EmitAddSP(16);
   EmitLdp;
@@ -1889,185 +882,77 @@ begin
   EmitSubSP(16);
 
   { Add 16 for header and align to 16 bytes: x0 = (x0 + 31) & ~15 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(51); writechar(49);  { #31 }
-  EmitNL;
+  writeln('    add x0, x0, #31');
   { and x0, x0, #-16 }
-  EmitIndent;
-  writechar(97); writechar(110); writechar(100); writechar(32);  { and }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(45); writechar(49); writechar(54);  { #-16 }
-  EmitNL;
+  writeln('    and x0, x0, #-16');
   { Save required size to x3 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x3, x0');
 
   { x1 = prev (0 initially), x2 = curr (x22 = free list head) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(50);  { x22 }
-  EmitNL;
+  writeln('    mov x1, #0');
+  writeln('    mov x2, x22');
 
   { Loop: walk free list looking for big enough block }
   EmitLabel(loop_lbl);
   { cbz x2, oom - end of list }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(76); write(oom_lbl);
-  EmitNL;
+  write('    cbz x2, L'); writeln(oom_lbl);
   { ldr x4, [x2] - x4 = block size }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
-  EmitNL;
+  writeln('    ldr x4, [x2]');
   { cmp x4, x3 - compare block size to required }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    cmp x4, x3');
   { b.ge found }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(found_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(found_lbl);
   { Not big enough - move to next }
   { mov x1, x2 - prev = curr }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    mov x1, x2');
   { ldr x2, [x2, #8] - curr = curr->next }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    ldr x2, [x2, #8]');
   EmitBranchLabel(loop_lbl);
 
   { Found a big enough block - check if we can split it }
   EmitLabel(found_lbl);
   { x2 = block addr, x3 = required size, x4 = block size }
   { ldr x5, [x2, #8] - x5 = found->next }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    ldr x5, [x2, #8]');
   { Check if block can be split: x4 - x3 >= 32 }
   { sub x6, x4, x3 - x6 = remainder size }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    sub x6, x4, x3');
   { cmp x6, #32 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
+  writeln('    cmp x6, #32');
   { b.lt no_split - if remainder < 32, don't split }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(no_split_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(no_split_lbl);
 
   { Split the block }
   EmitLabel(split_lbl);
   { x6 = remainder size, x7 = remainder block address = x2 + x3 }
   { add x7, x2, x3 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    add x7, x2, x3');
   { str x6, [x7] - remainder->size = x6 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(91); writechar(120); writechar(55); writechar(93);  { [x7] }
-  EmitNL;
+  writeln('    str x6, [x7]');
   { str x5, [x7, #8] - remainder->next = found->next }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(91); writechar(120); writechar(55); writechar(44); writechar(32);  { [x7, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str x5, [x7, #8]');
   { str x3, [x2] - found->size = required size }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
-  EmitNL;
+  writeln('    str x3, [x2]');
   { mov x5, x7 - use remainder as new "next" for unlinking }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(55);  { x7 }
-  EmitNL;
+  writeln('    mov x5, x7');
 
   { Unlink found block from free list (and link remainder in its place) }
   EmitLabel(no_split_lbl);
   { cbz x1, update_head - if prev==0, update head }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(76); write(update_head_lbl);
-  EmitNL;
+  write('    cbz x1, L'); writeln(update_head_lbl);
   { str x5, [x1, #8] - prev->next = x5 (remainder or found->next) }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str x5, [x1, #8]');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(update_head_lbl);
   { mov x22, x5 - free list head = x5 (remainder or found->next) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(120); writechar(53);  { x5 }
-  EmitNL;
+  writeln('    mov x22, x5');
 
   EmitLabel(done_lbl);
   { Mark as allocated: str xzr, [x2, #8] - next = 0 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(122); writechar(114); writechar(44); writechar(32);  { xzr, }
-  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str xzr, [x2, #8]');
   { Return user pointer: add x0, x2, #16 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    add x0, x2, #16');
   EmitAddSP(16);
   EmitLdp;
   EmitRet;
@@ -2086,25 +971,11 @@ begin
   { Input: x0 = pointer to user data }
   EmitLabel(rt_free);
   { Get block header: sub x0, x0, #16 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    sub x0, x0, #16');
   { Link into free list: str x22, [x0, #8] - block->next = free_head }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str x22, [x0, #8]');
   { Update free list head: mov x22, x0 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(50); writechar(44); writechar(32);  { x22, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x22, x0');
   EmitRet
 end;
 
@@ -2121,39 +992,16 @@ begin
 
   { Save dest and source addresses }
   { stur x0, [x29, #-8] - dest }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
+  writeln('    stur x0, [x29, #-8]');
   { stur x1, [x29, #-16] - source }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
 
   { Load length from source [x1] into x2 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldrb w2, [x1]');
   { Store length to dest [x0] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
+  writeln('    strb w2, [x0]');
   { Save length to [x29, #-24] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x2, [x29, #-24]');
 
   { Initialize index to 0 }
   EmitMovX0(0);
@@ -2167,68 +1015,26 @@ begin
   { Load index }
   EmitLdurX0(-32);
   { Load length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
   { cmp x0, x2 - if index >= length, done }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    cmp x0, x2');
   { b.ge done }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(done_lbl);
 
   { x3 = index + 1 (offset into string) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x3, x0, #1');
 
   { Load source char: ldrb w4, [x1, x3] where x1 = source }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w4, [x1, x3]');
 
   { Store to dest char: strb w4, [x5, x3] where x5 = dest }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(53); writechar(44); writechar(32);  { [x5, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldur x5, [x29, #-8]');
+  writeln('    strb w4, [x5, x3]');
 
   { Increment index }
   EmitLdurX0(-32);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(loop_lbl);
 
@@ -2251,46 +1057,21 @@ begin
   { Save addresses }
   EmitSturX0(-8);  { string 1 }
   { stur x1, [x29, #-16] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
 
   { Load lengths }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldrb w2, [x0]');
+  writeln('    ldrb w3, [x1]');
 
   { Compare lengths first }
   not_equal_lbl := NewLabel;
   done_lbl := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    cmp x2, x3');
   { b.ne not_equal }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(not_equal_lbl);
-  EmitNL;
+  write('    b.ne L'); writeln(not_equal_lbl);
 
   { Save length to [x29, #-24] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x2, [x29, #-24]');
 
   { Initialize index to 0 }
   EmitMovX0(0);
@@ -2303,79 +1084,30 @@ begin
   { Load index }
   EmitLdurX0(-32);
   { Load length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
   { cmp x0, x2 - if index >= length, all equal }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    cmp x0, x2');
   { b.ge equal (return 1) }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(done_lbl);
 
   { x3 = index + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x3, x0, #1');
 
   { Load chars from both strings }
   EmitLdurX0(-8);  { string 1 addr }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldrb w4, [x0, x3]');
 
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w5, [x1, x3]');
 
   { Compare chars }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(53);  { x5 }
-  EmitNL;
+  writeln('    cmp x4, x5');
   { b.ne not_equal }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(not_equal_lbl);
-  EmitNL;
+  write('    b.ne L'); writeln(not_equal_lbl);
 
   { Increment index }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-32]');
+  writeln('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(loop_lbl);
 
@@ -2409,74 +1141,28 @@ begin
   { Save addresses }
   EmitSturX0(-8);   { dest }
   { stur x1, [x29, #-16] - string 1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
   { stur x2, [x29, #-24] - string 2 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x2, [x29, #-24]');
 
   { Load lengths }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] - len1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] - len2 }
-  EmitNL;
+  writeln('    ldrb w3, [x1]');
+  writeln('    ldrb w4, [x2]');
 
   { Calculate total length (capped at 255) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(52);  { x4 }
-  EmitNL;
+  writeln('    add x5, x3, x4');
   { cmp x5, #255 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
-  EmitNL;
+  writeln('    cmp x5, #255');
   { csel x5, x5, x6, le - if x5 <= 255, keep it; else use 255 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(115); writechar(101); writechar(108); writechar(32);  { csel }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(108); writechar(101);  { le }
-  EmitNL;
+  writeln('    mov x6, #255');
+  writeln('    csel x5, x5, x6, le');
 
   { Store total length to dest }
   EmitLdurX0(-8);  { dest }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
+  writeln('    strb w5, [x0]');
 
   { Save len1 to [x29, #-32] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    stur x3, [x29, #-32]');
 
   { Initialize index to 0 }
   EmitMovX0(0);
@@ -2490,63 +1176,26 @@ begin
 
   { Load index and len1 }
   EmitLdurX0(-40);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
   { cmp x0, x3 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    cmp x0, x3');
   { b.ge loop2 }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(loop2_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(loop2_lbl);
 
   { x7 = index + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x7, x0, #1');
 
   { Load source1 char }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w8, [x1, x7]');
 
   { Store to dest }
   EmitLdurX0(-8);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    strb w8, [x0, x7]');
 
   { Increment index }
   EmitLdurX0(-40);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(loop1_lbl);
 
@@ -2557,24 +1206,10 @@ begin
   EmitSturX0(-40);
 
   { Load len2 into x4 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] - string2 addr }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    ldrb w4, [x2]');
   { Save len2 to [x29, #-48] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    stur x4, [x29, #-48]');
 
   { Loop 2 body label }
   EmitLabel(label_count);
@@ -2582,84 +1217,32 @@ begin
 
   { Load index and len2 }
   EmitLdurX0(-40);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    ldur x4, [x29, #-48]');
   { cmp x0, x4 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(52);  { x4 }
-  EmitNL;
+  writeln('    cmp x0, x4');
   { b.ge done }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(done_lbl);
 
   { x7 = index + 1 (source offset) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x7, x0, #1');
 
   { Load source2 char }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    ldrb w8, [x2, x7]');
 
   { Calculate dest offset: len1 + index + 1 }
   EmitLdurX0(-40);  { index }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] - len1 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    add x7, x0, x3');
+  writeln('    add x7, x7, #1');
 
   { Store to dest }
   EmitLdurX0(-8);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    strb w8, [x0, x7]');
 
   { Increment index }
   EmitLdurX0(-40);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(label_count - 1);
 
@@ -2685,12 +1268,7 @@ begin
   { stur x0, [x29, #-8]  - string1 }
   EmitSturX0(-8);
   { stur x1, [x29, #-16] - string2 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
 
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
@@ -2706,149 +1284,59 @@ begin
 
   { Load lengths }
   EmitLdurX0(-8);    { x0 = &s1 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;            { x2 = len1 }
+  writeln('    ldrb w2, [x0]');
 
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;            { x3 = len2 }
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w3, [x1]');
 
   { Load index }
   EmitLdurX0(-24);   { x0 = index }
 
   { if index >= min(len1, len2), check length }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(check_len_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(check_len_lbl);
-  EmitNL;
+  writeln('    cmp x0, x2');
+  write('    b.ge L'); writeln(check_len_lbl);
+  writeln('    cmp x0, x3');
+  write('    b.ge L'); writeln(check_len_lbl);
 
   { Compare chars at index+1 }
   { x4 = index + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x4, x0, #1');
 
   { Load char from s1 }
   EmitLdurX0(-8);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    ldrb w5, [x0, x4]');
 
   { Load char from s2 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w6, [x1, x4]');
 
   { Compare chars }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(54);  { x6 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(less_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(greater_lbl);
-  EmitNL;
+  writeln('    cmp x5, x6');
+  write('    b.lt L'); writeln(less_lbl);
+  write('    b.gt L'); writeln(greater_lbl);
 
   { Chars equal, increment index }
   EmitLdurX0(-24);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(loop_lbl);
 
   { Check lengths when all compared chars are equal }
   EmitLabel(check_len_lbl);
   EmitLdurX0(-8);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(less_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(greater_lbl);
-  EmitNL;
+  writeln('    ldrb w2, [x0]');
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w3, [x1]');
+  writeln('    cmp x2, x3');
+  write('    b.lt L'); writeln(less_lbl);
+  write('    b.gt L'); writeln(greater_lbl);
   { Equal }
   EmitMovX0(0);
   EmitBranchLabel(done_lbl);
 
   EmitLabel(less_lbl);
   EmitMovX0(0);
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;  { x0 = -1 }
+  writeln('    sub x0, x0, #1');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(greater_lbl);
@@ -2873,12 +1361,7 @@ begin
   EmitSubSP(48);
   { [x29-8] = substr, [x29-16] = string, [x29-24] = outer idx, [x29-32] = inner idx }
   EmitSturX0(-8);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
 
   outer_lbl := NewLabel;
   inner_lbl := NewLabel;
@@ -2889,36 +1372,14 @@ begin
 
   { If substr is empty, return 1 }
   EmitLdurX0(-8);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(76); write(found_lbl);
-  EmitNL;
+  writeln('    ldrb w2, [x0]');
+  write('    cbz x2, L'); writeln(found_lbl);
   { x2 = substr len }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
-  EmitNL;
+  writeln('    stur x2, [x29, #-40]');
 
   { Load string length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w3, [x1]');
   { x3 = string len }
 
   { outer_idx = 0 (will be 1-based position - 1) }
@@ -2928,39 +1389,13 @@ begin
   EmitLabel(outer_lbl);
   { Check if outer_idx + substr_len > string_len }
   EmitLdurX0(-24);  { outer_idx }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    ldur x2, [x29, #-40]');
+  writeln('    add x4, x0, x2');
   { x4 = outer_idx + substr_len }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(not_found_lbl);
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w3, [x1]');
+  writeln('    cmp x4, x3');
+  write('    b.gt L'); writeln(not_found_lbl);
 
   { inner_idx = 0 }
   EmitMovX0(0);
@@ -2969,119 +1404,45 @@ begin
   EmitLabel(inner_lbl);
   { if inner_idx >= substr_len, found! }
   EmitLdurX0(-32);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(found_lbl);
-  EmitNL;
+  writeln('    ldur x2, [x29, #-40]');
+  writeln('    cmp x0, x2');
+  write('    b.ge L'); writeln(found_lbl);
 
   { Compare substr[inner_idx+1] with string[outer_idx+inner_idx+1] }
   EmitLdurX0(-8);  { substr addr }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    ldur x4, [x29, #-32]');
+  writeln('    add x4, x4, #1');
+  writeln('    ldrb w5, [x0, x4]');
   { x5 = substr[inner_idx+1] }
 
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
   EmitLdurX0(-24);  { outer_idx }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(52);  { x4 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    ldur x4, [x29, #-32]');
+  writeln('    add x4, x0, x4');
+  writeln('    add x4, x4, #1');
+  writeln('    ldrb w6, [x1, x4]');
   { x6 = string[outer_idx+inner_idx+1] }
 
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(54);  { x6 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(next_pos_lbl);
-  EmitNL;
+  writeln('    cmp x5, x6');
+  write('    b.ne L'); writeln(next_pos_lbl);
 
   { Chars match, increment inner_idx }
   EmitLdurX0(-32);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-32);
   EmitBranchLabel(inner_lbl);
 
   EmitLabel(next_pos_lbl);
   { Chars don't match, try next outer position }
   EmitLdurX0(-24);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(outer_lbl);
 
   EmitLabel(found_lbl);
   { Return outer_idx + 1 (1-based position) }
   EmitLdurX0(-24);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(not_found_lbl);
@@ -3105,176 +1466,61 @@ begin
   EmitSubSP(48);
   { [x29-8]=string, [x29-16]=start, [x29-24]=count, [x29-32]=len, [x29-40]=idx }
   EmitSturX0(-8);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
+  writeln('    stur x2, [x29, #-24]');
 
   loop_lbl := NewLabel;
   done_lbl := NewLabel;
 
   { Load string length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldrb w3, [x0]');
+  writeln('    stur x3, [x29, #-32]');
   { x3 = len }
 
   { idx = start }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur x0, [x29, #-16]');
   EmitSturX0(-40);
 
   EmitLabel(loop_lbl);
   { if idx + count > len, done }
   EmitLdurX0(-40);  { idx }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    add x4, x0, x2');
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    cmp x4, x3');
+  write('    b.gt L'); writeln(done_lbl);
 
   { Copy char from idx+count to idx }
   EmitLdurX0(-8);  { string addr }
   EmitLdurX0(-40);  { idx }
   { RELOAD string addr since we overwrote x0 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-8]');
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    add x3, x0, x2');
   { x3 = idx + count (source position) }
   { Load char from string[idx+count] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldrb w4, [x1, x3]');
   { Store to string[idx] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(48); writechar(93);  { x0] }
-  EmitNL;
+  writeln('    strb w4, [x1, x0]');
 
   { idx++ }
   EmitLdurX0(-40);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-40);
   EmitBranchLabel(loop_lbl);
 
   EmitLabel(done_lbl);
   { Update string length: new_len = old_len - count }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    sub x0, x3, x2');
   EmitLdurX0(-8);
   { RELOAD x0 for store since we overwrote it }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    sub x4, x3, x2');
+  writeln('    ldur x1, [x29, #-8]');
+  writeln('    strb w4, [x1]');
 
   EmitAddSP(48);
   EmitLdp;
@@ -3293,18 +1539,8 @@ begin
   EmitSubSP(64);
   { [x29-8]=source, [x29-16]=dest, [x29-24]=pos, [x29-32]=src_len, [x29-40]=dst_len, [x29-48]=idx }
   EmitSturX0(-8);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
+  writeln('    stur x2, [x29, #-24]');
 
   loop1_lbl := NewLabel;
   loop2_lbl := NewLabel;
@@ -3312,97 +1548,32 @@ begin
   done_lbl := NewLabel;
 
   { Load lengths }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;  { src_len }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
-  EmitNL;  { dst_len }
+  writeln('    ldrb w3, [x0]');
+  writeln('    stur x3, [x29, #-32]');
+  writeln('    ldrb w4, [x1]');
+  writeln('    stur x4, [x29, #-40]');
 
   { Move existing chars from pos to end, shifting right by src_len }
   { idx = dst_len }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    stur x4, [x29, #-48]');
 
   EmitLabel(loop1_lbl);
   { if idx < pos, done moving }
   EmitLdurX0(-48);  { idx }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(loop2_lbl);
-  EmitNL;
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    cmp x0, x2');
+  write('    b.lt L'); writeln(loop2_lbl);
 
   { Copy dest[idx] to dest[idx+src_len] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(48); writechar(93);  { x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(54); writechar(93);  { x6] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldrb w5, [x1, x0]');
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    add x6, x0, x3');
+  writeln('    strb w5, [x1, x6]');
 
   { idx-- }
   EmitLdurX0(-48);
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x0, x0, #1');
   EmitSturX0(-48);
   EmitBranchLabel(loop1_lbl);
 
@@ -3415,108 +1586,32 @@ begin
   EmitLabel(copy_lbl);
   { if idx >= src_len, done }
   EmitLdurX0(-48);
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    cmp x0, x3');
+  write('    b.ge L'); writeln(done_lbl);
 
   { Copy source[idx+1] to dest[pos+idx] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(56); writechar(93);  { #-8] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
-  writechar(91); writechar(120); writechar(53); writechar(44); writechar(32);  { [x5, }
-  writechar(120); writechar(54); writechar(93);  { x6] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(54); writechar(93);  { x6] }
-  EmitNL;
+  writeln('    ldur x5, [x29, #-8]');
+  writeln('    add x6, x0, #1');
+  writeln('    ldrb w7, [x5, x6]');
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    ldur x2, [x29, #-24]');
+  writeln('    add x6, x2, x0');
+  writeln('    strb w7, [x1, x6]');
 
   { idx++ }
   EmitLdurX0(-48);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-48);
   EmitBranchLabel(copy_lbl);
 
   EmitLabel(done_lbl);
   { Update dest length: new_len = dst_len + src_len }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(48); writechar(93);  { #-40] }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(52);  { x4 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldur x3, [x29, #-32]');
+  writeln('    ldur x4, [x29, #-40]');
+  writeln('    add x0, x3, x4');
+  writeln('    ldur x1, [x29, #-16]');
+  writeln('    strb w0, [x1]');
 
   EmitAddSP(64);
   EmitLdp;
@@ -3542,224 +1637,82 @@ begin
   rev_done_lbl := NewLabel;
 
   { Save dest string address }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    stur x1, [x29, #-16]');
 
   { x2 = digit count, x3 = is_negative }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x2, #0');
+  writeln('    mov x3, #0');
 
   { Check if value is negative }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(neg_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(pos_lbl);
-  EmitNL;
+  writeln('    cmp x0, #0');
+  write('    b.lt L'); writeln(neg_lbl);
+  write('    b L'); writeln(pos_lbl);
 
   { Handle negative }
   EmitLabel(neg_lbl);
-  EmitIndent;
-  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    neg x0, x0');
+  writeln('    mov x3, #1');
 
   { Loop to extract digits (stored in reverse on stack) }
   EmitLabel(pos_lbl);
   EmitLabel(loop_lbl);
   { x4 = x0 / 10, x5 = x0 mod 10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(54);  { x6 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x6, #10');
+  writeln('    udiv x4, x0, x6');
+  writeln('    msub x5, x4, x6, x0');
 
   { Convert digit to ASCII and store on stack }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x5, x5, #48');
 
   { Store digit at sp + x2 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(120); writechar(50); writechar(93);  { x2] }
-  EmitNL;
+  writeln('    strb w5, [sp, x2]');
 
   { Increment digit count }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x2, x2, #1');
 
   { x0 = x4 (quotient), continue if x0 > 0 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(52);  { x4 }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    mov x0, x4');
+  writeln('    cmp x0, #0');
+  write('    b.ne L'); writeln(loop_lbl);
 
   { Now reverse digits into destination string }
   { x1 = dest string, x4 = write position (starts at 1 if no sign, 2 if negative) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
+  writeln('    ldur x1, [x29, #-16]');
 
   { If negative, store '-' at position 1, start digits at 2 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(rev_lbl);
-  EmitNL;
+  writeln('    cmp x3, #0');
+  write('    b.eq L'); writeln(rev_lbl);
 
   { Store '-' sign }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(35); writechar(52); writechar(53);  { #45 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(35); writechar(49); writechar(93);  { #1] }
-  EmitNL;
+  writeln('    mov w5, #45');
+  writeln('    strb w5, [x1, #1]');
 
   { x4 = write position (1 for positive, 2 for negative start) }
   EmitLabel(rev_lbl);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x4, x3, #1');
 
   { x5 = read position (digit count - 1, reading backwards) }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x5, x2, #1');
 
   { Reverse copy loop }
   EmitLabel(rev_done_lbl);
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x5, #0');
+  write('    b.lt L'); writeln(done_lbl);
 
   { Load digit from stack at position x5 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(120); writechar(53); writechar(93);  { x5] }
-  EmitNL;
+  writeln('    ldrb w6, [sp, x5]');
 
   { Store at dest position x4 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    strb w6, [x1, x4]');
 
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(rev_done_lbl);
-  EmitNL;
+  writeln('    add x4, x4, #1');
+  writeln('    sub x5, x5, #1');
+  write('    b L'); writeln(rev_done_lbl);
 
   { Store length (x2 + x3 = digit count + sign) }
   EmitLabel(done_lbl);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    add x0, x2, x3');
+  writeln('    strb w0, [x1]');
 
   EmitAddSP(48);
   EmitLdp;
@@ -3787,209 +1740,72 @@ begin
   exit_lbl := NewLabel;
 
   { x1 = length, x2 = index (starts at 1), x3 = result, x4 = is_negative }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    ldrb w1, [x0]');
+  writeln('    mov x2, #1');
+  writeln('    mov x3, #0');
+  writeln('    mov x4, #0');
 
   { Check if empty string }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(error_lbl);
-  EmitNL;
+  writeln('    cmp x1, #0');
+  write('    b.eq L'); writeln(error_lbl);
 
   { Check first char for sign }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(35); writechar(49); writechar(93);  { #1] }
-  EmitNL;
+  writeln('    ldrb w5, [x0, #1]');
 
   { Check for '-' (45) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(52); writechar(53);  { #45 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(neg_lbl);
-  EmitNL;
+  writeln('    cmp x5, #45');
+  write('    b.eq L'); writeln(neg_lbl);
 
   { Check for '+' (43) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(52); writechar(51);  { #43 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(pos_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    cmp x5, #43');
+  write('    b.eq L'); writeln(pos_lbl);
+  write('    b L'); writeln(loop_lbl);
 
   EmitLabel(neg_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    mov x4, #1');
   EmitLabel(pos_lbl);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x2, x2, #1');
 
   { Main loop }
   EmitLabel(loop_lbl);
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x2, x1');
+  write('    b.gt L'); writeln(done_lbl);
 
   { Load char at position x2 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(50); writechar(93);  { x2] }
-  EmitNL;
+  writeln('    ldrb w5, [x0, x2]');
 
   { Check if digit (48-57) }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(error_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(53); writechar(55);  { #57 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(error_lbl);
-  EmitNL;
+  writeln('    cmp x5, #48');
+  write('    b.lt L'); writeln(error_lbl);
+  writeln('    cmp x5, #57');
+  write('    b.gt L'); writeln(error_lbl);
 
   { result = result * 10 + digit }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(54);  { x6 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(53);  { x5 }
-  EmitNL;
+  writeln('    mov x6, #10');
+  writeln('    mul x3, x3, x6');
+  writeln('    sub x5, x5, #48');
+  writeln('    add x3, x3, x5');
 
   { x2 := x2 + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    add x2, x2, #1');
+  write('    b L'); writeln(loop_lbl);
 
   { Success }
   EmitLabel(done_lbl);
   { Apply sign if negative }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(skip_sign_lbl);
-  EmitNL;
-  EmitIndent;
-  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    cmp x4, #0');
+  write('    b.eq L'); writeln(skip_sign_lbl);
+  writeln('    neg x3, x3');
 
   EmitLabel(skip_sign_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(exit_lbl);
-  EmitNL;
+  writeln('    mov x0, x3');
+  writeln('    mov x1, #0');
+  write('    b L'); writeln(exit_lbl);
 
   { Error - return position in x1 }
   EmitLabel(error_lbl);
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    mov x0, #0');
+  writeln('    mov x1, x2');
 
   EmitLabel(exit_lbl);
   EmitAddSP(32);
@@ -4015,189 +1831,76 @@ begin
   copy_done_lbl := NewLabel;
 
   { Save source addr }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x1, x0');
 
   { x2 = source length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldrb w2, [x1]');
 
   { x3 = 0 (skip count) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x3, #0');
 
   { Loop: skip leading whitespace }
   EmitLabel(loop_lbl);
   { if x3 >= x2, done }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x3, x2');
+  write('    b.ge L'); writeln(done_lbl);
 
   { x4 = char at [x1 + x3 + 1] }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(52); writechar(93);  { x4] }
-  EmitNL;
+  writeln('    add x4, x3, #1');
+  writeln('    ldrb w4, [x1, x4]');
 
   { if char = 32 (space), skip }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(label_count);
-  EmitNL;
+  writeln('    cmp x4, #32');
+  write('    b.eq L'); writeln(label_count);
 
   { if char = 9 (tab), skip }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(57);  { #9 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x4, #9');
+  write('    b.ne L'); writeln(done_lbl);
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { x3 := x3 + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    add x3, x3, #1');
+  write('    b L'); writeln(loop_lbl);
 
   { Done scanning: x3 = number to skip, x2 = length }
   EmitLabel(done_lbl);
 
   { Allocate new string from heap: x0 = x21 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(49);  { x21 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-  EmitNL;
+  writeln('    mov x0, x21');
+  writeln('    add x21, x21, #256');
 
   { x5 = new length = x2 - x3 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    sub x5, x2, x3');
 
   { Store new length }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
+  writeln('    strb w5, [x0]');
 
   { x6 = copy index (0 to x5-1) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x6, #0');
 
   { Copy loop }
   EmitLabel(copy_lbl);
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(53);  { x5 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(copy_done_lbl);
-  EmitNL;
+  writeln('    cmp x6, x5');
+  write('    b.ge L'); writeln(copy_done_lbl);
 
   { x7 = x3 + x6 + 1 (source index) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(54);  { x6 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x7, x3, x6');
+  writeln('    add x7, x7, #1');
 
   { Load char }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    ldrb w8, [x1, x7]');
 
   { x7 = x6 + 1 (dest index) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(55); writechar(44); writechar(32);  { x7, }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x7, x6, #1');
 
   { Store char }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(56); writechar(44); writechar(32);  { w8, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(55); writechar(93);  { x7] }
-  EmitNL;
+  writeln('    strb w8, [x0, x7]');
 
   { x6 := x6 + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(copy_lbl);
-  EmitNL;
+  writeln('    add x6, x6, #1');
+  write('    b L'); writeln(copy_lbl);
 
   EmitLabel(copy_done_lbl);
   EmitAddSP(32);
@@ -4222,161 +1925,68 @@ begin
   copy_done_lbl := NewLabel;
 
   { x1 = source addr }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x1, x0');
 
   { x2 = source length }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-  EmitNL;
+  writeln('    ldrb w2, [x1]');
 
   { x3 = x2 (scan from end) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(50);  { x2 }
-  EmitNL;
+  writeln('    mov x3, x2');
 
   { Loop: find last non-whitespace }
   EmitLabel(loop_lbl);
   { if x3 <= 0, done }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(101); writechar(32);  { b.le }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x3, #0');
+  write('    b.le L'); writeln(done_lbl);
 
   { x4 = char at [x1 + x3] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(51); writechar(93);  { x3] }
-  EmitNL;
+  writeln('    ldrb w4, [x1, x3]');
 
   { if char = 32 (space), continue }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(label_count);
-  EmitNL;
+  writeln('    cmp x4, #32');
+  write('    b.eq L'); writeln(label_count);
 
   { if char = 9 (tab), continue }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(35); writechar(57);  { #9 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(110); writechar(101); writechar(32);  { b.ne }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x4, #9');
+  write('    b.ne L'); writeln(done_lbl);
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { x3 := x3 - 1 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  writeln('    sub x3, x3, #1');
+  write('    b L'); writeln(loop_lbl);
 
   { Done: x3 = new length }
   EmitLabel(done_lbl);
 
   { Allocate new string from heap }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(49);  { x21 }
-  EmitNL;
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-  EmitNL;
+  writeln('    mov x0, x21');
+  writeln('    add x21, x21, #256');
 
   { Store new length }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-  writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-  EmitNL;
+  writeln('    strb w3, [x0]');
 
   { x5 = copy index (0 to x3-1) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x5, #0');
 
   { Copy loop }
   EmitLabel(copy_lbl);
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(copy_done_lbl);
-  EmitNL;
+  writeln('    cmp x5, x3');
+  write('    b.ge L'); writeln(copy_done_lbl);
 
   { x6 = x5 + 1 (index) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(54); writechar(44); writechar(32);  { x6, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x6, x5, #1');
 
   { Load char from source }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
-  writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-  writechar(120); writechar(54); writechar(93);  { x6] }
-  EmitNL;
+  writeln('    ldrb w7, [x1, x6]');
 
   { Store char to dest }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(55); writechar(44); writechar(32);  { w7, }
-  writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-  writechar(120); writechar(54); writechar(93);  { x6] }
-  EmitNL;
+  writeln('    strb w7, [x0, x6]');
 
   { x5 := x5 + 1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(32);  { b }
-  writechar(76); write(copy_lbl);
-  EmitNL;
+  writeln('    add x5, x5, #1');
+  write('    b L'); writeln(copy_lbl);
 
   EmitLabel(copy_done_lbl);
   EmitAddSP(32);
@@ -4409,15 +2019,7 @@ end;
 procedure EmitStrbAtOffset(offset: integer);
 { Emit: sturb w0, [x29, #offset] - stores low byte of w0 at x29+offset }
 begin
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114);  { stur }
-  writechar(98); writechar(32);  { b }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(50); writechar(57);  { [x29 }
-  writechar(44); writechar(32); writechar(35);  { , # }
-  write(offset);
-  writechar(93);  { ] }
-  EmitNL
+  write('    sturb w0, [x29, #'); write(offset); writeln(']');
 end;
 
 procedure EmitClrScrRuntime;
@@ -4447,18 +2049,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #15 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(53);  { #15 }
-  EmitNL;
+  writeln('    sub x1, x29, #15');
   { mov x2, #7 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(55);  { #7 }
-  EmitNL;
+  writeln('    mov x2, #7');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4477,16 +2070,8 @@ begin
   EmitSubSP(48);
   { Save x and y to registers first to avoid memory corruption }
   { x11 = y (row), x12 = x (column) - using higher regs to avoid conflicts with division }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(50); writechar(44); writechar(32);  { x12, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    mov x11, x0');
+  writeln('    mov x12, x1');
   { Build escape sequence at stack offset -20 onwards (leave room for digits) }
   { Format: ESC [ y ; x H }
   EmitMovX0(27);  { ESC }
@@ -4494,196 +2079,68 @@ begin
   EmitMovX0(91);  { [ }
   EmitStrbAtOffset(-19);
   { x8 = pointer to next byte (start at -18) }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(56);  { #18 }
-  EmitNL;
+  writeln('    sub x8, x29, #18');
   { Convert y to decimal digits (y is in x11) }
   { mov x0, x11 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(49);  { x11 }
-  EmitNL;
+  writeln('    mov x0, x11');
   { If y >= 10, output tens digit }
   loop1 := NewLabel;
   done1 := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76);
-  write(done1);
-  EmitNL;
+  writeln('    cmp x0, #10');
+  write('    b.lt L'); writeln(done1);
   { Divide by 10: x1 = x0 / 10, x2 = x0 mod 10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(57);  { x9 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x9, #10');
+  writeln('    udiv x1, x0, x9');
+  writeln('    msub x0, x1, x9, x0');
   { x1=tens, x0=units - store tens digit }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x1, x1, #48');
   { strb w1, [x8], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
-  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w1, [x8], #1');
   EmitLabel(done1);
   { Store units digit }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x0, x0, #48');
   { strb w0, [x8], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w0, [x8], #1');
   { Store semicolon }
   EmitMovX0(59);  { ; }
   { strb w0, [x8], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w0, [x8], #1');
   { Convert x to decimal digits (x is in x12) }
   { mov x0, x12 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(50);  { x12 }
-  EmitNL;
+  writeln('    mov x0, x12');
   done2 := NewLabel;
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76);
-  write(done2);
-  EmitNL;
+  writeln('    cmp x0, #10');
+  write('    b.lt L'); writeln(done2);
   { Divide by 10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(35); writechar(49); writechar(48);  { #10 }
-  EmitNL;
-  EmitIndent;
-  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(57);  { x9 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x9, #10');
+  writeln('    udiv x1, x0, x9');
+  writeln('    msub x0, x1, x9, x0');
   { Store tens digit }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x1, x1, #48');
   { strb w1, [x8], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
-  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w1, [x8], #1');
   EmitLabel(done2);
   { Store units digit }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x0, x0, #48');
   { strb w0, [x8], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(56); writechar(93); writechar(44); writechar(32);  { [x8], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w0, [x8], #1');
   { Store H terminator }
   EmitMovX0(72);  { H }
   { strb w0, [x8] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-  EmitNL;
+  writeln('    strb w0, [x8]');
   { Calculate length: x8 points past last byte, buffer starts at x29-20 }
   { add x8, x8, #1 (point past H) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x8, x8, #1');
   { x2 = x8 - (x29-20) = x8 - x29 + 20 }
   { sub x2, x8, x29 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(120); writechar(50); writechar(57);  { x29 }
-  EmitNL;
+  writeln('    sub x2, x8, x29');
   { add x2, x2, #20 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(50); writechar(48);  { #20 }
-  EmitNL;
+  writeln('    add x2, x2, #20');
   { Write syscall }
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #20 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(50); writechar(48);  { #20 }
-  EmitNL;
+  writeln('    sub x1, x29, #20');
   EmitSvc;
   EmitAddSP(48);
   EmitLdp;
@@ -4708,18 +2165,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #11 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(49);  { #11 }
-  EmitNL;
+  writeln('    sub x1, x29, #11');
   { mov x2, #3 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(51);  { #3 }
-  EmitNL;
+  writeln('    mov x2, #3');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4734,11 +2182,7 @@ begin
   EmitMovFP;
   EmitSubSP(16);
   { Save color parameter (x0) to x9 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x9, x0');
   { Store ESC[3Xm = 27,91,51,X,109 (5 bytes) }
   EmitMovX0(27);  { ESC }
   EmitStrbAtOffset(-13);
@@ -4747,12 +2191,7 @@ begin
   EmitMovX0(51);  { 3 }
   EmitStrbAtOffset(-11);
   { Store color digit: x9 + 48 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x0, x9, #48');
   EmitStrbAtOffset(-10);
   { Store 'm' }
   EmitMovX0(109);  { m }
@@ -4761,18 +2200,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #13 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(51);  { #13 }
-  EmitNL;
+  writeln('    sub x1, x29, #13');
   { mov x2, #5 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(53);  { #5 }
-  EmitNL;
+  writeln('    mov x2, #5');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4787,11 +2217,7 @@ begin
   EmitMovFP;
   EmitSubSP(16);
   { Save color parameter (x0) to x9 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x9, x0');
   { Store ESC[4Xm = 27,91,52,X,109 (5 bytes) }
   EmitMovX0(27);  { ESC }
   EmitStrbAtOffset(-13);
@@ -4800,12 +2226,7 @@ begin
   EmitMovX0(52);  { 4 }
   EmitStrbAtOffset(-11);
   { Store color digit: x9 + 48 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    add x0, x9, #48');
   EmitStrbAtOffset(-10);
   { Store 'm' }
   EmitMovX0(109);  { m }
@@ -4814,18 +2235,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #13 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(51);  { #13 }
-  EmitNL;
+  writeln('    sub x1, x29, #13');
   { mov x2, #5 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(53);  { #5 }
-  EmitNL;
+  writeln('    mov x2, #5');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4852,18 +2264,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(50);  { #12 }
-  EmitNL;
+  writeln('    sub x1, x29, #12');
   { mov x2, #4 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(52);  { #4 }
-  EmitNL;
+  writeln('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4890,18 +2293,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(50);  { #12 }
-  EmitNL;
+  writeln('    sub x1, x29, #12');
   { mov x2, #4 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(52);  { #4 }
-  EmitNL;
+  writeln('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4928,18 +2322,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #12 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(50);  { #12 }
-  EmitNL;
+  writeln('    sub x1, x29, #12');
   { mov x2, #4 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(52);  { #4 }
-  EmitNL;
+  writeln('    mov x2, #4');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -4970,18 +2355,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #14 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(52);  { #14 }
-  EmitNL;
+  writeln('    sub x1, x29, #14');
   { mov x2, #6 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(54);  { #6 }
-  EmitNL;
+  writeln('    mov x2, #6');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -5012,18 +2388,9 @@ begin
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;          { fd from x20 }
   { sub x1, x29, #14 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-  writechar(35); writechar(49); writechar(52);  { #14 }
-  EmitNL;
+  writeln('    sub x1, x29, #14');
   { mov x2, #6 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(54);  { #6 }
-  EmitNL;
+  writeln('    mov x2, #6');
   EmitSvc;
   EmitAddSP(16);
   EmitLdp;
@@ -5042,93 +2409,40 @@ begin
   EmitSubSP(32);  { 16 bytes for timeval + alignment }
 
   { x10 = ms (save original) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x10, x0');
 
   { x11 = 1000 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
-  writechar(35); writechar(49); writechar(48); writechar(48); writechar(48);  { #1000 }
-  EmitNL;
+  writeln('    mov x11, #1000');
 
   { x0 = ms / 1000 (seconds) }
-  EmitIndent;
-  writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(120); writechar(49); writechar(49);  { x11 }
-  EmitNL;
+  writeln('    udiv x0, x10, x11');
 
   { x1 = ms mod 1000 (remainder): msub x1, x0, x11, x10 = x10 - (x0 * x11) }
-  EmitIndent;
-  writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
-  writechar(120); writechar(49); writechar(48);  { x10 }
-  EmitNL;
+  writeln('    msub x1, x0, x11, x10');
 
   { x1 = x1 * 1000 (microseconds, not nanoseconds for timeval) }
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(49); writechar(49);  { x11 (x11 is still 1000) }
-  EmitNL;
+  writeln('    mul x1, x1, x11');
 
   { Store timeval at sp: [sp] = tv_sec, [sp+8] = tv_usec }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-  EmitNL;
+  writeln('    str x0, [sp]');
 
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(56); writechar(93);  { #8] }
-  EmitNL;
+  writeln('    str x1, [sp, #8]');
 
   { select(nfds=0, readfds=NULL, writefds=NULL, exceptfds=NULL, timeout=sp) }
   { x0 = 0 (nfds) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { x1 = NULL }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x1, #0');
 
   { x2 = NULL }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x2, #0');
 
   { x3 = NULL }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x3, #0');
 
   { x4 = pointer to timeval (sp) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x4, sp');
 
   { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
   EmitMovX16(33554525);
@@ -5149,84 +2463,33 @@ begin
   EmitSubSP(48);  { 8 bytes for fd_set + 16 bytes for timeval + padding }
 
   { Clear the fd_set at sp }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-  EmitNL;
+  writeln('    mov x0, #0');
+  writeln('    str x0, [sp]');
 
   { Set bit 0 in fd_set for stdin (fd 0) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-  EmitNL;
+  writeln('    mov x0, #1');
+  writeln('    str x0, [sp]');
 
   { Set timeval to 0,0 (no wait) at sp+16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(49); writechar(54); writechar(93);  { #16] }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
-  EmitNL;
+  writeln('    mov x0, #0');
+  writeln('    str x0, [sp, #16]');
+  writeln('    str x0, [sp, #24]');
 
   { select(nfds=1, readfds=sp, writefds=NULL, exceptfds=NULL, timeout=sp+16) }
   { x0 = 1 (nfds) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    mov x0, #1');
 
   { x1 = sp (readfds) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x1, sp');
 
   { x2 = NULL }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x2, #0');
 
   { x3 = NULL }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x3, #0');
 
   { x4 = sp + 16 (timeout) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-  writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    add x4, sp, #16');
 
   { x16 = syscall number for select: 0x2000000 + 93 = 33554525 }
   EmitMovX16(33554525);
@@ -5234,16 +2497,8 @@ begin
 
   { select returns number of ready fds in x0, or -1 on error }
   { If x0 > 0, key is available; convert to 0 or 1 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(103); writechar(116);  { gt }
-  EmitNL;
+  writeln('    cmp x0, #0');
+  writeln('    cset x0, gt');
 
   EmitAddSP(48);
   EmitLdp;
@@ -5261,133 +2516,56 @@ begin
 
   { First get current terminal settings: ioctl(0, TIOCGETA, sp) }
   { x0 = 0 (stdin) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { x1 = TIOCGETA = 0x40487413 }
   { movz x1, #0x7413 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(51);  { #0x7413 }
-  EmitNL;
+  writeln('    movz x1, #0x7413');
   { movk x1, #0x4048, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(52); writechar(56);  { #0x4048 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movk x1, #0x4048, lsl #16');
 
   { x2 = sp (pointer to termios buffer) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x2, sp');
 
   { ioctl syscall: 0x2000000 + 54 = 33554486 }
   EmitMovX16(33554486);
   EmitSvc;
 
   { Save original c_lflag (at offset 24) to x23 (callee-saved) for later restore }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
-  EmitNL;
+  writeln('    ldr x23, [sp, #24]');
 
   { Clear ICANON (0x100 = 256) and ECHO (0x8) from c_lflag }
   { Load current c_lflag into x10 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(120); writechar(50); writechar(51);  { x23 }
-  EmitNL;
+  writeln('    mov x10, x23');
 
   { x11 = 0x108 (ICANON | ECHO) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(49); writechar(44); writechar(32);  { x11, }
-  writechar(35); writechar(48); writechar(120); writechar(49); writechar(48); writechar(56);  { #0x108 }
-  EmitNL;
+  writeln('    mov x11, #0x108');
 
   { bic x10, x10, x11 (clear bits) }
-  EmitIndent;
-  writechar(98); writechar(105); writechar(99); writechar(32);  { bic }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(120); writechar(49); writechar(49);  { x11 }
-  EmitNL;
+  writeln('    bic x10, x10, x11');
 
   { Store modified c_lflag back }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
-  EmitNL;
+  writeln('    str x10, [sp, #24]');
 
   { Set VMIN (c_cc[16]) to 1 and VTIME (c_cc[17]) to 0 }
   { c_cc starts at offset 32, so VMIN is at 32+16=48, VTIME at 32+17=49 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(49); writechar(48); writechar(44); writechar(32);  { w10, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(52); writechar(56); writechar(93);  { #48] }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(48); writechar(44); writechar(32);  { x10, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(49); writechar(48); writechar(44); writechar(32);  { w10, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(52); writechar(57); writechar(93);  { #49] }
-  EmitNL;
+  writeln('    mov x10, #1');
+  writeln('    strb w10, [sp, #48]');
+  writeln('    mov x10, #0');
+  writeln('    strb w10, [sp, #49]');
 
   { Now set the modified settings: ioctl(0, TIOCSETA, sp) }
   { x0 = 0 (stdin) }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { x1 = TIOCSETA = 0x80487414 }
   { movz x1, #0x7414 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(52);  { #0x7414 }
-  EmitNL;
+  writeln('    movz x1, #0x7414');
   { movk x1, #0x8048, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(52); writechar(56);  { #0x8048 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movk x1, #0x8048, lsl #16');
 
   { x2 = sp }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
@@ -5406,69 +2584,28 @@ begin
   EmitSubSP(80);
 
   { Get current settings first }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { x1 = TIOCGETA = 0x40487413 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(51);  { #0x7413 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(52); writechar(56);  { #0x4048 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x1, #0x7413');
+  writeln('    movk x1, #0x4048, lsl #16');
 
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
 
   { Restore original c_lflag from x23 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-  writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-  writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-  writechar(35); writechar(50); writechar(52); writechar(93);  { #24] }
-  EmitNL;
+  writeln('    str x23, [sp, #24]');
 
   { Set the restored settings }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x0, #0');
 
   { x1 = TIOCSETA = 0x80487414 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(52); writechar(49); writechar(52);  { #0x7414 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(52); writechar(56);  { #0x8048 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movz x1, #0x7414');
+  writeln('    movk x1, #0x8048, lsl #16');
 
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(115); writechar(112);  { sp }
-  EmitNL;
+  writeln('    mov x2, sp');
 
   EmitMovX16(33554486);
   EmitSvc;
@@ -5492,175 +2629,70 @@ begin
 
   { Compute x² and save to [x29, #-24] }
   { fmul d1, d0, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d1, d0, d0');
   { stur d1, [x29, #-24] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur d1, [x29, #-24]');
 
   { result = x (d0 already has x) }
   { Compute x³ = x² * x into d2 }
   { fmul d2, d1, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d2, d1, d0');
 
   { Term 2: -x³/6 }
   EmitMovX0(6);
   EmitScvtfD0X0;
   { fdiv d3, d2, d0 - d3 = x³/6 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d2, d0');
   { Load x into d0 }
   EmitLdurD0(-16);
   { fsub d0, d0, d3 - result = x - x³/6 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
   { Save result }
   EmitSturD0(-32);
 
   { Term 3: +x⁵/120 - multiply d3 by x², divide by 20 }
   { ldur d1, [x29, #-24] - reload x² }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
   { fmul d3, d3, d1 - d3 = x⁵/6 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(20);
   EmitScvtfD0X0;
   { fdiv d3, d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   { Load result and add }
   EmitLdurD0(-32);
   { fadd d0, d0, d3 }
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 4: -x⁷/5040 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(42);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 5: +x⁹/362880 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(72);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 6: -x¹¹/39916800 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(110);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
 
   EmitAddSP(48);
   EmitLdp;
@@ -5681,172 +2713,68 @@ begin
 
   { Compute x² and save to [x29, #-24] }
   { fmul d1, d0, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d1, d0, d0');
   { stur d1, [x29, #-24] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    stur d1, [x29, #-24]');
 
   { Start with result = 1.0 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { d3 = x² (current term numerator starts as x²) }
   { fmov d3, d1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmov d3, d1');
 
   { Term 2: -x²/2 }
   EmitPushD0;
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fdiv d3, d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitPopD0;
   { fsub d0, d0, d3 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 3: +x⁴/24 }
   { ldur d1, [x29, #-24] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
   { fmul d3, d3, d1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(12);  { 24/2 = 12 }
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 4: -x⁶/720 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(30);  { 720/24 = 30 }
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 5: +x⁸/40320 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(56);  { 40320/720 = 56 }
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-32);
 
   { Term 6: -x¹⁰/3628800 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
+  writeln('    fmul d3, d3, d1');
   EmitMovX0(90);  { 3628800/40320 = 90 }
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-32);
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fsub d0, d0, d3');
 
   EmitAddSP(48);
   EmitLdp;
@@ -5876,20 +2804,10 @@ begin
   EmitBL(rt_cos);
 
   { d0 = cos(x), load sin(x) to d1 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(50); writechar(52); writechar(93);  { #-24] }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-24]');
 
   { fdiv d0, d1, d0 - tan = sin/cos }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d0, d1, d0');
 
   EmitAddSP(32);
   EmitLdp;
@@ -5915,436 +2833,168 @@ begin
   { Load 1/ln(2) = 1.4426950408889634 into d1 }
   { IEEE 754: 0x3FF71547652B82FE }
   { movz x0, #0x82FE }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(56); writechar(50);  { #0x82 }
-  writechar(70); writechar(69);  { FE }
-  EmitNL;
+  writeln('    movz x0, #0x82FE');
   { movk x0, #0x652B, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(54); writechar(53);  { #0x65 }
-  writechar(50); writechar(66);  { 2B }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movk x0, #0x652B, lsl #16');
   { movk x0, #0x7154, lsl #32 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(49);  { #0x71 }
-  writechar(53); writechar(52);  { 54 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
+  writeln('    movk x0, #0x7154, lsl #32');
   { movk x0, #0x3FF7, lsl #48 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
-  writechar(70); writechar(55);  { F7 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movk x0, #0x3FF7, lsl #48');
   { fmov d1, x0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    fmov d1, x0');
 
   { d0 = x, d1 = 1/ln(2) }
   { d0 = x / ln(2) = x * (1/ln(2)) }
   EmitLdurD0(-16);
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d0, d0, d1');
 
   { n = round(x/ln(2)) using fcvtas (round to nearest) }
   { fcvtas x0, d0 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(118); writechar(116); writechar(97);  { fcvta }
-  writechar(115); writechar(32);  { s }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fcvtas x0, d0');
   EmitSturX0(-24);
 
   { Load ln(2) into d1 }
   { IEEE 754: 0x3FE62E42FEFA39EF }
   { movz x1, #0x39EF }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(57);  { #0x39 }
-  writechar(69); writechar(70);  { EF }
-  EmitNL;
+  writeln('    movz x1, #0x39EF');
   { movk x1, #0xFEFA, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(70); writechar(69);  { #0xFE }
-  writechar(70); writechar(65);  { FA }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movk x1, #0xFEFA, lsl #16');
   { movk x1, #0x62E4, lsl #32 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(54); writechar(50);  { #0x62 }
-  writechar(69); writechar(52);  { E4 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
+  writeln('    movk x1, #0x62E4, lsl #32');
   { movk x1, #0x3FE6, lsl #48 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
-  writechar(69); writechar(54);  { E6 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movk x1, #0x3FE6, lsl #48');
   { fmov d1, x1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    fmov d1, x1');
 
   { r = x - n * ln(2) }
   { scvtf d0, x0 - convert n to float }
   EmitScvtfD0X0;
   { fmul d0, d0, d1 - d0 = n * ln(2) }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d0, d0, d1');
   { fmov d2, d0 - save n*ln(2) in d2 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d2, d0');
   { d0 = x }
   EmitLdurD0(-16);
   { fsub d0, d0, d2 - r = x - n*ln(2) }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fsub d0, d0, d2');
   { Save r to [x29, #-32] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-32]');
 
   { Now compute exp(r) using Taylor series }
   { r is small (|r| < ln(2)/2 ≈ 0.35), so series converges fast }
   { exp(r) = 1 + r + r²/2 + r³/6 + r⁴/24 + r⁵/120 + r⁶/720 + r⁷/5040 + r⁸/40320 }
   { d3 = current term, d0 = r }
   { fmov d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d3, d0');
   { d0 = 1.0 }
   EmitPushD0;
   EmitMovX0(1);
   EmitScvtfD0X0;
   EmitPopD1;
   { fadd d0, d0, d1 - result = 1 + r }
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fadd d0, d0, d1');
   EmitSturD0(-40);
 
   { Term 3: r²/2 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
   { fmul d3, d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(2);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 4: r³/6 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(3);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 5: r⁴/24 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(4);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 6: r⁵/120 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(5);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 7: r⁶/720 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(6);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 8: r⁷/5040 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(7);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
   EmitSturD0(-40);
 
   { Term 9: r⁸/40320 }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
+  writeln('    fmul d3, d3, d0');
   EmitMovX0(8);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d0');
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fadd d0, d0, d3');
 
   { d0 = exp(r), now multiply by 2^n }
   { Store exp(r) in [x29, #-48] temporarily }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-48]');
 
   { Load n }
   EmitLdurX0(-24);
   { If n = 0, skip scaling }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    cmp x0, #0');
   done_lbl := NewLabel;
   pos_lbl := NewLabel;
   scale_lbl := NewLabel;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.eq L'); writeln(done_lbl);
   { If n > 0, multiply by 2 repeatedly }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-  writechar(76); write(pos_lbl);
-  EmitNL;
+  write('    b.gt L'); writeln(pos_lbl);
   { n < 0, divide by 2 repeatedly }
   { neg x0, x0 }
-  EmitIndent;
-  writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    neg x0, x0');
   EmitSturX0(-56);
   { Load 0.5 into d1 }
   { IEEE 754 for 0.5 = 0x3FE0000000000000 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
-  writechar(69); writechar(48);  { E0 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x1, #0x3FE0, lsl #48');
   { fmov d1, x1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    fmov d1, x1');
   EmitBranchLabel(scale_lbl);
 
   EmitLabel(pos_lbl);
@@ -6353,64 +3003,28 @@ begin
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d1, d0');
 
   EmitLabel(scale_lbl);
   { d1 = scale factor (2.0 or 0.5), [x29, #-56] = count, [x29, #-48] = result }
   { Load result }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-48]');
 
   EmitLdurX0(-56);
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  writeln('    cmp x0, #0');
+  write('    b.eq L'); writeln(done_lbl);
   { fmul d0, d0, d1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d0, d0, d1');
   { Store result }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-48]');
   { Decrement count }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x0, x0, #1');
   EmitSturX0(-56);
   EmitBranchLabel(scale_lbl);
 
   EmitLabel(done_lbl);
   { Load final result }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(52); writechar(56); writechar(93);  { #-48] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-48]');
 
   EmitAddSP(64);
   EmitLdp;
@@ -6441,29 +3055,17 @@ begin
   { Load x into d0 }
   EmitLdurD0(-16);
   { fmov d3, d0 - d3 = working copy of x }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d3, d0');
 
   { Load 2.0 into d1 and 1.0 into d2 for comparisons }
   EmitMovX0(2);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d1, d0');
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d2, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d2, d0');
   { d1 = 2.0, d2 = 1.0, d3 = x }
 
   { Reduce while d3 >= 2: d3 = d3 / 2, count++ }
@@ -6472,85 +3074,41 @@ begin
   done_lbl := NewLabel;
   EmitLabel(reduce_lbl);
   { fcmp d3, d1 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fcmp d3, d1');
   { b.lt reduce_up_lbl - if d3 < 2, check if < 1 }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(reduce_up_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(reduce_up_lbl);
   { d3 >= 2: divide by 2 }
   { fdiv d3, d3, d1 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fdiv d3, d3, d1');
   { count++ }
   EmitLdurX0(-24);
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(reduce_lbl);
 
   { Check if d3 < 1: multiply by 2, count-- }
   EmitLabel(reduce_up_lbl);
   { fcmp d3, d2 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fcmp d3, d2');
   { b.ge done_lbl - if d3 >= 1, we're in [1, 2) }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(done_lbl);
   { d3 < 1: multiply by 2 }
   { fmul d3, d3, d1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d3, d3, d1');
   { count-- }
   EmitLdurX0(-24);
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x0, x0, #1');
   EmitSturX0(-24);
   EmitBranchLabel(reduce_up_lbl);
 
   EmitLabel(done_lbl);
   { Now d3 is in [1, 2), count is in [x29, #-24] }
   { Save reduced x to [x29, #-32] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    stur d3, [x29, #-32]');
 
   { Initial guess: y = d3 - 1 (will be in [0, 1)) }
   { fsub d0, d3, d2 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fsub d0, d3, d2');
   EmitSturD0(-40);
 
   { Iterate 15 times for convergence }
@@ -6564,24 +3122,12 @@ begin
   { Check counter }
   EmitLdurX0(-48);
   { cmp x0, #0 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    cmp x0, #0');
   { b.eq iter_done }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(iter_done_lbl);
-  EmitNL;
+  write('    b.eq L'); writeln(iter_done_lbl);
 
   { Decrement counter }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x0, x0, #1');
   EmitSturX0(-48);
 
   { Load y }
@@ -6589,71 +3135,31 @@ begin
   { Calculate exp(y) }
   EmitBL(rt_exp);
   { Save exp(y) to [x29, #-56] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(117); writechar(114); writechar(32);  { stur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(53); writechar(54); writechar(93);  { #-56] }
-  EmitNL;
+  writeln('    stur d0, [x29, #-56]');
 
   { d0 = reduced x, d1 = exp(y) }
   { ldur d0, [x29, #-32] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(51); writechar(50); writechar(93);  { #-32] }
-  EmitNL;
+  writeln('    ldur d0, [x29, #-32]');
   { ldur d1, [x29, #-56] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(53); writechar(54); writechar(93);  { #-56] }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-56]');
 
   { d2 = x - exp(y) }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fsub d2, d0, d1');
 
   { d3 = x + exp(y) }
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fadd d3, d0, d1');
 
   { d2 = d2 / d3 = (x - exp(y))/(x + exp(y)) }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(51);  { d3 }
-  EmitNL;
+  writeln('    fdiv d2, d2, d3');
 
   { d2 = 2 * d2 }
   EmitMovX0(2);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d2, d2, d0');
 
   { y = y + d2 }
   EmitLdurD0(-40);
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fadd d0, d0, d2');
   EmitSturD0(-40);
 
   { Loop }
@@ -6669,45 +3175,15 @@ begin
 
   { Load ln(2) into d1 }
   { movz x0, #0x39EF }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(57);  { #0x39 }
-  writechar(69); writechar(70);  { EF }
-  EmitNL;
+  writeln('    movz x0, #0x39EF');
   { movk x0, #0xFEFA, lsl #16 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(70); writechar(69);  { #0xFE }
-  writechar(70); writechar(65);  { FA }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
+  writeln('    movk x0, #0xFEFA, lsl #16');
   { movk x0, #0x62E4, lsl #32 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(54); writechar(50);  { #0x62 }
-  writechar(69); writechar(52);  { E4 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
+  writeln('    movk x0, #0x62E4, lsl #32');
   { movk x0, #0x3FE6, lsl #48 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
-  writechar(69); writechar(54);  { E6 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movk x0, #0x3FE6, lsl #48');
   { fmov d1, x0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    fmov d1, x0');
 
   { Load count into d0, convert to float }
   EmitLdurX0(-24);
@@ -6716,21 +3192,11 @@ begin
 
   { d0 = count * ln(2) }
   { fmul d0, d0, d1 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fmul d0, d0, d1');
 
   { d0 = count*ln(2) + ln(reduced_x) }
   EmitPopD1;
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fadd d0, d0, d1');
 
   EmitAddSP(64);
   EmitLdp;
@@ -6748,128 +3214,40 @@ begin
   EmitMovFP;
 
   { Load seed from x27 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(55);  { x27 }
-  EmitNL;
+  writeln('    mov x0, x27');
 
   { If seed is 0, initialize with a default value }
   { cbnz x0, Lxxx }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(110); writechar(122); writechar(32);  { cbnz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(76); write(label_count);
-  EmitNL;
+  write('    cbnz x0, L'); writeln(label_count);
   { Initialize seed to 0x5DEECE66D }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(69); writechar(54); writechar(54); writechar(68);  { #0xE66D }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(69); writechar(67); writechar(69); writechar(53);  { #0xECE5 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(68); writechar(69);  { #0xDE }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(53);  { #0x5 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x0, #0xE66D');
+  writeln('    movk x0, #0xECE5, lsl #16');
+  writeln('    movk x0, #0xDE, lsl #32');
+  writeln('    movk x0, #0x5, lsl #48');
 
   EmitLabel(label_count);
   label_count := label_count + 1;
 
   { Load multiplier 6364136223846793005 = 0x5851F42D4C957F2D into x1 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(70); writechar(50); writechar(68);  { #0x7F2D }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(52); writechar(67); writechar(57); writechar(53);  { #0x4C95 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(70); writechar(52); writechar(50); writechar(68);  { #0xF42D }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(53); writechar(56); writechar(53); writechar(49);  { #0x5851 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x1, #0x7F2D');
+  writeln('    movk x1, #0x4C95, lsl #16');
+  writeln('    movk x1, #0xF42D, lsl #32');
+  writeln('    movk x1, #0x5851, lsl #48');
 
   { mul x0, x0, x1 }
-  EmitIndent;
-  writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    mul x0, x0, x1');
 
   { Load increment 1442695040888963407 = 0x14057B7EF767814F into x1 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(56); writechar(49); writechar(52); writechar(70);  { #0x814F }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(54); writechar(55); writechar(55);  { #0x7677 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(55); writechar(66); writechar(55); writechar(69);  { #0x7B7E }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(35); writechar(48); writechar(120); writechar(49); writechar(52); writechar(48); writechar(53);  { #0x1405 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x1, #0x814F');
+  writeln('    movk x1, #0x7677, lsl #16');
+  writeln('    movk x1, #0x7B7E, lsl #32');
+  writeln('    movk x1, #0x1405, lsl #48');
 
   { add x0, x0, x1 }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    add x0, x0, x1');
 
   { Store new seed in x27 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    mov x27, x0');
 
   EmitLdp;
   EmitRet
@@ -6893,47 +3271,27 @@ begin
 
   { Check if |x| > 1 }
   { fabs d1, d0 }
-  EmitIndent;
-  writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fabs d1, d0');
   { Load 1.0 into d2 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d2, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d2, d0');
   { fcmp d1, d2 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(50);  { d2 }
-  EmitNL;
+  writeln('    fcmp d1, d2');
 
   use_identity_lbl := NewLabel;
   compute_lbl := NewLabel;
   done_lbl := NewLabel;
 
   { b.le compute - if |x| <= 1, use direct Taylor series }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(101); writechar(32);  { b.le }
-  writechar(76); write(compute_lbl);
-  EmitNL;
+  write('    b.le L'); writeln(compute_lbl);
 
   { |x| > 1: use identity arctan(x) = sign(x)*pi/2 - arctan(1/x) }
   { Compute 1/x }
   EmitLdurD0(-16);  { x }
   { fdiv d0, d2, d0 - d0 = 1/x (d2 still has 1.0) }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(50); writechar(44); writechar(32);  { d2, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d0, d2, d0');
   { Save 1/x to [x29, #-24] }
   EmitSturD0(-24);
   { Now compute arctan(1/x) recursively - but we're already in arctan! }
@@ -6952,148 +3310,56 @@ begin
 
   { Save x to d5 as running result }
   { fmov d5, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d5, d0');
 
   { d4 = x² }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(52); writechar(44); writechar(32);  { d4, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d4, d0, d0');
 
   { d3 = x (current power) }
   { fmov d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d3, d0');
 
   { Term 2: -x³/3 }
   { d3 = d3 * d4 = x³ }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(52);  { d4 }
-  EmitNL;
+  writeln('    fmul d3, d3, d4');
   EmitMovX0(3);
   EmitScvtfD0X0;
   { fdiv d6, d3, d0 }
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fdiv d6, d3, d0');
   { d5 = d5 - d6 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(54);  { d6 }
-  EmitNL;
+  writeln('    fsub d5, d5, d6');
 
   { Term 3: +x⁵/5 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(52);  { d4 }
-  EmitNL;
+  writeln('    fmul d3, d3, d4');
   EmitMovX0(5);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(54);  { d6 }
-  EmitNL;
+  writeln('    fdiv d6, d3, d0');
+  writeln('    fadd d5, d5, d6');
 
   { Term 4: -x⁷/7 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(52);  { d4 }
-  EmitNL;
+  writeln('    fmul d3, d3, d4');
   EmitMovX0(7);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(54);  { d6 }
-  EmitNL;
+  writeln('    fdiv d6, d3, d0');
+  writeln('    fsub d5, d5, d6');
 
   { Term 5: +x⁹/9 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(52);  { d4 }
-  EmitNL;
+  writeln('    fmul d3, d3, d4');
   EmitMovX0(9);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(97); writechar(100); writechar(100); writechar(32);  { fadd }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(54);  { d6 }
-  EmitNL;
+  writeln('    fdiv d6, d3, d0');
+  writeln('    fadd d5, d5, d6');
 
   { Term 6: -x¹¹/11 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(52);  { d4 }
-  EmitNL;
+  writeln('    fmul d3, d3, d4');
   EmitMovX0(11);
   EmitScvtfD0X0;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(54); writechar(44); writechar(32);  { d6, }
-  writechar(100); writechar(51); writechar(44); writechar(32);  { d3, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(53); writechar(44); writechar(32);  { d5, }
-  writechar(100); writechar(54);  { d6 }
-  EmitNL;
+  writeln('    fdiv d6, d3, d0');
+  writeln('    fsub d5, d5, d6');
 
   { Result in d5, move to d0 }
   { fmov d0, d5 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(53);  { d5 }
-  EmitNL;
+  writeln('    fmov d0, d5');
 
   EmitAddSP(48);
   EmitLdp;
@@ -7125,41 +3391,19 @@ begin
   EmitMovX0(1);
   EmitScvtfD0X0;
   { fmov d1, d0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d1, d0');
   { Load x back }
   EmitLdurD0(-16);
   { fcmp d0, d1 - compare x with 1.0 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fcmp d0, d1');
   { b.eq pos_one_lbl }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(pos_one_lbl);
-  EmitNL;
+  write('    b.eq L'); writeln(pos_one_lbl);
   { fneg d1, d1 - d1 = -1.0 }
-  EmitIndent;
-  writechar(102); writechar(110); writechar(101); writechar(103); writechar(32);  { fneg }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fneg d1, d1');
   { fcmp d0, d1 - compare x with -1.0 }
-  EmitIndent;
-  writechar(102); writechar(99); writechar(109); writechar(112); writechar(32);  { fcmp }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fcmp d0, d1');
   { b.eq neg_one_lbl }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-  writechar(76); write(neg_one_lbl);
-  EmitNL;
+  write('    b.eq L'); writeln(neg_one_lbl);
   { Fall through to normal case }
   EmitBranchLabel(normal_lbl);
 
@@ -7167,84 +3411,24 @@ begin
   EmitLabel(pos_one_lbl);
   { Load pi/2 = 1.5707963267948966 }
   { IEEE 754: 0x3FF921FB54442D18 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68);  { #0x2D }
-  writechar(49); writechar(56);  { 18 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52);  { #0x54 }
-  writechar(52); writechar(52);  { 44 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49);  { #0x21 }
-  writechar(70); writechar(66);  { FB }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70);  { #0x3F }
-  writechar(70); writechar(57);  { F9 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x0, #0x2D18');
+  writeln('    movk x0, #0x5444, lsl #16');
+  writeln('    movk x0, #0x21FB, lsl #32');
+  writeln('    movk x0, #0x3FF9, lsl #48');
   { fmov d0, x0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    fmov d0, x0');
   EmitBranchLabel(done_lbl);
 
   { x = -1: return -pi/2 }
   EmitLabel(neg_one_lbl);
   { Load -pi/2 = -1.5707963267948966 }
   { IEEE 754: 0xBFF921FB54442D18 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68);  { #0x2D }
-  writechar(49); writechar(56);  { 18 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52);  { #0x54 }
-  writechar(52); writechar(52);  { 44 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49);  { #0x21 }
-  writechar(70); writechar(66);  { FB }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(66); writechar(70);  { #0xBF }
-  writechar(70); writechar(57);  { F9 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x0, #0x2D18');
+  writeln('    movk x0, #0x5444, lsl #16');
+  writeln('    movk x0, #0x21FB, lsl #32');
+  writeln('    movk x0, #0xBFF9, lsl #48');
   { fmov d0, x0 }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(120); writechar(48);  { x0 }
-  EmitNL;
+  writeln('    fmov d0, x0');
   EmitBranchLabel(done_lbl);
 
   EmitLabel(normal_lbl);
@@ -7252,43 +3436,19 @@ begin
   EmitLdurD0(-16);
   { Compute 1 - x² }
   { d1 = x² }
-  EmitIndent;
-  writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmul d1, d0, d0');
   { Load 1.0 }
   EmitMovX0(1);
   EmitScvtfD0X0;
   { d0 = 1 - x² }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fsub d0, d0, d1');
 
   { d0 = sqrt(1 - x²) }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(113); writechar(114); writechar(116); writechar(32);  { fsqrt }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fsqrt d0, d0');
 
   { d0 = x / sqrt(1 - x²) }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(91); writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { [x29, }
-  writechar(35); writechar(45); writechar(49); writechar(54); writechar(93);  { #-16] }
-  EmitNL;
-  EmitIndent;
-  writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    ldur d1, [x29, #-16]');
+  writeln('    fdiv d0, d1, d0');
 
   { d0 = arctan(x / sqrt(1 - x²)) }
   EmitBL(rt_arctan);
@@ -7315,76 +3475,23 @@ begin
 
   { Load pi/2 = 1.5707963267948966 }
   { IEEE 754: 0x3FF921FB54442D18 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(70); writechar(57);  { #0x3FF9 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x0, #0x2D18');
+  writeln('    movk x0, #0x5444, lsl #16');
+  writeln('    movk x0, #0x21FB, lsl #32');
+  writeln('    movk x0, #0x3FF9, lsl #48');
   EmitFmovD0X0;
 
   { d0 = pi/2 - arcsin(x) }
   EmitLdurD0(-16);
-  EmitIndent;
-  writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-  writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-  writechar(100); writechar(48);  { d0 }
-  EmitNL;
+  writeln('    fmov d1, d0');
   { Reload pi/2 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(49); writechar(54);  { #16 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(51); writechar(50);  { #32 }
-  EmitNL;
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(70); writechar(57);  { #0x3FF9 }
-  writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-  writechar(35); writechar(52); writechar(56);  { #48 }
-  EmitNL;
+  writeln('    movz x0, #0x2D18');
+  writeln('    movk x0, #0x5444, lsl #16');
+  writeln('    movk x0, #0x21FB, lsl #32');
+  writeln('    movk x0, #0x3FF9, lsl #48');
   EmitFmovD0X0;
   { fsub d0, d0, d1 }
-  EmitIndent;
-  writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-  writechar(100); writechar(49);  { d1 }
-  EmitNL;
+  writeln('    fsub d0, d0, d1');
 
   EmitAddSP(16);
   EmitLdp;
@@ -7407,18 +3514,9 @@ begin
 
   { Allocate string buffer from heap: x8 = x21, x21 += 256 }
   { Save dest addr in x8 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(120); writechar(50); writechar(49);  { x21 }
-  EmitNL;
+  writeln('    mov x8, x21');
   { Advance heap pointer }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-  writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-  EmitNL;
+  writeln('    add x21, x21, #256');
 
   done_lbl := NewLabel;
   empty_lbl := NewLabel;
@@ -7428,170 +3526,77 @@ begin
 
   { Check bounds: if n >= argc, return empty string }
   { cmp x0, x25 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(50); writechar(53);  { x25 }
-  EmitNL;
+  writeln('    cmp x0, x25');
   { b.ge empty }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-  writechar(76); write(empty_lbl);
-  EmitNL;
+  write('    b.ge L'); writeln(empty_lbl);
 
   { Check for negative index }
   { cmp x0, #0 }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    cmp x0, #0');
   { b.lt empty }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(empty_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(empty_lbl);
 
   { Load argv[n] pointer: x1 = argv[n] = *(x26 + n*8) }
   { ldr x1, [x26, x0, lsl #3] }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(91); writechar(120); writechar(50); writechar(54); writechar(44); writechar(32);  { [x26, }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-  writechar(35); writechar(51); writechar(93);  { #3] }
-  EmitNL;
+  writeln('    ldr x1, [x26, x0, lsl #3]');
 
   { Check if argv[n] is null }
   { cbz x1, empty }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(76); write(empty_lbl);
-  EmitNL;
+  write('    cbz x1, L'); writeln(empty_lbl);
 
   { x1 = pointer to C string, x8 = dest buffer }
   { First count length (max 255) }
   { mov x2, #0 - length counter }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(48);  { #0 }
-  EmitNL;
+  writeln('    mov x2, #0');
   { mov x3, x1 - save string pointer }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-  writechar(120); writechar(49);  { x1 }
-  EmitNL;
+  writeln('    mov x3, x1');
 
   EmitLabel(loop_lbl);
   { ldrb w4, [x1], #1 - load byte and increment }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(93); writechar(44); writechar(32);  { [x1], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    ldrb w4, [x1], #1');
   { cbz w4, copy_start - if null terminator, start copying }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(76); write(copy_lbl);
-  EmitNL;
+  write('    cbz w4, L'); writeln(copy_lbl);
   { add x2, x2, #1 - increment length }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x2, x2, #1');
   { cmp x2, #255 - max length }
-  EmitIndent;
-  writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(50); writechar(53); writechar(53);  { #255 }
-  EmitNL;
+  writeln('    cmp x2, #255');
   { b.lt loop }
-  EmitIndent;
-  writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-  writechar(76); write(loop_lbl);
-  EmitNL;
+  write('    b.lt L'); writeln(loop_lbl);
 
   EmitLabel(copy_lbl);
   { x2 = length, x3 = source pointer, x8 = dest buffer }
   { Store length byte at [x8] }
   { strb w2, [x8] }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(50); writechar(44); writechar(32);  { w2, }
-  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-  EmitNL;
+  writeln('    strb w2, [x8]');
   { x0 = x8 + 1 (dest for chars), x1 = x3 (source) }
-  EmitIndent;
-  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    add x0, x8, #1');
   { mov x1, x3 - restore source pointer }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-  writechar(120); writechar(51);  { x3 }
-  EmitNL;
+  writeln('    mov x1, x3');
 
   { Copy loop }
   EmitLabel(copy_done_lbl);
   { cbz x2, done - if count = 0, done }
-  EmitIndent;
-  writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(76); write(done_lbl);
-  EmitNL;
+  write('    cbz x2, L'); writeln(done_lbl);
   { ldrb w4, [x1], #1 }
-  EmitIndent;
-  writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(49); writechar(93); writechar(44); writechar(32);  { [x1], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    ldrb w4, [x1], #1');
   { strb w4, [x0], #1 }
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-  writechar(91); writechar(120); writechar(48); writechar(93); writechar(44); writechar(32);  { [x0], }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    strb w4, [x0], #1');
   { sub x2, x2, #1 }
-  EmitIndent;
-  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-  writechar(35); writechar(49);  { #1 }
-  EmitNL;
+  writeln('    sub x2, x2, #1');
   EmitBranchLabel(copy_done_lbl);
 
   { Empty string: store length 0 }
   EmitLabel(empty_lbl);
-  EmitIndent;
-  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-  writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
-  writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-  EmitNL;
+  writeln('    strb wzr, [x8]');
 
   EmitLabel(done_lbl);
   { Return pointer to string buffer (x8) }
   { mov x0, x8 }
-  EmitIndent;
-  writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-  writechar(120); writechar(56);  { x8 }
-  EmitNL;
+  writeln('    mov x0, x8');
 
   EmitAddSP(32);
   EmitLdp;
   EmitRet
 end;
+
 

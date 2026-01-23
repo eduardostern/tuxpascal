@@ -102,11 +102,7 @@ begin
           { x0 = hi, need to set bits from lo to hi inclusive }
           { Algorithm: create mask with bits set from lo to hi }
           { For simplicity, use a loop: for i := lo to hi do set |= (1 << i) }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-          writechar(120); writechar(48);  { x0 - hi }
-          EmitNL;
+          writeln('    mov x2, x0');
           EmitPopX1;  { x1 = lo }
           EmitPopX0;  { x0 = set so far }
           { Loop: while x1 <= x2 do x0 |= (1 << x1); x1++ }
@@ -114,42 +110,16 @@ begin
           lbl2 := NewLabel;
           EmitLabel(lbl1);
           { cmp x1, x2 }
-          EmitIndent;
-          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(50);  { x2 }
-          EmitNL;
+          writeln('    cmp x1, x2');
           { b.gt done }
-          EmitIndent;
-          writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-          writechar(76); write(lbl2);
-          EmitNL;
+          write('    b.gt L'); writeln(lbl2);
           { x3 = 1 << x1 }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-          writechar(35); writechar(49);  { #1 }
-          EmitNL;
-          EmitIndent;
-          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-          writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-          writechar(120); writechar(49);  { x1 }
-          EmitNL;
+          writeln('    mov x3, #1');
+          writeln('    lsl x3, x3, x1');
           { x0 |= x3 }
-          EmitIndent;
-          writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(51);  { x3 }
-          EmitNL;
+          writeln('    orr x0, x0, x3');
           { x1++ }
-          EmitIndent;
-          writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(35); writechar(49);  { #1 }
-          EmitNL;
+          writeln('    add x1, x1, #1');
           EmitBranchLabel(lbl1);
           EmitLabel(lbl2)
         end
@@ -158,17 +128,8 @@ begin
           { Single element: set the bit }
           { x0 has the element value, stack has set so far }
           { mask = 1 << x0, then OR with saved set }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(35); writechar(49);  { #1 }
-          EmitNL;
-          EmitIndent;
-          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL;
+          writeln('    mov x1, #1');
+          writeln('    lsl x1, x1, x0');
           EmitPopX0;  { saved set }
           EmitOrrX0X1  { set | (1 << element) }
         end
@@ -196,44 +157,20 @@ begin
     begin
       { Multi-char string - allocate temp from heap and store string }
       { mov x8, x21 ; store string base to x8 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(120); writechar(50); writechar(49);  { x21 }
-      EmitNL;
+      writeln('    mov x8, x21');
       { Store length byte }
       EmitMovX0(tok_len);
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-      writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-      EmitNL;
+      writeln('    strb w0, [x8]');
       { Store each character }
       for i := 0 to tok_len - 1 do
       begin
         EmitMovX0(tok_str[i]);
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
-        writechar(35);
-        write(i + 1);
-        writechar(93);  { ] }
-        EmitNL
+        write('    strb w0, [x8, #'); write(i + 1); writeln(']');
       end;
       { mov x0, x21 ; return string address }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(49);  { x21 }
-      EmitNL;
+      writeln('    mov x0, x21');
       { add x21, x21, #256 ; advance heap pointer }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-      EmitNL;
+      writeln('    add x21, x21, #256');
       expr_type := TYPE_STRING
     end;
     NextToken
@@ -258,19 +195,9 @@ begin
       EmitMovX0(sym_const_val[idx]);  { low bound }
       EmitPopX1;
       { x0 = x1 - x0 = index - low_bound }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    sub x0, x1, x0');
       { Multiply by 8 (element size) using lsl #3 }
-      EmitIndent;
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(51);  { #3 }
-      EmitNL;
+      writeln('    lsl x0, x0, #3');
       { Get base address }
       if sym_level[idx] < scope_level then
       begin
@@ -280,12 +207,7 @@ begin
       else
         EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
       { Address = base - element_offset }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL
+      writeln('    sub x0, x1, x0');
     end
     else
       EmitVarAddr(idx, scope_level);
@@ -321,11 +243,7 @@ begin
         Expect(TOK_RPAREN)
       end;
       { mov x0, x19 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(49); writechar(57);  { x19 }
-      EmitNL;
+      writeln('    mov x0, x19');
       expr_type := TYPE_INTEGER
     end
     { getoutputfd = 103,101,116,111,117,116,112,117,116,102,100 (11 chars) }
@@ -342,11 +260,7 @@ begin
         Expect(TOK_RPAREN)
       end;
       { mov x0, x20 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(48);  { x20 }
-      EmitNL;
+      writeln('    mov x0, x20');
       expr_type := TYPE_INTEGER
     end
     { readfd = 114,101,97,100,102,100 (6 chars) }
@@ -361,69 +275,29 @@ begin
       Expect(TOK_RPAREN);
       { x0 = fd, save it then do read syscall }
       { sub sp, sp, #16; str x0, [sp] - allocate buffer and save fd }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    sub sp, sp, #16');
       { mov x1, sp - buffer on stack }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(115); writechar(112);  { sp }
-      EmitNL;
+      writeln('    mov x1, sp');
       { mov x2, #1 - read 1 byte }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    mov x2, #1');
       { read syscall: x16 = 0x2000003 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(51);  { #3 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #3');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Check if read returned >= 1 }
       { cmp x0, #1; b.ge got_char; mov x0, #-1; b done; got_char: ldrb w0, [sp]; done: }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-      writechar(76); write(label_count);
-      EmitNL;
+      writeln('    cmp x0, #1');
+      write('    b.ge L'); writeln(label_count);
       EmitMovX0(-1);
       EmitBranchLabel(label_count + 1);
       EmitLabel(label_count);
       label_count := label_count + 1;
       { ldrb w0, [sp] }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-      writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-      EmitNL;
+      writeln('    ldrb w0, [sp]');
       EmitLabel(label_count);
       label_count := label_count + 1;
       { add sp, sp, #16 - restore stack }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add sp, sp, #16');
       expr_type := TYPE_INTEGER
     end
     { openfile = 111,112,101,110,102,105,108,101 (8 chars) }
@@ -436,44 +310,17 @@ begin
       Expect(TOK_RPAREN);
       { x0 = Pascal string address, need to skip length byte for C string }
       { add x0, x0, #1 }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #0');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(53);  { #5 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #5');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { On macOS, carry flag set on error - convert errno to -1 }
       { b.cc skip; mov x0, #-1; skip: }
-      EmitIndent;
-      writechar(98); writechar(46); writechar(99); writechar(99); writechar(32);  { b.cc }
-      writechar(76); write(label_count);
-      EmitNL;
+      write('    b.cc L'); writeln(label_count);
       EmitMovX0(-1);
       EmitLabel(label_count);
       label_count := label_count + 1;
@@ -492,45 +339,18 @@ begin
       Expect(TOK_RPAREN);
       { x0 = Pascal string address, need to skip length byte for C string }
       { add x0, x0, #1 }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420=0644) }
       { mov x1, #1537 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);  { #1537 }
-      EmitNL;
+      writeln('    mov x1, #1537');
       { mov x2, #420 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(52); writechar(50); writechar(48);  { #420 }
-      EmitNL;
+      writeln('    mov x2, #420');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(53);  { #5 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #5');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { On macOS, carry flag set on error - convert errno to -1 }
-      EmitIndent;
-      writechar(98); writechar(46); writechar(99); writechar(99); writechar(32);  { b.cc }
-      writechar(76); write(label_count);
-      EmitNL;
+      write('    b.cc L'); writeln(label_count);
       EmitMovX0(-1);
       EmitLabel(label_count);
       label_count := label_count + 1;
@@ -580,20 +400,9 @@ begin
       Expect(TOK_RPAREN);
       { If x < 0, negate it }
       { cmp x0, #0; b.ge skip; neg x0, x0; skip: }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-      writechar(76); write(label_count);
-      EmitNL;
-      EmitIndent;
-      writechar(110); writechar(101); writechar(103); writechar(32);  { neg }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    cmp x0, #0');
+      write('    b.ge L'); writeln(label_count);
+      writeln('    neg x0, x0');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_INTEGER
@@ -606,12 +415,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x AND 1 }
-      EmitIndent;
-      writechar(97); writechar(110); writechar(100); writechar(32);  { and }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    and x0, x0, #1');
       expr_type := TYPE_BOOLEAN
     end
     { sqr = 115,113,114 }
@@ -622,12 +426,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x * x }
-      EmitIndent;
-      writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mul x0, x0, x0');
       expr_type := TYPE_INTEGER
     end
     { sqrt = 115,113,114,116 }
@@ -641,11 +440,7 @@ begin
       if expr_type <> TYPE_REAL then
         EmitScvtfD0X0;
       { fsqrt d0, d0 }
-      EmitIndent;
-      writechar(102); writechar(115); writechar(113); writechar(114); writechar(116); writechar(32);  { fsqrt }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fsqrt d0, d0');
       expr_type := TYPE_REAL
     end
     { round = 114,111,117,110,100 }
@@ -660,11 +455,7 @@ begin
       if expr_type <> TYPE_REAL then
         EmitScvtfD0X0;
       { fcvtas x0, d0 - round to nearest with ties to away }
-      EmitIndent;
-      writechar(102); writechar(99); writechar(118); writechar(116); writechar(97); writechar(115); writechar(32);  { fcvtas }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fcvtas x0, d0');
       expr_type := TYPE_INTEGER
     end
     { trunc = 116,114,117,110,99 }
@@ -679,11 +470,7 @@ begin
       if expr_type <> TYPE_REAL then
         EmitScvtfD0X0;
       { fcvtzs x0, d0 - truncate toward zero }
-      EmitIndent;
-      writechar(102); writechar(99); writechar(118); writechar(116); writechar(122); writechar(115); writechar(32);  { fcvtzs }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fcvtzs x0, d0');
       expr_type := TYPE_INTEGER
     end
     { sin = 115,105,110 }
@@ -763,19 +550,8 @@ begin
           EmitBL(rt_random);
           EmitPopX1;
           { x0 mod x1 using udiv and msub }
-          EmitIndent;
-          writechar(117); writechar(100); writechar(105); writechar(118); writechar(32);  { udiv }
-          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(49);  { x1 }
-          EmitNL;
-          EmitIndent;
-          writechar(109); writechar(115); writechar(117); writechar(98); writechar(32);  { msub }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL
+          writeln('    udiv x2, x0, x1');
+          writeln('    msub x0, x2, x1, x0');
         end
         else
         begin
@@ -784,31 +560,11 @@ begin
           { Convert to real and divide by 2^64 }
           EmitScvtfD0X0;
           { Load 2^63 as divisor (since signed, use 2^63) }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(48); writechar(48);  { #0x8000 }
-          writechar(44); writechar(32);
-          writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-          writechar(35); writechar(52); writechar(56);  { #48 }
-          EmitNL;
-          EmitIndent;
-          writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-          writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-          writechar(120); writechar(49);  { x1 }
-          EmitNL;
-          EmitIndent;
-          writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-          writechar(100); writechar(49);  { d1 }
-          EmitNL;
+          writeln('    movz x1, #0x8000, lsl #48');
+          writeln('    scvtf d1, x1');
+          writeln('    fdiv d0, d0, d1');
           { Make positive by using fabs }
-          EmitIndent;
-          writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
-          writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-          writechar(100); writechar(48);  { d0 }
-          EmitNL;
+          writeln('    fabs d0, d0');
           expr_type := TYPE_REAL
         end;
         Expect(TOK_RPAREN)
@@ -818,30 +574,10 @@ begin
         { random with no parens - return real 0.0..1.0 }
         EmitBL(rt_random);
         EmitScvtfD0X0;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(35); writechar(48); writechar(120); writechar(56); writechar(48); writechar(48); writechar(48);  { #0x8000 }
-        writechar(44); writechar(32);
-        writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-        writechar(35); writechar(52); writechar(56);  { #48 }
-        EmitNL;
-        EmitIndent;
-        writechar(115); writechar(99); writechar(118); writechar(116); writechar(102); writechar(32);  { scvtf }
-        writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-        writechar(120); writechar(49);  { x1 }
-        EmitNL;
-        EmitIndent;
-        writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-        writechar(100); writechar(49);  { d1 }
-        EmitNL;
-        EmitIndent;
-        writechar(102); writechar(97); writechar(98); writechar(115); writechar(32);  { fabs }
-        writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-        writechar(100); writechar(48);  { d0 }
-        EmitNL;
+        writeln('    movz x1, #0x8000, lsl #48');
+        writeln('    scvtf d1, x1');
+        writeln('    fdiv d0, d0, d1');
+        writeln('    fabs d0, d0');
         expr_type := TYPE_REAL
       end;
       if expr_type <> TYPE_REAL then
@@ -853,32 +589,10 @@ begin
       NextToken;
       { Load pi = 3.14159265358979323846 into d0 }
       { IEEE 754 double: 0x400921FB54442D18 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(68); writechar(49); writechar(56);  { #0x2D18 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(53); writechar(52); writechar(52); writechar(52);  { #0x5444 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(49); writechar(70); writechar(66);  { #0x21FB }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(48); writechar(57);  { #0x4009 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(52); writechar(56);  { #48 }
-      EmitNL;
+      writeln('    movz x0, #0x2D18');
+      writeln('    movk x0, #0x5444, lsl #16');
+      writeln('    movk x0, #0x21FB, lsl #32');
+      writeln('    movk x0, #0x4009, lsl #48');
       EmitFmovD0X0;
       expr_type := TYPE_REAL
     end
@@ -899,19 +613,10 @@ begin
       { Convert back to float }
       EmitScvtfD0X0;
       { Pop original, now d1 = trunc(x) }
-      EmitIndent;
-      writechar(102); writechar(109); writechar(111); writechar(118); writechar(32);  { fmov }
-      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fmov d1, d0');
       EmitPopD0;
       { d0 = x - trunc(x) }
-      EmitIndent;
-      writechar(102); writechar(115); writechar(117); writechar(98); writechar(32);  { fsub }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(49);  { d1 }
-      EmitNL;
+      writeln('    fsub d0, d0, d1');
       expr_type := TYPE_REAL
     end
     { int = 105,110,116 - integer part as real (different from trunc) }
@@ -925,11 +630,7 @@ begin
         EmitScvtfD0X0;
       { int(x) = trunc(x) as float }
       { frintz d0, d0 - round toward zero (truncate) }
-      EmitIndent;
-      writechar(102); writechar(114); writechar(105); writechar(110); writechar(116); writechar(122); writechar(32);  { frintz }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    frintz d0, d0');
       expr_type := TYPE_REAL
     end
     { arctan = 97,114,99,116,97,110 }
@@ -988,41 +689,14 @@ begin
       EmitBL(rt_ln);
       EmitPushD0;
       { Load ln(10) = 2.302585... into d0 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(54); writechar(51); writechar(52); writechar(65);  { #0x634A }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(57); writechar(66); writechar(70); writechar(69);  { #0x9BFE }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(54); writechar(54); writechar(68); writechar(51);  { #0x66D3 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(52); writechar(48); writechar(48); writechar(50);  { #0x4002 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(52); writechar(56);  { #48 }
-      EmitNL;
+      writeln('    movz x0, #0x634A');
+      writeln('    movk x0, #0x9BFE, lsl #16');
+      writeln('    movk x0, #0x66D3, lsl #32');
+      writeln('    movk x0, #0x4002, lsl #48');
       EmitFmovD0X0;
       EmitPopD1;
       { d0 = ln(x) / ln(10) }
-      EmitIndent;
-      writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fdiv d0, d1, d0');
       expr_type := TYPE_REAL
     end
     { log2 = 108,111,103,50 }
@@ -1038,41 +712,14 @@ begin
       EmitBL(rt_ln);
       EmitPushD0;
       { Load ln(2) = 0.693147... into d0 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(51); writechar(57); writechar(69); writechar(70);  { #0x39EF }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(70); writechar(69); writechar(70); writechar(65);  { #0xFEFA }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(69); writechar(52); writechar(50);  { #0x2E42 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48); writechar(120); writechar(51); writechar(70); writechar(69); writechar(54);  { #0x3FE6 }
-      writechar(44); writechar(32); writechar(108); writechar(115); writechar(108); writechar(32);  { , lsl }
-      writechar(35); writechar(52); writechar(56);  { #48 }
-      EmitNL;
+      writeln('    movz x0, #0x39EF');
+      writeln('    movk x0, #0xFEFA, lsl #16');
+      writeln('    movk x0, #0x2E42, lsl #32');
+      writeln('    movk x0, #0x3FE6, lsl #48');
       EmitFmovD0X0;
       EmitPopD1;
       { d0 = ln(x) / ln(2) }
-      EmitIndent;
-      writechar(102); writechar(100); writechar(105); writechar(118); writechar(32);  { fdiv }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(49); writechar(44); writechar(32);  { d1, }
-      writechar(100); writechar(48);  { d0 }
-      EmitNL;
+      writeln('    fdiv d0, d1, d0');
       expr_type := TYPE_REAL
     end
     { power = 112,111,119,101,114 }
@@ -1096,23 +743,12 @@ begin
       EmitPopD1;        { d1 = exp, stack = [base] }
       EmitPopD0;        { d0 = base, stack = [] }
       { Push d1 (exp) to stack - str d1, [sp, #-16]! }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(100); writechar(49); writechar(44); writechar(32);    { d1, }
-      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-      writechar(35); writechar(45); writechar(49); writechar(54);     { #-16 }
-      writechar(93); writechar(33);  { ]! }
-      EmitNL;
+      writeln('    str d1, [sp, #-16]!');
       { d0 = base, stack = [exp] }
       EmitBL(rt_ln);    { d0 = ln(base), stack = [exp] }
       EmitPopD1;        { d1 = exp, stack = [] }
       { fmul d0, d0, d1 - d0 = ln(base) * exp }
-      EmitIndent;
-      writechar(102); writechar(109); writechar(117); writechar(108); writechar(32);  { fmul }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-      writechar(100); writechar(49);  { d1 }
-      EmitNL;
+      writeln('    fmul d0, d0, d1');
       EmitBL(rt_exp);   { d0 = exp(ln(base) * exp) = base^exp }
       Expect(TOK_RPAREN);
       expr_type := TYPE_REAL
@@ -1125,12 +761,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x + 1 }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       expr_type := TYPE_INTEGER
     end
     { pred = 112,114,101,100 }
@@ -1141,12 +772,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { Return x - 1 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    sub x0, x0, #1');
       expr_type := TYPE_INTEGER
     end
     { sizeof = 115,105,122,101,111,102 }
@@ -1235,30 +861,11 @@ begin
       Expect(TOK_RPAREN);
       { If char is 'a'-'z' (97-122), subtract 32 }
       { cmp x0, #97; b.lt skip; cmp x0, #122; b.gt skip; sub x0, x0, #32; skip: }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(57); writechar(55);  { #97 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-      writechar(76); write(label_count);
-      EmitNL;
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49); writechar(50); writechar(50);  { #122 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-      writechar(76); write(label_count);
-      EmitNL;
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
+      writeln('    cmp x0, #97');
+      write('    b.lt L'); writeln(label_count);
+      writeln('    cmp x0, #122');
+      write('    b.gt L'); writeln(label_count);
+      writeln('    sub x0, x0, #32');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_CHAR
@@ -1275,30 +882,11 @@ begin
       Expect(TOK_RPAREN);
       { If char is 'A'-'Z' (65-90), add 32 }
       { cmp x0, #65; b.lt skip; cmp x0, #90; b.gt skip; add x0, x0, #32; skip: }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(54); writechar(53);  { #65 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(108); writechar(116); writechar(32);  { b.lt }
-      writechar(76); write(label_count);
-      EmitNL;
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(57); writechar(48);  { #90 }
-      EmitNL;
-      EmitIndent;
-      writechar(98); writechar(46); writechar(103); writechar(116); writechar(32);  { b.gt }
-      writechar(76); write(label_count);
-      EmitNL;
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
+      writeln('    cmp x0, #65');
+      write('    b.lt L'); writeln(label_count);
+      writeln('    cmp x0, #90');
+      write('    b.gt L'); writeln(label_count);
+      writeln('    add x0, x0, #32');
       EmitLabel(label_count);
       label_count := label_count + 1;
       expr_type := TYPE_CHAR
@@ -1328,11 +916,7 @@ begin
         { Load string address }
         EmitVarAddr(idx, scope_level);
         { Load length byte from [x0] }
-        EmitIndent;
-        writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-        EmitNL
+        writeln('    ldrb w0, [x0]');
       end
       else
         Error(9);
@@ -1359,128 +943,39 @@ begin
       { Get file fd and save for later }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { Save fd to x23 (callee-saved) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x23, x0');
       { lseek(fd, 0, SEEK_CUR=1) to get current position }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 = SEEK_CUR }
-      EmitNL;
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = current position, save to x24 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x24, x0');
       { lseek(fd, 0, SEEK_END=2) to get file size }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(51);  { x23 = fd }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(50);  { #2 = SEEK_END }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    mov x0, x23');
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #2');
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = file size, x24 = current position }
       { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
-      writechar(120); writechar(48);  { x0 = save file_size }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(51);  { x23 = fd }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(50); writechar(52);  { x24 = current_pos }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(48);  { #0 = SEEK_SET }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    mov x25, x0');
+      writeln('    mov x0, x23');
+      writeln('    mov x1, x24');
+      writeln('    mov x2, #0');
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Compare: x24 = current_pos, x25 = file_size }
       { cmp x24, x25 }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-      writechar(120); writechar(50); writechar(53);  { x25 }
-      EmitNL;
+      writeln('    cmp x24, x25');
       { cset x0, ge - x0 = 1 if current_pos >= file_size }
-      EmitIndent;
-      writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(103); writechar(101);  { ge }
-      EmitNL;
+      writeln('    cset x0, ge');
       expr_type := TYPE_BOOLEAN
     end
     { filepos = 102,105,108,101,112,111,115 }
@@ -1503,36 +998,13 @@ begin
       { Get file fd }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { lseek(fd, 0, SEEK_CUR=1) to get current position }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 = SEEK_CUR }
-      EmitNL;
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = current position }
       expr_type := TYPE_INTEGER
@@ -1557,121 +1029,36 @@ begin
       { Get file fd and save for later }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { Save fd to x23 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x23, x0');
       { lseek(fd, 0, SEEK_CUR=1) to get current position (to restore later) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 = SEEK_CUR }
-      EmitNL;
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #1');
       { lseek syscall: 0x20000C7 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = current position, save to x24 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(52); writechar(44); writechar(32);  { x24, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x24, x0');
       { lseek(fd, 0, SEEK_END=2) to get file size }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(51);  { x23 = fd }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(50);  { #2 = SEEK_END }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    mov x0, x23');
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #2');
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { x0 = file size, save to x25 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x25, x0');
       { Restore file position: lseek(fd, current_pos, SEEK_SET=0) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(51);  { x23 = fd }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(50); writechar(52);  { x24 = current_pos }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(48);  { #0 = SEEK_SET }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    mov x0, x23');
+      writeln('    mov x1, x24');
+      writeln('    mov x2, #0');
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Move file size to x0 as return value }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(53);  { x25 }
-      EmitNL;
+      writeln('    mov x0, x25');
       expr_type := TYPE_INTEGER
     end
     { copy = 99,111,112,121 }
@@ -1702,94 +1089,37 @@ begin
       { Third arg: count }
       ParseExpression;  { count in x0 }
       { x0 = count, x1 = start, x2 = source addr }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-      writechar(120); writechar(48);  { x0 - count }
-      EmitNL;
+      writeln('    mov x3, x0');
       EmitPopX1;  { start }
       EmitPopX0;  { source addr -> x2 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 - source }
-      EmitNL;
+      writeln('    mov x2, x0');
       { Allocate temp string from heap: x0 = x21, x21 += 256 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(49);  { x21 }
-      EmitNL;
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-      EmitNL;
+      writeln('    mov x0, x21');
+      writeln('    add x21, x21, #256');
       { Save dest addr }
       EmitPushX0;
       { Inline copy logic: copy from source[start] to dest, count bytes }
       { x0 = dest, x1 = start, x2 = source, x3 = count }
       { Store count as length at dest[0] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    strb w3, [x0]');
       { Loop: copy count bytes from source[start+i] to dest[1+i] }
       lbl1 := NewLabel;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(35); writechar(48);  { #0 - index }
-      EmitNL;
+      writeln('    mov x4, #0');
       EmitLabel(lbl1);
       { cmp x4, x3 }
-      EmitIndent;
-      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(120); writechar(51);  { x3 }
-      EmitNL;
+      writeln('    cmp x4, x3');
       { b.ge done }
-      EmitIndent;
-      writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
-      writechar(76); write(label_count);
-      EmitNL;
+      write('    b.ge L'); writeln(label_count);
       { x5 = start + x4 (source index) }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(52);  { x4 }
-      EmitNL;
+      writeln('    add x5, x1, x4');
       { ldrb w6, [x2, x5] }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-      writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-      writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-      writechar(120); writechar(53); writechar(93);  { x5] }
-      EmitNL;
+      writeln('    ldrb w6, [x2, x5]');
       { x5 = x4 + 1 (dest index) }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x5, x4, #1');
       { strb w6, [x0, x5] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(54); writechar(44); writechar(32);  { w6, }
-      writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-      writechar(120); writechar(53); writechar(93);  { x5] }
-      EmitNL;
+      writeln('    strb w6, [x0, x5]');
       { x4 = x4 + 1 }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x4, x4, #1');
       EmitBranchLabel(lbl1);
       EmitLabel(label_count);
       label_count := label_count + 1;
@@ -1831,27 +1161,14 @@ begin
         NextToken;
         EmitVarAddr(idx, scope_level);  { string2 addr in x0 }
         { x0 = string2, stack top = string1 }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL;
+        writeln('    mov x2, x0');
         EmitPopX1;  { string1 }
       end
       else
         Error(9);
       { Allocate temp string from heap: x0 = x21, x21 += 256 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(49);  { x21 }
-      EmitNL;
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-      EmitNL;
+      writeln('    mov x0, x21');
+      writeln('    add x21, x21, #256');
       { Call rt_str_concat(x0=dest, x1=str1, x2=str2) }
       EmitBL(rt_str_concat);
       Expect(TOK_RPAREN);
@@ -1944,40 +1261,16 @@ begin
       else if tok_type = TOK_STRING then
       begin
         { String literal - allocate temp on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
+        writeln('    mov x8, x21');
         EmitMovX0(tok_len);
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-        EmitNL;
+        writeln('    strb w0, [x8]');
         for i := 0 to tok_len - 1 do
         begin
           EmitMovX0(tok_str[i]);
-          EmitIndent;
-          writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-          writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-          writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
-          writechar(35);
-          write(i + 1);
-          writechar(93);  { ] }
-          EmitNL
+          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
         end;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    mov x0, x21');
+        writeln('    add x21, x21, #256');
         EmitPushX0;
         NextToken
       end
@@ -1995,11 +1288,7 @@ begin
         NextToken;
         EmitVarAddr(idx, scope_level);  { string addr in x0 }
         { mov x1, x0; pop x0 }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL;
+        writeln('    mov x1, x0');
         EmitPopX0  { substr in x0 }
       end
       else
@@ -2018,12 +1307,7 @@ begin
       { paramcount - returns argc - 1 (number of command-line parameters) }
       NextToken;
       { x25 holds argc, return argc - 1 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(53); writechar(44); writechar(32);  { x25, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    sub x0, x25, #1');
       expr_type := TYPE_INTEGER
     end
     { paramstr = 112,97,114,97,109,115,116,114 }
@@ -2054,42 +1338,22 @@ begin
           begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
             { add x0, x8, #sym_offset + field_offset }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-            writechar(35);
-            write(sym_offset[with_rec_idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x0, x8, #');
           end
           else
           begin
             { add x0, x29, #sym_offset + field_offset }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-            writechar(35);
-            write(sym_offset[with_rec_idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x0, x29, #');
           end;
           { Load from computed address }
           if field_type[arg_count] = TYPE_REAL then
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
+            writeln('    ldr d0, [x0]');
             expr_type := TYPE_REAL
           end
           else
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
+            writeln('    ldr x0, [x0]');
             expr_type := field_type[arg_count]
           end
         end
@@ -2130,12 +1394,7 @@ begin
           EmitMovX0(sym_const_val[idx]);  { low bound }
           EmitPopX1;
           { x0 = x1 - x0 = index - low_bound }
-          EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL;
+          writeln('    sub x0, x1, x0');
           { Check if array of records }
           if sym_var_param_flags[idx] > 0 then
           begin
@@ -2145,22 +1404,12 @@ begin
             EmitMovX0(lbl1);
             EmitPopX1;
             { mul x0, x1, x0 }
-            EmitIndent;
-            writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL
+            writeln('    mul x0, x1, x0');
           end
           else
           begin
             { Basic type - multiply by 8 using lsl #3 }
-            EmitIndent;
-            writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(35); writechar(51);  { #3 }
-            EmitNL
+            writeln('    lsl x0, x0, #3');
           end;
           { Get base address: frame + offset (offset is negative) }
           if sym_level[idx] < scope_level then
@@ -2171,12 +1420,7 @@ begin
           else
             EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
           { Compute element address: x1 - x0 }
-          EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL;
+          writeln('    sub x1, x1, x0');
           { Check for field access on array of records }
           if (sym_var_param_flags[idx] > 0) and (tok_type = TOK_DOT) then
           begin
@@ -2188,42 +1432,24 @@ begin
             { Add field offset: x1 = x1 + offset }
             if field_offset[arg_count] > 0 then
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(35);
-              write(field_offset[arg_count]);
-              EmitNL
+              writeln('    add x1, x1, #');
             end;
             { Load field value }
             if field_type[arg_count] = TYPE_REAL then
             begin
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL;
+              writeln('    ldr d0, [x1]');
               expr_type := TYPE_REAL
             end
             else
             begin
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL;
+              writeln('    ldr x0, [x1]');
               expr_type := field_type[arg_count]
             end
           end
           else
           begin
             { Load element value }
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-            EmitNL
+            writeln('    ldr x0, [x1]');
           end
         end
         else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
@@ -2242,24 +1468,12 @@ begin
           begin
             EmitFollowChain(sym_level[idx], scope_level);
             { add x0, x8, #sym_offset + field_offset }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-            writechar(35);
-            write(sym_offset[idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x0, x8, #');
           end
           else
           begin
             { add x0, x29, #sym_offset + field_offset }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-            writechar(35);
-            write(sym_offset[idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x0, x29, #');
           end;
           NextToken;
           { Handle nested record fields: x0 has address, check for more dots }
@@ -2276,24 +1490,14 @@ begin
             { Add sub-field offset to x0 }
             if field_offset[arg_count] > 0 then
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(35);
-              write(field_offset[arg_count]);
-              EmitNL
+              writeln('    add x0, x0, #');
             end;
             NextToken
           end;
           { Load from final computed address }
           if field_type[arg_count] = TYPE_REAL then
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
+            writeln('    ldr d0, [x0]');
             expr_type := TYPE_REAL
           end
           else if field_type[arg_count] = TYPE_RECORD then
@@ -2303,11 +1507,7 @@ begin
           end
           else
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL;
+            writeln('    ldr x0, [x0]');
             expr_type := field_type[arg_count]
           end
         end
@@ -2325,11 +1525,7 @@ begin
             begin
               { fmov x0, d0; ldr d0, [x0] }
               EmitFmovX0D0;
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-              EmitNL
+              writeln('    ldr d0, [x0]');
             end;
             expr_type := TYPE_REAL
           end
@@ -2348,18 +1544,9 @@ begin
               { x0 = index, stack has base address }
               EmitPopX1;  { x1 = base address }
               { Add index to base: x0 = x1 + x0 }
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(48);  { x0 }
-              EmitNL;
+              writeln('    add x0, x1, x0');
               { Load byte at [x0]: ldrb w0, [x0] }
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-              writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-              EmitNL;
+              writeln('    ldrb w0, [x0]');
               expr_type := TYPE_CHAR
             end
           end
@@ -2372,11 +1559,7 @@ begin
             { If var param, x0 now contains address - dereference it }
             if sym_is_var_param[idx] = 1 then
             begin
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-              EmitNL
+              writeln('    ldr x0, [x0]');
             end;
             expr_type := sym_type[idx]
           end
@@ -2407,11 +1590,7 @@ begin
             arg_count := lbl1;
           for i := 1 to arg_count do
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            writeln('    ldr x0, [x0]');
           end;
           { Determine result type }
           if lbl2 > 0 then
@@ -2434,13 +1613,7 @@ begin
               { Add field offset to pointer: add x0, x0, #offset }
               if field_offset[arg_count] > 0 then
               begin
-                EmitIndent;
-                writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(35);
-                write(field_offset[arg_count]);
-                EmitNL
+                writeln('    add x0, x0, #');
               end;
               { Handle nested record fields }
               while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
@@ -2454,35 +1627,21 @@ begin
                   Error(15);
                 if field_offset[arg_count] > 0 then
                 begin
-                  EmitIndent;
-                  writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(35);
-                  write(field_offset[arg_count]);
-                  EmitNL
+                  writeln('    add x0, x0, #');
                 end;
                 NextToken
               end;
               { Load field value }
               if field_type[arg_count] = TYPE_REAL then
               begin
-                EmitIndent;
-                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-                writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-                EmitNL;
+                writeln('    ldr d0, [x0]');
                 expr_type := TYPE_REAL
               end
               else if field_type[arg_count] = TYPE_RECORD then
                 expr_type := TYPE_RECORD
               else
               begin
-                EmitIndent;
-                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-                EmitNL;
+                writeln('    ldr x0, [x0]');
                 expr_type := field_type[arg_count]
               end
             end
@@ -2508,44 +1667,21 @@ begin
               EmitMovX0(ptr_arr_lo[arg_count]);
               EmitPopX1;
               { x0 = x1 - x0 = index - low_bound }
-              EmitIndent;
-              writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(48);  { x0 }
-              EmitNL;
+              writeln('    sub x0, x1, x0');
               { Multiply by 8 using lsl #3 }
-              EmitIndent;
-              writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(35); writechar(51);  { #3 }
-              EmitNL;
+              writeln('    lsl x0, x0, #3');
               { Add to base: x1 = base + offset }
               EmitPopX1;  { x1 = base address }
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(48);  { x0 }
-              EmitNL;
+              writeln('    add x0, x1, x0');
               { Load element value }
               if ptr_arr_elem[arg_count] = TYPE_REAL then
               begin
-                EmitIndent;
-                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-                writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-                EmitNL;
+                writeln('    ldr d0, [x0]');
                 expr_type := TYPE_REAL
               end
               else
               begin
-                EmitIndent;
-                writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-                EmitNL;
+                writeln('    ldr x0, [x0]');
                 expr_type := ptr_arr_elem[arg_count]
               end
             end
@@ -2596,19 +1732,9 @@ begin
                   EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
                   EmitPopX1;
                   { x0 = x1 - x0 = index - low_bound }
-                  EmitIndent;
-                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-                  writechar(120); writechar(48);  { x0 }
-                  EmitNL;
+                  writeln('    sub x0, x1, x0');
                   { Multiply by 8 using lsl #3 }
-                  EmitIndent;
-                  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(35); writechar(51);  { #3 }
-                  EmitNL;
+                  writeln('    lsl x0, x0, #3');
                   { Get base address and subtract element offset }
                   if sym_level[var_arg_idx] < scope_level then
                   begin
@@ -2618,12 +1744,7 @@ begin
                   else
                     EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
                   { Address = base - element_offset }
-                  EmitIndent;
-                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-                  writechar(120); writechar(48);  { x0 }
-                  EmitNL
+                  writeln('    sub x0, x1, x0');
                 end
                 else
                   { Simple variable - emit address }
@@ -2643,12 +1764,7 @@ begin
         { Pop args from stack into registers in reverse order }
         for i := arg_count - 1 downto 0 do
         begin
-          EmitIndent;
-          writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-          writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
-          EmitNL
+          write('    ldr x'); write(i); writeln(', [sp], #16');
         end;
         { Set up static link for callee }
         EmitStaticLink(sym_level[idx], scope_level);
@@ -2770,12 +1886,7 @@ begin
       begin
         { Set intersection: x0 = x1 AND x0 }
         EmitPopX1;
-        EmitIndent;
-        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL;
+        writeln('    and x0, x1, x0');
         expr_type := TYPE_SET
       end
       else
@@ -2850,12 +1961,7 @@ begin
       { pointer + integer: scale integer by 8 and SUBTRACT (arrays grow downward) }
       EmitPopX1;  { pointer in x1 }
       { x0 has integer offset, multiply by 8 using lsl #3 }
-      EmitIndent;
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(51);  { #3 }
-      EmitNL;
+      writeln('    lsl x0, x0, #3');
       EmitSub;  { x0 = x1 - x0 (subtract because arrays grow downward) }
       expr_type := TYPE_POINTER;
       ptr_base_type := left_ptr_base
@@ -2870,12 +1976,7 @@ begin
         { Negate and divide by 8 for correct count }
         EmitNeg;  { x0 = -(x1 - x0) = x0 - x1 }
         { Divide by 8 (element size) using asr #3 }
-        EmitIndent;
-        writechar(97); writechar(115); writechar(114); writechar(32);  { asr }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(35); writechar(51);  { #3 }
-        EmitNL;
+        writeln('    asr x0, x0, #3');
         expr_type := TYPE_INTEGER
       end
       else
@@ -2883,12 +1984,7 @@ begin
         { pointer - integer: scale integer by 8 and ADD (arrays grow downward) }
         EmitPopX1;  { pointer in x1 }
         { x0 has integer offset, multiply by 8 using lsl #3 }
-        EmitIndent;
-        writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(35); writechar(51);  { #3 }
-        EmitNL;
+        writeln('    lsl x0, x0, #3');
         EmitAdd;  { x0 = x1 + x0 (add because arrays grow downward) }
         expr_type := TYPE_POINTER;
         ptr_base_type := left_ptr_base
@@ -2898,24 +1994,11 @@ begin
     begin
       { String concatenation: str1 + str2 }
       { x0 = string2 addr, stack top = string1 addr }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 - string2 }
-      EmitNL;
+      writeln('    mov x2, x0');
       EmitPopX1;  { string1 addr }
       { Allocate temp string from heap }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(49);  { x21 - heap ptr }
-      EmitNL;
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-      writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-      EmitNL;
+      writeln('    mov x0, x21');
+      writeln('    add x21, x21, #256');
       { Call rt_str_concat(x0=dest, x1=str1, x2=str2) }
       EmitBL(rt_str_concat);
       expr_type := TYPE_STRING
@@ -2929,99 +2012,33 @@ begin
       begin
         { string + char: x0 = char, stack top = string addr }
         { Create single-char string from x0 on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-        writechar(120); writechar(48);  { x0 - save char }
-        EmitNL;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-        writechar(120); writechar(50); writechar(49);  { x21 - heap ptr for char string }
-        EmitNL;
+        writeln('    mov x3, x0');
+        writeln('    mov x2, x21');
         EmitMovX0(1);  { length = 1 }
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(50); writechar(93);  { [x2] }
-        EmitNL;
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-        writechar(91); writechar(120); writechar(50); writechar(44); writechar(32);  { [x2, }
-        writechar(35); writechar(49); writechar(93);  { #1] }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    strb w0, [x2]');
+        writeln('    strb w3, [x2, #1]');
+        writeln('    add x21, x21, #256');
         EmitPopX1;  { string1 addr }
         { x2 = char string, x1 = string1, allocate result on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(50); writechar(49);  { x21 - heap ptr for result }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    mov x0, x21');
+        writeln('    add x21, x21, #256');
         EmitBL(rt_str_concat)
       end
       else
       begin
         { char + string: x0 = string addr, stack top = char }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-        writechar(120); writechar(48);  { x0 - save string2 addr }
-        EmitNL;
+        writeln('    mov x2, x0');
         EmitPopX0;  { x0 = char }
         { Create single-char string from x0 on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(120); writechar(50); writechar(49);  { x21 - heap ptr for char string }
-        EmitNL;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-        writechar(120); writechar(48);  { x0 - save char }
-        EmitNL;
+        writeln('    mov x1, x21');
+        writeln('    mov x3, x0');
         EmitMovX0(1);  { length = 1 }
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-        EmitNL;
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(51); writechar(44); writechar(32);  { w3, }
-        writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-        writechar(35); writechar(49); writechar(93);  { #1] }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    strb w0, [x1]');
+        writeln('    strb w3, [x1, #1]');
+        writeln('    add x21, x21, #256');
         { x1 = char string, x2 = string2, allocate result on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(50); writechar(49);  { x21 - heap ptr for result }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    mov x0, x21');
+        writeln('    add x21, x21, #256');
         EmitBL(rt_str_concat)
       end;
       expr_type := TYPE_STRING
@@ -3033,29 +2050,15 @@ begin
       if op = TOK_PLUS then
       begin
         { Union: x0 = x1 OR x0 }
-        EmitIndent;
-        writechar(111); writechar(114); writechar(114); writechar(32);  { orr }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL
+        writeln('    orr x0, x1, x0');
       end
       else if op = TOK_MINUS then
       begin
         { Difference: x0 = x1 AND NOT x0 }
         { First: mvn x0, x0 (NOT x0) }
-        EmitIndent;
-        writechar(109); writechar(118); writechar(110); writechar(32);  { mvn }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL;
+        writeln('    mvn x0, x0');
         { Then: and x0, x1, x0 }
-        EmitIndent;
-        writechar(97); writechar(110); writechar(100); writechar(32);  { and }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(120); writechar(48);  { x0 }
-        EmitNL
+        writeln('    and x0, x1, x0');
       end;
       expr_type := TYPE_SET
     end
@@ -3125,11 +2128,7 @@ begin
     begin
       { String comparison }
       { x0 = string2 addr, stack top = string1 addr }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x1, x0');
       EmitPopX0;  { string1 addr in x0 }
       if (op = TOK_EQ) or (op = TOK_NEQ) then
       begin
@@ -3146,58 +2145,26 @@ begin
         if op = TOK_LT then
         begin
           { cmp x0, #0; cset x0, lt }
-          EmitIndent;
-          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(35); writechar(48);  { #0 }
-          EmitNL;
-          EmitIndent;
-          writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(108); writechar(116);  { lt }
-          EmitNL
+          writeln('    cmp x0, #0');
+          writeln('    cset x0, lt');
         end
         else if op = TOK_GT then
         begin
           { cmp x0, #0; cset x0, gt }
-          EmitIndent;
-          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(35); writechar(48);  { #0 }
-          EmitNL;
-          EmitIndent;
-          writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(103); writechar(116);  { gt }
-          EmitNL
+          writeln('    cmp x0, #0');
+          writeln('    cset x0, gt');
         end
         else if op = TOK_LE then
         begin
           { cmp x0, #0; cset x0, le }
-          EmitIndent;
-          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(35); writechar(48);  { #0 }
-          EmitNL;
-          EmitIndent;
-          writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(108); writechar(101);  { le }
-          EmitNL
+          writeln('    cmp x0, #0');
+          writeln('    cset x0, le');
         end
         else if op = TOK_GE then
         begin
           { cmp x0, #0; cset x0, ge }
-          EmitIndent;
-          writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(35); writechar(48);  { #0 }
-          EmitNL;
-          EmitIndent;
-          writechar(99); writechar(115); writechar(101); writechar(116); writechar(32);  { cset }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(103); writechar(101);  { ge }
-          EmitNL
+          writeln('    cmp x0, #0');
+          writeln('    cset x0, ge');
         end
       end;
       expr_type := TYPE_INTEGER
@@ -3250,12 +2217,7 @@ begin
     { Result: (set >> value) & 1 }
     EmitPopX1;  { value in x1 }
     { lsr x0, x0, x1 }
-    EmitIndent;
-    writechar(108); writechar(115); writechar(114); writechar(32);  { lsr }
-    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-    writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-    writechar(120); writechar(49);  { x1 }
-    EmitNL;
+    writeln('    lsr x0, x0, x1');
     { and x0, x0, #1 }
     EmitAndImm(1);
     expr_type := TYPE_BOOLEAN
@@ -3377,11 +2339,7 @@ begin
       EmitLabel(lbl1);
       EmitLdurX0(sym_offset[idx]);  { load loop var }
       { ldur x1, [sp] - load end value from stack }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-      EmitNL;
+      writeln('    ldur x1, [sp]');
       EmitCmpX0X1;
       EmitCset(2);  { lt: exit when end < i, meaning i > end }
       EmitBranchLabelNZ(lbl2);
@@ -3389,12 +2347,7 @@ begin
       { continue target - increment }
       EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add x0, x0, #1 }
-      writechar(120); writechar(48); writechar(44); writechar(32);
-      writechar(120); writechar(48); writechar(44); writechar(32);
-      writechar(35); writechar(49);
-      EmitNL;
+      writeln('    add x0, x0, #1');
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
@@ -3402,12 +2355,7 @@ begin
       break_label := old_break;
       continue_label := old_continue;
       { Pop end value from stack }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL
+      writeln('    add sp, sp, #16');
     end
     else
     begin
@@ -3418,11 +2366,7 @@ begin
       EmitLabel(lbl1);
       EmitLdurX0(sym_offset[idx]);  { load loop var }
       { ldur x1, [sp] - load end value from stack }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(117); writechar(114); writechar(32);  { ldur }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-      EmitNL;
+      writeln('    ldur x1, [sp]');
       EmitCmpX0X1;
       EmitCset(4);  { gt: exit when end > i, meaning i < end }
       EmitBranchLabelNZ(lbl2);
@@ -3430,12 +2374,7 @@ begin
       { continue target - decrement }
       EmitLabel(lbl3);
       EmitLdurX0(sym_offset[idx]);
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub x0, x0, #1 }
-      writechar(120); writechar(48); writechar(44); writechar(32);
-      writechar(120); writechar(48); writechar(44); writechar(32);
-      writechar(35); writechar(49);
-      EmitNL;
+      writeln('    sub x0, x0, #1');
       EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
@@ -3443,12 +2382,7 @@ begin
       break_label := old_break;
       continue_label := old_continue;
       { Pop end value from stack }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL
+      writeln('    add sp, sp, #16');
     end
   end
   else if tok_type = TOK_CASE then
@@ -3468,11 +2402,7 @@ begin
       repeat
         if tok_type = TOK_COMMA then NextToken;
         { Load selector from stack (peek, don't pop): ldr x1, [sp] }
-        EmitIndent;
-        writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-        writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-        writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-        EmitNL;
+        writeln('    ldr x1, [sp]');
         { Parse constant value }
         if tok_type = TOK_INTEGER then
         begin
@@ -3495,10 +2425,7 @@ begin
         { Compare: cmp x1, x0 }
         EmitCmpX0X1;
         { If equal, jump to match label }
-        EmitIndent;
-        writechar(98); writechar(46); writechar(101); writechar(113); writechar(32);  { b.eq }
-        writechar(76); write(lbl3);
-        EmitNL
+        write('    b.eq L'); writeln(lbl3);
       until tok_type = TOK_COLON;
       { No match in this group, jump to next branch }
       EmitBranchLabel(lbl2);
@@ -3506,12 +2433,7 @@ begin
       EmitLabel(lbl3);
       NextToken;  { consume ':' }
       { Pop selector from stack (discard) }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add sp, sp, #16');
       ParseStatement;
       { Jump to end of case }
       EmitBranchLabel(lbl1);
@@ -3535,24 +2457,14 @@ begin
     begin
       NextToken;
       { Pop selector (discard) before else statement }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add sp, sp, #16');
       ParseStatement;
       { Note: no need to jump to lbl1, we fall through }
     end
     else
     begin
       { No else - just pop selector }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL
+      writeln('    add sp, sp, #16');
     end;
     EmitLabel(lbl1);
     Expect(TOK_END)
@@ -3575,19 +2487,10 @@ begin
       lbl1 := 1;
       NextToken;
       { Push x19 to save it }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-      EmitNL;
+      writeln('    str x19, [sp, #-16]!');
       { Load file's fd into x19 }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x19, [x0]');
       Expect(TOK_COMMA);
       if tok_type <> TOK_IDENT then
         Error(6);
@@ -3619,12 +2522,7 @@ begin
     { Restore x19 if we saved it }
     if lbl1 = 1 then
     begin
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL
+      writeln('    ldr x19, [sp], #16');
     end;
     Expect(TOK_RPAREN)
   end
@@ -3650,19 +2548,10 @@ begin
           lbl1 := 1;
           NextToken;
           { Push x19 to save it }
-          EmitIndent;
-          writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-          writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-          writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-          writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-          EmitNL;
+          writeln('    str x19, [sp, #-16]!');
           { Load file's fd into x19 }
           EmitVarAddr(idx, scope_level);
-          EmitIndent;
-          writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-          writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-          writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-          EmitNL;
+          writeln('    ldr x19, [x0]');
           { Check for comma (more args) or just skip to rparen }
           if tok_type = TOK_COMMA then
           begin
@@ -3680,12 +2569,7 @@ begin
             { Skip to end of line }
             EmitBL(rt_skip_line);
             { Restore x19 }
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-            writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-            writechar(35); writechar(49); writechar(54);  { #16 }
-            EmitNL
+            writeln('    ldr x19, [sp], #16');
           end
         end;
         { Only process variable if we have one }
@@ -3730,12 +2614,7 @@ begin
           { Restore x19 if we saved it }
           if lbl1 = 1 then
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-            writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-            writechar(35); writechar(49); writechar(54);  { #16 }
-            EmitNL
+            writeln('    ldr x19, [sp], #16');
           end
         end
       end
@@ -3809,16 +2688,9 @@ begin
         { In main program - just call halt with exit code 0 }
         EmitMovX0(0);
         { mov x16, #1 }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-        writechar(35); writechar(49);  { #1 }
-        EmitNL;
+        writeln('    mov x16, #1');
         { svc #0x80 }
-        EmitIndent;
-        writechar(115); writechar(118); writechar(99); writechar(32);  { svc }
-        writechar(35); writechar(48); writechar(120); writechar(56); writechar(48);  { #0x80 }
-        EmitNL
+        writeln('    svc #0x80');
       end
       else
         EmitBranchLabel(exit_label)
@@ -3848,19 +2720,10 @@ begin
               lbl1 := 1;
               NextToken;
               { Push x20 to save it }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-              writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-              writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-              EmitNL;
+              writeln('    str x20, [sp, #-16]!');
               { Load file's fd into x20 }
               EmitVarAddr(idx, scope_level);
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-              EmitNL;
+              writeln('    ldr x20, [x0]');
               if tok_type = TOK_COMMA then
                 NextToken
             end
@@ -3924,12 +2787,7 @@ begin
       { Restore x20 if we saved it }
       if lbl1 = 1 then
       begin
-        EmitIndent;
-        writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-        writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-        writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-        writechar(35); writechar(49); writechar(54);  { #16 }
-        EmitNL
+        writeln('    ldr x20, [sp], #16');
       end
     end
     else if TokIs8(119, 114, 105, 116, 101, 0, 0, 0) = 1 then
@@ -3952,19 +2810,10 @@ begin
               lbl1 := 1;
               NextToken;
               { Push x20 to save it }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-              writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-              writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-              EmitNL;
+              writeln('    str x20, [sp, #-16]!');
               { Load file's fd into x20 }
               EmitVarAddr(idx, scope_level);
-              EmitIndent;
-              writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-              writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-              writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-              EmitNL;
+              writeln('    ldr x20, [x0]');
               if tok_type = TOK_COMMA then
                 NextToken
             end
@@ -4027,12 +2876,7 @@ begin
       { Restore x20 if we saved it }
       if lbl1 = 1 then
       begin
-        EmitIndent;
-        writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-        writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-        writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-        writechar(35); writechar(49); writechar(54);  { #16 }
-        EmitNL
+        writeln('    ldr x20, [sp], #16');
       end
     end
     else if TokIs8(104, 97, 108, 116, 0, 0, 0, 0) = 1 then
@@ -4069,31 +2913,19 @@ begin
           { randomize(seed) - use provided seed }
           ParseExpression;
           { mov x27, x0 }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL
+          writeln('    mov x27, x0');
         end
         else
         begin
           { randomize() - use sp as seed }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
-          writechar(115); writechar(112);  { sp }
-          EmitNL
+          writeln('    mov x27, sp');
         end;
         Expect(TOK_RPAREN)
       end
       else
       begin
         { randomize with no parens - use sp as seed }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(50); writechar(55); writechar(44); writechar(32);  { x27, }
-        writechar(115); writechar(112);  { sp }
-        EmitNL
+        writeln('    mov x27, sp');
       end
     end
     { inc = 105,110,99 }
@@ -4109,30 +2941,13 @@ begin
       NextToken;
       { Load address into x8 }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x8, x0');
       { Load current value }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-      EmitNL;
+      writeln('    ldr x0, [x8]');
       { Add 1 }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { Store back }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-      EmitNL;
+      writeln('    str x0, [x8]');
       Expect(TOK_RPAREN)
     end
     { dec = 100,101,99 }
@@ -4148,30 +2963,13 @@ begin
       NextToken;
       { Load address into x8 }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x8, x0');
       { Load current value }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-      EmitNL;
+      writeln('    ldr x0, [x8]');
       { Subtract 1 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    sub x0, x0, #1');
       { Store back }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-      EmitNL;
+      writeln('    str x0, [x8]');
       Expect(TOK_RPAREN)
     end
     else if (tok_len = 9) and (tok_str[0] = 119) and (tok_str[1] = 114) and
@@ -4205,11 +3003,7 @@ begin
         Error(9);
       { Load file fd into x0 }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { Push fd to stack }
       EmitPushX0;
       NextToken;
@@ -4218,17 +3012,8 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { x0 has char, pop fd into x1, swap }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-      writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
-      EmitNL;
+      writeln('    mov x1, x0');
+      writeln('    ldr x0, [sp], #16');
       { Call write char to fd runtime: x0=fd, x1=char }
       EmitBL(rt_write_char_fd)
     end
@@ -4332,65 +3117,30 @@ begin
       { Copy filename to file var offset 16 }
       EmitPopX1;  { x1 = file var address }
       { add x1, x1, #16 - point to filename area }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add x1, x1, #16');
       { swap x0 and x1 for str_copy (dest in x0, src in x1) }
       { x0 = src string, x1 = dest (file var + 16) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(49);  { x1 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(50);  { x2 }
-      EmitNL;
+      writeln('    mov x2, x0');
+      writeln('    mov x0, x1');
+      writeln('    mov x1, x2');
       { Now x0 = dest, x1 = src. Save dest before call. }
       EmitPushX0;
       EmitBL(rt_str_copy);
       EmitPopX0;  { restore dest address }
       { Add null terminator for C string compatibility }
       { ldrb w1, [x0] - load length }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
-      writechar(119); writechar(49); writechar(44); writechar(32);  { w1, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldrb w1, [x0]');
       { add x1, x1, #1 - position after last char }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x1, x1, #1');
       { strb wzr, [x0, x1] - store null byte }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
-      writechar(91); writechar(120); writechar(48); writechar(44); writechar(32);  { [x0, }
-      writechar(120); writechar(49); writechar(93);  { x1] }
-      EmitNL;
+      writeln('    strb wzr, [x0, x1]');
       { Initialize fd to -1 (not open) }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       Expect(TOK_RPAREN)
     end
     { assigntokstr = 97,115,115,105,103,110,116,111,107,115,116,114 }
@@ -4420,11 +3170,7 @@ begin
       ParseExpression;
       { x0 = len, stack has start }
       { mov x2, x0 - x2 = len }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x2, x0');
       EmitPopX1;  { x1 = start }
       { Get address of tok_str using VarAddr }
       { We need the tok_str global - find it in symbol table }
@@ -4432,29 +3178,14 @@ begin
       { Get file var base address first }
       EmitVarAddr(idx, scope_level);
       { add x0, x0, #16 - point to filename area }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add x0, x0, #16');
       { Save dest address }
       EmitPushX0;
       { Get tok_str base address - look it up }
       { str x1, [sp, #-16]! - save start index }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-      EmitNL;
+      writeln('    str x1, [sp, #-16]!');
       { str x2, [sp, #-16]! - save len }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
-      EmitNL;
+      writeln('    str x2, [sp, #-16]!');
       { Find tok_str in symbol table and get its address }
       tok_str[0] := 116; tok_str[1] := 111; tok_str[2] := 107; tok_str[3] := 95;
       tok_str[4] := 115; tok_str[5] := 116; tok_str[6] := 114; tok_str[7] := 0;
@@ -4464,127 +3195,52 @@ begin
         Error(3);  { tok_str not found }
       EmitVarAddr(arg_idx, scope_level);  { x0 = tok_str base }
       { mov x3, x0 - x3 = tok_str base }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x3, x0');
       { ldr x2, [sp], #16 - restore len }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    ldr x2, [sp], #16');
       { ldr x1, [sp], #16 - restore start }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    ldr x1, [sp], #16');
       { ldr x0, [sp], #16 - restore dest }
       EmitPopX0;
       { x3 + x1*8 = source address (tok_str elements are 8 bytes) }
       { lsl x1, x1, #3 }
-      EmitIndent;
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(51);  { #3 }
-      EmitNL;
+      writeln('    lsl x1, x1, #3');
       { add x3, x3, x1 - x3 = source address }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
-      writechar(120); writechar(49);  { x1 }
-      EmitNL;
+      writeln('    add x3, x3, x1');
       { Copy loop: copy x2 characters from [x3] to [x0], skip length byte }
       { add x0, x0, #1 - skip length byte position }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { Save x2 (len) for later length byte write }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
-      writechar(120); writechar(50);  { x2 }
-      EmitNL;
+      writeln('    mov x4, x2');
       lbl1 := NewLabel;
       lbl2 := NewLabel;
       EmitLabel(lbl1);
       { cbz x2, done }
-      EmitIndent;
-      writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(76);  { L }
-      write(lbl2);
-      EmitNL;
+      write('    cbz x2, L'); writeln(lbl2);
       { ldr x5, [x3], #8 - load 8-byte integer from tok_str }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
-      writechar(91); writechar(120); writechar(51); writechar(93); writechar(44); writechar(32);  { [x3], }
-      writechar(35); writechar(56);  { #8 }
-      EmitNL;
+      writeln('    ldr x5, [x3], #8');
       { strb w5, [x0], #1 - store as byte }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
-      writechar(91); writechar(120); writechar(48); writechar(93); writechar(44); writechar(32);  { [x0], }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    strb w5, [x0], #1');
       { sub x2, x2, #1 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    sub x2, x2, #1');
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { strb wzr, [x0] - null terminate }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    strb wzr, [x0]');
       { Write length byte at start of filename: x0-x4-1 = start address }
       { sub x0, x0, x4 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(52);  { x4 }
-      EmitNL;
+      writeln('    sub x0, x0, x4');
       { sub x0, x0, #1 }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    sub x0, x0, #1');
       { strb w4, [x0] - store length byte }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    strb w4, [x0]');
       { Initialize fd to -1 }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       Expect(TOK_RPAREN)
     end
     { reset = 114,101,115,101,116 }
@@ -4607,66 +3263,24 @@ begin
       EmitVarAddr(idx, scope_level);
       EmitPushX0;  { save file var base }
       { add x0, x0, #16 - point to filename }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add x0, x0, #16');
       { Convert Pascal string to C string: skip length byte }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
+      writeln('    mov x1, #0');
+      writeln('    mov x2, #0');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(53);  { #5 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #5');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Store fd in file variable (offset 0) }
       EmitPopX1;  { x1 = file var base }
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       { Store mode=1 (read) at offset 8 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    mov x0, #1');
       { str x0, [x1, #8] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-      writechar(35); writechar(56); writechar(93);  { #8] }
-      EmitNL
+      writeln('    str x0, [x1, #8]');
     end
     { rewrite = 114,101,119,114,105,116,101 }
     else if (tok_len = 7) and (tok_str[0] = 114) and (tok_str[1] = 101) and
@@ -4689,68 +3303,26 @@ begin
       EmitVarAddr(idx, scope_level);
       EmitPushX0;  { save file var base }
       { add x0, x0, #16 - point to filename }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    add x0, x0, #16');
       { Convert Pascal string to C string: skip length byte }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    add x0, x0, #1');
       { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420) }
       { mov x1, #1537 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);  { #1537 }
-      EmitNL;
+      writeln('    mov x1, #1537');
       { mov x2, #420 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(52); writechar(50); writechar(48);  { #420 }
-      EmitNL;
+      writeln('    mov x2, #420');
       { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(53);  { #5 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #5');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Store fd in file variable (offset 0) }
       EmitPopX1;  { x1 = file var base }
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       { Store mode=2 (write) at offset 8 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(50);  { #2 }
-      EmitNL;
+      writeln('    mov x0, #2');
       { str x0, [x1, #8] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-      writechar(35); writechar(56); writechar(93);  { #8] }
-      EmitNL
+      writeln('    str x0, [x1, #8]');
     end
     { close = 99,108,111,115,101 }
     else if (tok_len = 5) and (tok_str[0] = 99) and (tok_str[1] = 108) and
@@ -4771,26 +3343,11 @@ begin
       { Load fd from file variable }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { close syscall: x0=fd }
       { movz x16, #6; movk x16, #0x200, lsl #16 = 0x2000006 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(54);  { #6 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #6');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { Set fd to -1 to mark as closed }
       EmitVarAddr(idx, scope_level);
@@ -4798,24 +3355,11 @@ begin
       EmitMovX0(-1);
       EmitPopX1;
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       { Set mode to 0 (closed) at offset 8 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(35); writechar(48);  { #0 }
-      EmitNL;
+      writeln('    mov x0, #0');
       { str x0, [x1, #8] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
-      writechar(35); writechar(56); writechar(93);  { #8] }
-      EmitNL
+      writeln('    str x0, [x1, #8]');
     end
     { setinput = 115,101,116,105,110,112,117,116 }
     else if (tok_len = 8) and (tok_str[0] = 115) and (tok_str[1] = 101) and
@@ -4837,11 +3381,7 @@ begin
       { Load fd from file variable and store in x19 }
       EmitVarAddr(idx, scope_level);
       { ldr x19, [x0] }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL
+      writeln('    ldr x19, [x0]');
     end
     { setoutput = 115,101,116,111,117,116,112,117,116 }
     else if (tok_len = 9) and (tok_str[0] = 115) and (tok_str[1] = 101) and
@@ -4864,11 +3404,7 @@ begin
       { Load fd from file variable and store in x20 }
       EmitVarAddr(idx, scope_level);
       { ldr x20, [x0] }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL
+      writeln('    ldr x20, [x0]');
     end
     { setinputfd = 115,101,116,105,110,112,117,116,102,100 (10 chars) }
     else if (tok_len = 10) and (tok_str[0] = 115) and (tok_str[1] = 101) and
@@ -4882,11 +3418,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { mov x19, x0 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL
+      writeln('    mov x19, x0');
     end
     { setoutputfd = 115,101,116,111,117,116,112,117,116,102,100 (11 chars) }
     else if (tok_len = 11) and (tok_str[0] = 115) and (tok_str[1] = 101) and
@@ -4900,11 +3432,7 @@ begin
       ParseExpression;
       Expect(TOK_RPAREN);
       { mov x20, x0 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL
+      writeln('    mov x20, x0');
     end
     { closefd = 99,108,111,115,101,102,100 (7 chars) }
     else if (tok_len = 7) and (tok_str[0] = 99) and (tok_str[1] = 108) and
@@ -4918,19 +3446,8 @@ begin
       Expect(TOK_RPAREN);
       { x0 = fd to close }
       { close syscall: x16 = 0x2000006 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(54);  { #6 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #6');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc
     end
     { writefd = 119,114,105,116,101,102,100 (7 chars) }
@@ -4947,59 +3464,21 @@ begin
       ParseExpression;  { char }
       { x0 = char, stack top = fd }
       { sub sp, sp, #16; strb w0, [sp] - store char in buffer }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    sub sp, sp, #16');
       { strb w0, [sp] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-      writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-      EmitNL;
+      writeln('    strb w0, [sp]');
       { ldr x0, [sp, #16] - load fd from saved position }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
-      writechar(35); writechar(49); writechar(54); writechar(93);  { #16] }
-      EmitNL;
+      writeln('    ldr x0, [sp, #16]');
       { mov x1, sp - buffer address }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(115); writechar(112);  { sp }
-      EmitNL;
+      writeln('    mov x1, sp');
       { mov x2, #1 - write 1 byte }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(49);  { #1 }
-      EmitNL;
+      writeln('    mov x2, #1');
       { write syscall: x16 = 0x2000004 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(52);  { #4 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #4');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       { add sp, sp, #32 - restore stack (16 for buffer + 16 for saved fd) }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
-      writechar(35); writechar(51); writechar(50);  { #32 }
-      EmitNL;
+      writeln('    add sp, sp, #32');
       Expect(TOK_RPAREN)
     end
     { seek = 115,101,101,107 }
@@ -5021,52 +3500,21 @@ begin
       { Get file fd and save to x23 }
       EmitVarAddr(idx, scope_level);
       { ldr x0, [x0] - load fd }
-      EmitIndent;
-      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-      EmitNL;
+      writeln('    ldr x0, [x0]');
       { Save fd to x23 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(51); writechar(44); writechar(32);  { x23, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x23, x0');
       { Parse position expression }
       ParseExpression;
       { x0 = position, x23 = fd }
       { mov x1, x0 (position to x1) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x1, x0');
       { mov x0, x23 (fd to x0) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(51);  { x23 }
-      EmitNL;
+      writeln('    mov x0, x23');
       { mov x2, #0 (SEEK_SET) }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(35); writechar(48);  { #0 = SEEK_SET }
-      EmitNL;
+      writeln('    mov x2, #0');
       { lseek syscall: 0x20000C7 }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(67); writechar(55);  { #0xC7 }
-      EmitNL;
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
-      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
-      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
-      writechar(44); writechar(32);
-      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-      writechar(35); writechar(49); writechar(54);  { #16 }
-      EmitNL;
+      writeln('    movz x16, #0xC7');
+      writeln('    movk x16, #0x200, lsl #16');
       EmitSvc;
       Expect(TOK_RPAREN)
     end
@@ -5097,11 +3545,7 @@ begin
       { Third arg: count }
       ParseExpression;
       { x0=count, stack has string addr and start }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x2, x0');
       EmitPopX1;  { start }
       EmitPopX0;  { string addr }
       EmitBL(rt_str_delete);
@@ -5130,40 +3574,16 @@ begin
       else if tok_type = TOK_STRING then
       begin
         { String literal - allocate temp on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
+        writeln('    mov x8, x21');
         EmitMovX0(tok_len);
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-        EmitNL;
+        writeln('    strb w0, [x8]');
         for i := 0 to tok_len - 1 do
         begin
           EmitMovX0(tok_str[i]);
-          EmitIndent;
-          writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-          writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-          writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
-          writechar(35);
-          write(i + 1);
-          writechar(93);  { ] }
-          EmitNL
+          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
         end;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    mov x0, x21');
+        writeln('    add x21, x21, #256');
         EmitPushX0;
         NextToken
       end
@@ -5185,11 +3605,7 @@ begin
       { Third arg: position }
       ParseExpression;
       { x0=pos, stack has source and dest }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x2, x0');
       EmitPopX1;  { dest }
       EmitPopX0;  { source }
       EmitBL(rt_str_insert);
@@ -5217,11 +3633,7 @@ begin
       NextToken;
       EmitVarAddr(idx, scope_level);
       { x0 = string addr, pop integer into x1 then swap }
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x1, x0');
       EmitPopX0;  { x0 = integer value }
       { Now: x0 = integer, x1 = string addr }
       EmitBL(rt_int_to_str);
@@ -5248,40 +3660,16 @@ begin
       else if tok_type = TOK_STRING then
       begin
         { String literal - allocate temp on heap }
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
+        writeln('    mov x8, x21');
         EmitMovX0(tok_len);
-        EmitIndent;
-        writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-        writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-        writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-        EmitNL;
+        writeln('    strb w0, [x8]');
         for i := 0 to tok_len - 1 do
         begin
           EmitMovX0(tok_str[i]);
-          EmitIndent;
-          writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-          writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-          writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
-          writechar(35);
-          write(i + 1);
-          writechar(93);  { ] }
-          EmitNL
+          write('    strb w0, [x8, #'); write(i + 1); writeln(']');
         end;
-        EmitIndent;
-        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-        writechar(120); writechar(50); writechar(49);  { x21 }
-        EmitNL;
-        EmitIndent;
-        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-        writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-        EmitNL;
+        writeln('    mov x0, x21');
+        writeln('    add x21, x21, #256');
         NextToken
       end
       else
@@ -5301,18 +3689,10 @@ begin
       NextToken;
       { Get address of v into x0, move to x1, pop value, store }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x1, x0');
       EmitPopX0;  { value }
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       Expect(TOK_COMMA);
       { Third arg: integer variable to receive error code }
       if tok_type <> TOK_IDENT then
@@ -5323,18 +3703,10 @@ begin
       NextToken;
       { Get address of code into x0, move to x1, pop error, store }
       EmitVarAddr(idx, scope_level);
-      EmitIndent;
-      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-      writechar(120); writechar(48);  { x0 }
-      EmitNL;
+      writeln('    mov x1, x0');
       EmitPopX0;  { error }
       { str x0, [x1] }
-      EmitIndent;
-      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-      EmitNL;
+      writeln('    str x0, [x1]');
       Expect(TOK_RPAREN)
     end
     { clrscr = 99,108,114,115,99,114 }
@@ -5484,44 +3856,24 @@ begin
           if sym_level[with_rec_idx] < scope_level then
           begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-            writechar(35);
-            write(sym_offset[with_rec_idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x1, x8, #');
           end
           else
           begin
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-            writechar(35);
-            write(sym_offset[with_rec_idx] + field_offset[arg_count]);
-            EmitNL
+            writeln('    add x1, x29, #');
           end;
           { Store value to field }
           if field_type[arg_count] = TYPE_REAL then
           begin
             EmitPopD0;
             { str d0, [x1] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-            EmitNL
+            writeln('    str d0, [x1]');
           end
           else
           begin
             EmitPopX0;
             { str x0, [x1] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-            EmitNL
+            writeln('    str x0, [x1]');
           end
         end
         else
@@ -5578,19 +3930,9 @@ begin
                   EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
                   EmitPopX1;
                   { x0 = x1 - x0 = index - low_bound }
-                  EmitIndent;
-                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-                  writechar(120); writechar(48);  { x0 }
-                  EmitNL;
+                  writeln('    sub x0, x1, x0');
                   { Multiply by 8 using lsl #3 }
-                  EmitIndent;
-                  writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(35); writechar(51);  { #3 }
-                  EmitNL;
+                  writeln('    lsl x0, x0, #3');
                   { Get base address and subtract element offset }
                   if sym_level[var_arg_idx] < scope_level then
                   begin
@@ -5600,12 +3942,7 @@ begin
                   else
                     EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
                   { Address = base - element_offset }
-                  EmitIndent;
-                  writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                  writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                  writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-                  writechar(120); writechar(48);  { x0 }
-                  EmitNL
+                  writeln('    sub x0, x1, x0');
                 end
                 else
                   { Simple variable - emit address }
@@ -5625,12 +3962,7 @@ begin
         { Pop args from stack into registers in reverse order }
         for i := arg_count - 1 downto 0 do
         begin
-          EmitIndent;
-          writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-          writechar(120); writechar(48 + i); writechar(44); writechar(32);  { xi, }
-          writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
-          writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
-          EmitNL
+          write('    ldr x'); write(i); writeln(', [sp], #16');
         end;
         { Set up static link for callee }
         EmitStaticLink(sym_level[idx], scope_level);
@@ -5653,12 +3985,7 @@ begin
           EmitMovX0(sym_const_val[idx]);
           EmitPopX1;
           { x0 = x1 - x0 = index - low_bound }
-          EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL;
+          writeln('    sub x0, x1, x0');
           { Multiply by element size }
           if sym_var_param_flags[idx] > 0 then
           begin
@@ -5667,21 +3994,11 @@ begin
             EmitPushX0;
             EmitMovX0(lbl1);
             EmitPopX1;
-            EmitIndent;
-            writechar(109); writechar(117); writechar(108); writechar(32);  { mul }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL
+            writeln('    mul x0, x1, x0');
           end
           else
           begin
-            EmitIndent;
-            writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(35); writechar(51);  { #3 }
-            EmitNL
+            writeln('    lsl x0, x0, #3');
           end;
           { Get base address }
           if sym_level[idx] < scope_level then
@@ -5692,12 +4009,7 @@ begin
           else
             EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
           { x1 = base, x0 = offset, compute element address in x1 }
-          EmitIndent;
-          writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-          writechar(120); writechar(48);  { x0 }
-          EmitNL;
+          writeln('    sub x1, x1, x0');
           { Check for field access }
           if (sym_var_param_flags[idx] > 0) and (tok_type = TOK_DOT) then
           begin
@@ -5709,13 +4021,7 @@ begin
             { Add field offset }
             if field_offset[arg_count] > 0 then
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(35);
-              write(field_offset[arg_count]);
-              EmitNL
+              writeln('    add x1, x1, #');
             end;
             EmitPushX1;  { save field address }
             Expect(TOK_ASSIGN);
@@ -5725,20 +4031,12 @@ begin
               if expr_type <> TYPE_REAL then
                 EmitScvtfD0X0;
               EmitPopX1;
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str d0, [x1]');
             end
             else
             begin
               EmitPopX1;
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str x0, [x1]');
             end
           end
           else
@@ -5748,11 +4046,7 @@ begin
             Expect(TOK_ASSIGN);
             ParseExpression;
             EmitPopX1;
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-            EmitNL
+            writeln('    str x0, [x1]');
           end
         end
         else if (sym_type[idx] = TYPE_RECORD) and (tok_type = TOK_DOT) then
@@ -5795,31 +4089,15 @@ begin
             if sym_level[idx] < scope_level then
             begin
               EmitFollowChain(sym_level[idx], scope_level);
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-              writechar(35);
-              write(sym_offset[idx] + lbl1);
-              EmitNL
+              writeln('    add x0, x8, #');
             end
             else
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-              writechar(35);
-              write(sym_offset[idx] + lbl1);
-              EmitNL
+              writeln('    add x0, x29, #');
             end;
             EmitPopD0;
             { str d0, [x0] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            writeln('    str d0, [x0]');
           end
           else
           begin
@@ -5829,31 +4107,15 @@ begin
             if sym_level[idx] < scope_level then
             begin
               EmitFollowChain(sym_level[idx], scope_level);
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-              writechar(35);
-              write(sym_offset[idx] + lbl1);
-              EmitNL
+              writeln('    add x1, x8, #');
             end
             else
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-              writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-              writechar(35);
-              write(sym_offset[idx] + lbl1);
-              EmitNL
+              writeln('    add x1, x29, #');
             end;
             EmitPopX0;
             { str x0, [x1] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-            EmitNL
+            writeln('    str x0, [x1]');
           end
         end
         else if (sym_type[idx] = TYPE_POINTER) and (tok_type = TOK_CARET) then
@@ -5874,11 +4136,7 @@ begin
           { Dereference (count-1) times to get target address }
           for i := 1 to lbl1 - 1 do
           begin
-            EmitIndent;
-            writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            writeln('    ldr x0, [x0]');
           end;
           { lbl2 = remaining pointer depth after all derefs }
           lbl2 := ptr_depth[idx] - lbl1;
@@ -5895,13 +4153,7 @@ begin
             { Add field offset to pointer: x0 = x0 + offset }
             if field_offset[arg_count] > 0 then
             begin
-              EmitIndent;
-              writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(35);
-              write(field_offset[arg_count]);
-              EmitNL
+              writeln('    add x0, x0, #');
             end;
             { Handle nested record fields }
             while (field_type[arg_count] = TYPE_RECORD) and (tok_type = TOK_DOT) do
@@ -5915,13 +4167,7 @@ begin
                 Error(15);
               if field_offset[arg_count] > 0 then
               begin
-                EmitIndent;
-                writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-                writechar(35);
-                write(field_offset[arg_count]);
-                EmitNL
+                writeln('    add x0, x0, #');
               end;
               NextToken
             end;
@@ -5934,21 +4180,13 @@ begin
                 EmitScvtfD0X0;
               EmitPopX1;  { get address into x1 }
               { str d0, [x1] }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str d0, [x1]');
             end
             else
             begin
               EmitPopX1;  { get address into x1 }
               { str x0, [x1] }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str x0, [x1]');
             end
           end
           else if (lbl2 = 0) and (ptr_ultimate_type[idx] = TYPE_ARRAY) and (tok_type = TOK_LBRACKET) then
@@ -5965,27 +4203,12 @@ begin
             EmitMovX0(ptr_arr_lo[arg_count]);
             EmitPopX1;
             { x0 = x1 - x0 = index - low_bound }
-            EmitIndent;
-            writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL;
+            writeln('    sub x0, x1, x0');
             { Multiply by 8 using lsl #3 }
-            EmitIndent;
-            writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-            writechar(35); writechar(51);  { #3 }
-            EmitNL;
+            writeln('    lsl x0, x0, #3');
             { Add to base: x0 = base + offset }
             EmitPopX1;  { x1 = base address }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL;
+            writeln('    add x8, x1, x0');
             { x8 now has element address }
             Expect(TOK_ASSIGN);
             ParseExpression;  { value to store }
@@ -5994,19 +4217,11 @@ begin
             begin
               if expr_type <> TYPE_REAL then
                 EmitScvtfD0X0;
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-              EmitNL
+              writeln('    str d0, [x8]');
             end
             else
             begin
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-              EmitNL
+              writeln('    str x0, [x8]');
             end
           end
           else
@@ -6023,22 +4238,14 @@ begin
                 EmitScvtfD0X0;
               EmitPopX1;  { get address into x1 }
               { str d0, [x1] }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str d0, [x1]');
             end
             else
             begin
               { Value in x0 }
               EmitPopX1;  { get address into x1 }
               { str x0, [x1] }
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-              writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-              writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
-              EmitNL
+              writeln('    str x0, [x1]');
             end
           end
         end
@@ -6055,21 +4262,12 @@ begin
             Expect(TOK_RBRACKET);
             { Add index to base: address = base + index }
             EmitPopX1;  { x1 = base address }
-            EmitIndent;
-            writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-            writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL;
+            writeln('    add x8, x1, x0');
             { x8 now has the address to store to }
             Expect(TOK_ASSIGN);
             ParseExpression;  { value to store in x0 }
             { strb w0, [x8] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-            writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-            writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-            EmitNL
+            writeln('    strb w0, [x8]');
           end
           else
           begin
@@ -6085,23 +4283,11 @@ begin
               { add/sub x8, x8, #offset }
               if sym_offset[idx] < 0 then
               begin
-                EmitIndent;
-                writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(35);
-                write(0 - sym_offset[idx]);
-                EmitNL
+                writeln('    sub x8, x8, #');
               end
               else
               begin
-                EmitIndent;
-                writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(35);
-                write(sym_offset[idx]);
-                EmitNL
+                writeln('    add x8, x8, #');
               end
             end
             else
@@ -6109,44 +4295,21 @@ begin
               { add/sub x8, x29, #offset }
               if sym_offset[idx] < 0 then
               begin
-                EmitIndent;
-                writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-                writechar(35);
-                write(0 - sym_offset[idx]);
-                EmitNL
+                writeln('    sub x8, x29, #');
               end
               else
               begin
-                EmitIndent;
-                writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-                writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-                writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-                writechar(35);
-                write(sym_offset[idx]);
-                EmitNL
+                writeln('    add x8, x29, #');
               end
             end;
             { Store length at [x8] }
             EmitMovX0(tok_len);
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-            writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-            writechar(91); writechar(120); writechar(56); writechar(93);  { [x8] }
-            EmitNL;
+            writeln('    strb w0, [x8]');
             { Store each character at [x8+1], [x8+2], etc }
             for i := 0 to tok_len - 1 do
             begin
               EmitMovX0(tok_str[i]);
-              EmitIndent;
-              writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
-              writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
-              writechar(91); writechar(120); writechar(56); writechar(44); writechar(32);  { [x8, }
-              writechar(35);
-              write(i + 1);
-              writechar(93);  { ] }
-              EmitNL
+              write('    strb w0, [x8, #'); write(i + 1); writeln(']');
             end;
             NextToken
           end
@@ -6157,11 +4320,7 @@ begin
             if expr_type <> TYPE_STRING then
               Error(12);  { expected string }
             { x0 = source string address, copy to dest }
-            EmitIndent;
-            writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(120); writechar(48);  { x0 }
-            EmitNL;
+            writeln('    mov x1, x0');
             { Get dest address into x0 }
             EmitVarAddr(idx, scope_level);
             { Call rt_str_copy(x0=dest, x1=source) }
@@ -6190,11 +4349,7 @@ begin
             { x0 now has the address, pop value to d0 }
             EmitPopD0;
             { Store d0 to [x0] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(100); writechar(48); writechar(44); writechar(32);  { d0, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            writeln('    str d0, [x0]');
           end
           else
           begin
@@ -6222,11 +4377,7 @@ begin
             { x0 now has the address, pop value to x1 }
             EmitPopX1;
             { Store x1 to [x0] }
-            EmitIndent;
-            writechar(115); writechar(116); writechar(114); writechar(32);  { str }
-            writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
-            writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
-            EmitNL
+            writeln('    str x1, [x0]');
           end
           else
           begin
@@ -6253,37 +4404,16 @@ begin
         begin
           { String function - x0 has source string addr, copy to heap for return }
           { x0 = source, x1 = dest (heap), call str_copy }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(48);  { x0 - save source }
-          EmitNL;
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-          writechar(120); writechar(50); writechar(49);  { x21 - heap ptr }
-          EmitNL;
+          writeln('    mov x8, x0');
+          writeln('    mov x0, x21');
           { Save heap addr as result }
           EmitSturX0(-16);
           { x8 = dest, x9 = source for str_copy }
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
-          writechar(120); writechar(56);  { x8 - source }
-          EmitNL;
-          EmitIndent;
-          writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
-          writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-          writechar(120); writechar(50); writechar(49);  { x21 - dest }
-          EmitNL;
+          writeln('    mov x9, x8');
+          writeln('    mov x8, x21');
           EmitBL(rt_str_copy);
           { Advance heap pointer }
-          EmitIndent;
-          writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-          writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-          writechar(120); writechar(50); writechar(49); writechar(44); writechar(32);  { x21, }
-          writechar(35); writechar(50); writechar(53); writechar(54);  { #256 }
-          EmitNL
+          writeln('    add x21, x21, #256');
         end
         else
           EmitSturX0(-16)
@@ -6294,4 +4424,5 @@ begin
     end  { end of else for non-builtin identifier }
   end  { end of else if tok_type = TOK_IDENT }
 end;
+
 

@@ -13,7 +13,7 @@ static int label_count = 0;
 static struct {
     char *str;
     int len;
-} strings[256];
+} strings[4096];
 static int num_strings = 0;
 
 static void error(Parser *p, const char *msg) {
