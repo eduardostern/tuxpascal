@@ -431,10 +431,10 @@ MIT License. Use it, learn from it, make something beautiful.
 **TuxPascal** — *Because real programmers never forgot Pascal.*
 
 ```
-╔══════════════════════════════════════════════════════════════════╗
-║  Compile Complete. 0 Errors, 0 Warnings, 0 Hints.               ║
-║  Press any key to run...                                         ║
-╚══════════════════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════╗
+║  Compile Complete. 0 Errors, 0 Warnings, 0 Hints.              ║
+║  Press any key to run...                                       ║
+╚════════════════════════════════════════════════════════════════╝
 ```
 
 </div>
