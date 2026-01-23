@@ -16,7 +16,7 @@
 
 [![Self-Hosting](https://img.shields.io/badge/Self--Hosting-Verified-brightgreen)]()
 [![Platform](https://img.shields.io/badge/Platform-ARM64%20macOS-blue)]()
-[![License](https://img.shields.io/badge/License-MIT-yellow)]()
+[![License](https://img.shields.io/badge/License-Unlicense-blue)]()
 [![Borland Spirit](https://img.shields.io/badge/Borland%20Spirit-100%25-red)]()
 
 </div>
@@ -422,7 +422,11 @@ Found a bug? Want to add a feature? Remember that warm feeling when you submitte
 
 ## License
 
-MIT License. Use it, learn from it, make something beautiful.
+**Unlicense** - Public Domain. No restrictions. No attribution required.
+
+Use it, sell it, modify it, claim you wrote it, print it and wallpaper your bathroom with it. We don't care. Just make something beautiful.
+
+*"Treat this compiler like a book"* - The Borland Way
 
 ---
 
