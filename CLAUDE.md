@@ -135,8 +135,28 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 **Include Directives:** `{$I filename}` or `{$INCLUDE filename}` - processed by bootstrap compiler only
 
-## Not Yet Implemented
+**Units (partial):** `unit`, `interface`, `implementation`, `uses` - unit parsing and TPU file generation
 
-- Units/modules (`unit`, `uses`)
+## TPU File Format
+
+When compiling a unit, the compiler generates a `.tpu` file containing interface metadata:
+
+```
+TUXPASCAL_UNIT_V1
+UNIT UnitName
+INTERFACE
+CONST name TYPE value
+VAR name TYPE offset
+PROC name label var_param_flags
+FUNC name TYPE label var_param_flags
+TYPE name kind const_val label
+ENDINTERFACE
+```
+
+The assembly code goes to stdout (redirected to `.s` file by the wrapper). The TPU file is used when other programs `uses` the unit to import interface symbols.
+
+## Not Yet Fully Implemented
+
+- Units: TPU loading for `uses` clause, inter-unit linking, unit initialization calls
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.

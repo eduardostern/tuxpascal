@@ -1,6 +1,108 @@
 { ----- Lexer ----- }
 
+{ Check if current include file is at EOF }
+function IncludeEof: integer;
+begin
+  IncludeEof := 0;
+  if include_depth = 1 then
+  begin if eof(include_file0) then IncludeEof := 1 end
+  else if include_depth = 2 then
+  begin if eof(include_file1) then IncludeEof := 1 end
+  else if include_depth = 3 then
+  begin if eof(include_file2) then IncludeEof := 1 end
+  else if include_depth = 4 then
+  begin if eof(include_file3) then IncludeEof := 1 end
+  else if include_depth = 5 then
+  begin if eof(include_file4) then IncludeEof := 1 end
+  else if include_depth = 6 then
+  begin if eof(include_file5) then IncludeEof := 1 end
+  else if include_depth = 7 then
+  begin if eof(include_file6) then IncludeEof := 1 end
+  else if include_depth = 8 then
+  begin if eof(include_file7) then IncludeEof := 1 end
+end;
+
+{ Read a character from current include file }
+function IncludeRead: integer;
+var
+  c: integer;
+begin
+  c := -1;
+  if include_depth = 1 then
+    read(include_file0, c)
+  else if include_depth = 2 then
+    read(include_file1, c)
+  else if include_depth = 3 then
+    read(include_file2, c)
+  else if include_depth = 4 then
+    read(include_file3, c)
+  else if include_depth = 5 then
+    read(include_file4, c)
+  else if include_depth = 6 then
+    read(include_file5, c)
+  else if include_depth = 7 then
+    read(include_file6, c)
+  else if include_depth = 8 then
+    read(include_file7, c);
+  IncludeRead := c
+end;
+
+{ Close current include file }
+procedure IncludeClose;
+begin
+  if include_depth = 1 then
+    close(include_file0)
+  else if include_depth = 2 then
+    close(include_file1)
+  else if include_depth = 3 then
+    close(include_file2)
+  else if include_depth = 4 then
+    close(include_file3)
+  else if include_depth = 5 then
+    close(include_file4)
+  else if include_depth = 6 then
+    close(include_file5)
+  else if include_depth = 7 then
+    close(include_file6)
+  else if include_depth = 8 then
+    close(include_file7)
+end;
+
+{ Read a single character from stdin or current include file }
+function ReadCurrentChar: integer;
+begin
+  if include_depth = 0 then
+    ReadCurrentChar := readchar
+  else
+  begin
+    if IncludeEof = 1 then
+      ReadCurrentChar := -1
+    else
+      ReadCurrentChar := IncludeRead
+  end
+end;
+
+{ Pop back to parent include file }
+procedure PopIncludeFile;
+begin
+  if include_depth > 0 then
+  begin
+    IncludeClose;
+    include_depth := include_depth - 1;
+    { Restore parent file state }
+    if include_depth > 0 then
+    begin
+      line_num := include_line[include_depth - 1];
+      col_num := include_col[include_depth - 1];
+      ch := include_ch[include_depth - 1];
+      pushback_ch := include_pushback[include_depth - 1]
+    end
+  end
+end;
+
 procedure NextChar;
+var
+  c: integer;
 begin
   if pushback_ch >= 0 then
   begin
@@ -9,7 +111,17 @@ begin
   end
   else
   begin
-    ch := readchar;
+    c := ReadCurrentChar;
+    { If EOF in include file, pop back to parent }
+    while (c = -1) and (include_depth > 0) do
+    begin
+      PopIncludeFile;
+      if include_depth = 0 then
+        c := readchar
+      else
+        c := ReadCurrentChar
+    end;
+    ch := c;
     if ch = 10 then
     begin
       line_num := line_num + 1;
@@ -20,18 +132,201 @@ begin
   end
 end;
 
+{ Open include file using filename from tok_str at given position }
+procedure IncludeOpenFromTokStr(start, len: integer);
+begin
+  if include_depth = 1 then
+  begin assigntokstr(include_file0, start, len); reset(include_file0) end
+  else if include_depth = 2 then
+  begin assigntokstr(include_file1, start, len); reset(include_file1) end
+  else if include_depth = 3 then
+  begin assigntokstr(include_file2, start, len); reset(include_file2) end
+  else if include_depth = 4 then
+  begin assigntokstr(include_file3, start, len); reset(include_file3) end
+  else if include_depth = 5 then
+  begin assigntokstr(include_file4, start, len); reset(include_file4) end
+  else if include_depth = 6 then
+  begin assigntokstr(include_file5, start, len); reset(include_file5) end
+  else if include_depth = 7 then
+  begin assigntokstr(include_file6, start, len); reset(include_file6) end
+  else if include_depth = 8 then
+  begin assigntokstr(include_file7, start, len); reset(include_file7) end
+end;
+
+{ Push a new include file onto the stack }
+procedure PushIncludeFile(path_start, path_len: integer);
+var
+  i: integer;
+begin
+  if include_depth >= 8 then
+    Error(17)  { include nesting too deep - Error halts }
+  else
+  begin
+    { Save current state }
+    if include_depth > 0 then
+    begin
+      include_line[include_depth - 1] := line_num;
+      include_col[include_depth - 1] := col_num;
+      include_ch[include_depth - 1] := ch;
+      include_pushback[include_depth - 1] := pushback_ch
+    end;
+
+    { Open include file }
+    include_depth := include_depth + 1;
+    IncludeOpenFromTokStr(path_start, path_len);
+
+    { Store path for reference (include_depth is already incremented) }
+    for i := 0 to path_len - 1 do
+      include_path[(include_depth - 1) * 256 + i] := tok_str[path_start + i];
+    include_path[(include_depth - 1) * 256 + path_len] := 0;
+
+    line_num := 1;
+    col_num := 0;
+    pushback_ch := -1;
+    { Read first character from new file }
+    ch := ReadCurrentChar
+  end
+end;
+
+{ Parse and process include directive: dollar-I or dollar-INCLUDE }
+procedure ParseIncludeDirective;
+var
+  i: integer;
+begin
+  { Skip whitespace after I or INCLUDE }
+  while (ch = 32) or (ch = 9) do
+    NextChar;
+
+  { Read filename until closing brace or whitespace }
+  i := 0;
+  while (ch <> 125) and (ch <> 32) and (ch <> 9) and (ch <> -1) and (i < 255) do
+  begin
+    tok_str[i] := ch;
+    i := i + 1;
+    NextChar
+  end;
+  tok_str[i] := 0;
+
+  { Skip to end of directive }
+  while (ch <> 125) and (ch <> -1) do
+    NextChar;
+  if ch = 125 then
+    NextChar;
+
+  { Process include }
+  if i > 0 then
+    PushIncludeFile(0, i)
+end;
+
 procedure SkipWhitespace;
+var
+  directive_char: integer;
 begin
   while (ch = 32) or (ch = 9) or (ch = 10) or (ch = 13) do
     NextChar;
-  { Skip comments }
+  { Skip comments and process directives }
   if ch = 123 then  { '{' }
   begin
-    while (ch <> 125) and (ch <> -1) do
+    NextChar;
+    { Check for compiler directive }
+    if ch = 36 then  { '$' }
+    begin
       NextChar;
-    if ch = 125 then
-      NextChar;
-    SkipWhitespace
+      directive_char := ToLower(ch);
+      if directive_char = 105 then  { 'i' }
+      begin
+        NextChar;
+        { Check for 'include' or just whitespace after 'i' }
+        if (ch = 32) or (ch = 9) or (ch = 125) then
+        begin
+          { Short form: dollar-I filename }
+          ParseIncludeDirective;
+          SkipWhitespace
+        end
+        else if ToLower(ch) = 110 then  { 'n' - could be 'include' }
+        begin
+          { Check for 'nclude' }
+          NextChar;
+          if ToLower(ch) = 99 then  { 'c' }
+          begin
+            NextChar;
+            if ToLower(ch) = 108 then  { 'l' }
+            begin
+              NextChar;
+              if ToLower(ch) = 117 then  { 'u' }
+              begin
+                NextChar;
+                if ToLower(ch) = 100 then  { 'd' }
+                begin
+                  NextChar;
+                  if ToLower(ch) = 101 then  { 'e' }
+                  begin
+                    NextChar;
+                    { Full form: dollar-INCLUDE filename }
+                    ParseIncludeDirective;
+                    SkipWhitespace
+                  end
+                  else
+                  begin
+                    { Unknown directive, skip to end }
+                    while (ch <> 125) and (ch <> -1) do NextChar;
+                    if ch = 125 then NextChar;
+                    SkipWhitespace
+                  end
+                end
+                else
+                begin
+                  while (ch <> 125) and (ch <> -1) do NextChar;
+                  if ch = 125 then NextChar;
+                  SkipWhitespace
+                end
+              end
+              else
+              begin
+                while (ch <> 125) and (ch <> -1) do NextChar;
+                if ch = 125 then NextChar;
+                SkipWhitespace
+              end
+            end
+            else
+            begin
+              while (ch <> 125) and (ch <> -1) do NextChar;
+              if ch = 125 then NextChar;
+              SkipWhitespace
+            end
+          end
+          else
+          begin
+            while (ch <> 125) and (ch <> -1) do NextChar;
+            if ch = 125 then NextChar;
+            SkipWhitespace
+          end
+        end
+        else
+        begin
+          { Unknown directive starting with 'i', skip }
+          while (ch <> 125) and (ch <> -1) do NextChar;
+          if ch = 125 then NextChar;
+          SkipWhitespace
+        end
+      end
+      else
+      begin
+        { Unknown directive, skip as comment }
+        while (ch <> 125) and (ch <> -1) do NextChar;
+        if ch = 125 then NextChar;
+        SkipWhitespace
+      end
+    end
+    else
+    begin
+      { Regular comment }
+      while (ch <> 125) and (ch <> -1) do
+        NextChar;
+      if ch = 125 then
+        NextChar;
+      SkipWhitespace
+    end
   end
 end;
 
@@ -267,21 +562,46 @@ begin
           tok_type := TOK_TEXT;
       if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 105) then { fi }
         if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 101) then { le }
-          tok_type := TOK_FILE
+          tok_type := TOK_FILE;
+      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
+        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) then { it }
+          tok_type := TOK_UNIT;
+      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 115) then { us }
+        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 115) then { es }
+          tok_type := TOK_USES
     end;
     if tok_len = 9 then
+    begin
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
         if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 99) then { oc }
           if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 100) then { ed }
             if (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 114) then { ur }
               if ToLower(tok_str[8]) = 101 then { e }
                 tok_type := TOK_PROCEDURE;
+      { interface = 105,110,116,101,114,102,97,99,101 }
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
+          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 102) then { rf }
+            if (ToLower(tok_str[6]) = 97) and (ToLower(tok_str[7]) = 99) then { ac }
+              if ToLower(tok_str[8]) = 101 then { e }
+                tok_type := TOK_INTERFACE
+    end;
     if tok_len = 8 then
       if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 117) then { fu }
         if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 99) then { nc }
           if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 105) then { ti }
             if (ToLower(tok_str[6]) = 111) and (ToLower(tok_str[7]) = 110) then { on }
-              tok_type := TOK_FUNCTION
+              tok_type := TOK_FUNCTION;
+    { implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
+    if tok_len = 14 then
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 109) then { im }
+        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 108) then { pl }
+          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 109) then { em }
+            if (ToLower(tok_str[6]) = 101) and (ToLower(tok_str[7]) = 110) then { en }
+              if (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 97) then { ta }
+                if (ToLower(tok_str[10]) = 116) and (ToLower(tok_str[11]) = 105) then { ti }
+                  if (ToLower(tok_str[12]) = 111) and (ToLower(tok_str[13]) = 110) then { on }
+                    tok_type := TOK_IMPLEMENTATION
   end
   else if ch = 39 then  { single quote - string }
   begin

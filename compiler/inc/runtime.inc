@@ -310,6 +310,37 @@ begin
   EmitRet
 end;
 
+procedure EmitWriteCharFdRuntime;
+begin
+  { Write char to fd routine - x0=fd, x1=char }
+  EmitLabel(rt_write_char_fd);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store char on stack }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb w1, [sp] }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { x0 already has fd, set up rest of syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
 procedure EmitPrintStringRuntime;
 var
   loop_lbl, done_lbl: integer;

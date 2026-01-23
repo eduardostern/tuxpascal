@@ -1251,8 +1251,15 @@ static void parse_factor(Parser *p) {
         }
     }
     else if (check(p, TOK_STRING)) {
-        // Strings are handled specially in write/writeln
-        error(p, "string literals only allowed in write/writeln");
+        // String literal - store in data section and return pointer
+        char *str_val = current(p)->str_val;
+        advance(p);
+        int len = strlen(str_val);
+        int id = add_string(str_val, len);
+        free(str_val);
+        // Load address of string
+        emit("adrp x0, str%d@PAGE", id);
+        emit("add x0, x0, str%d@PAGEOFF", id);
     }
     else if (check(p, TOK_TRUE)) {
         advance(p);
@@ -1615,6 +1622,46 @@ static void parse_assignment_or_call(Parser *p) {
         return;
     }
 
+    // writefilechar(file, char) - write single char to file
+    if (strcmp(lower_name, "writefilechar") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        // First argument: file variable
+        if (!check(p, TOK_IDENT)) {
+            error(p, "writefilechar requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "writefilechar requires a text file variable");
+        }
+        // Load file fd
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("ldr x0, [x0]");  // load fd
+        emit("str x0, [sp, #-16]!");  // save fd
+
+        expect(p, TOK_COMMA);
+        // Second argument: character to write
+        parse_expression(p);
+        expect(p, TOK_RPAREN);
+
+        emit("mov x1, x0");  // char in x1
+        emit("ldr x0, [sp], #16");  // restore fd
+        emit("bl L%d", rt_write_char_fd);
+        return;
+    }
+
     if (strcmp(lower_name, "halt") == 0) {
         free(name);
         if (match(p, TOK_LPAREN)) {
@@ -1720,6 +1767,90 @@ static void parse_assignment_or_call(Parser *p) {
         return;
     }
 
+    // assigntokstr(file, start, len) - assign filename from tok_str array
+    if (strcmp(lower_name, "assigntokstr") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        // First argument: file variable
+        if (!check(p, TOK_IDENT)) {
+            error(p, "assigntokstr requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "assigntokstr requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_COMMA);
+
+        // Second argument: start index in tok_str
+        parse_expression(p);
+        emit("str x0, [sp, #-16]!");  // save start
+        expect(p, TOK_COMMA);
+
+        // Third argument: length
+        parse_expression(p);
+        emit("mov x2, x0");           // x2 = len
+        emit("ldr x1, [sp], #16");    // x1 = start
+
+        expect(p, TOK_RPAREN);
+
+        int current_level = p->symbols.current->level;
+
+        // Get address of tok_str (global variable)
+        Symbol *tok_str_sym = symtab_lookup(&p->symbols, "tok_str");
+        if (!tok_str_sym) {
+            error(p, "tok_str not found - required for assigntokstr");
+        }
+        // Load base address of tok_str (handle scope levels)
+        if (tok_str_sym->level < current_level) {
+            emit_addr_outer(tok_str_sym->offset, tok_str_sym->level, current_level);
+        } else {
+            emit_addr_fp(tok_str_sym->offset);
+        }
+        emit("mov x3, x0");           // x3 = tok_str base
+        // x3 + x1*8 = source address (tok_str elements are 8 bytes)
+        emit("lsl x1, x1, #3");       // x1 = start * 8
+        emit("add x3, x3, x1");       // x3 = source address
+
+        // Get destination address (file var + 16)
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("add x0, x0, #16");      // x0 = dest (filename field)
+
+        // Copy x2 characters from x3 to x0
+        int copy_loop = new_label();
+        int copy_done = new_label();
+        emit_label(copy_loop);
+        emit("cbz x2, L%d", copy_done);
+        emit("ldr x4, [x3], #8");     // load integer (8 bytes) from tok_str
+        emit("strb w4, [x0], #1");    // store as byte to filename
+        emit("sub x2, x2, #1");
+        emit("b L%d", copy_loop);
+        emit_label(copy_done);
+        emit("strb wzr, [x0]");       // null-terminate
+
+        // Initialize fd to -1 and mode to 0
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("mov x1, #-1");
+        emit("str x1, [x0]");         // fd = -1
+        emit("str xzr, [x0, #8]");    // mode = 0
+        return;
+    }
+
     if (strcmp(lower_name, "reset") == 0) {
         free(name);
         expect(p, TOK_LPAREN);
@@ -1807,6 +1938,69 @@ static void parse_assignment_or_call(Parser *p) {
             emit_addr_fp(file_sym->offset);
         }
         emit("bl L%d", rt_close);
+        return;
+    }
+
+    // read(file, var) - read a character/integer from text file
+    if (strcmp(lower_name, "read") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        // First argument: text file variable
+        if (!check(p, TOK_IDENT)) {
+            error(p, "read requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "read requires a text file variable as first argument");
+        }
+        free(file_name);
+        expect(p, TOK_COMMA);
+
+        // Second argument: variable to store result
+        if (!check(p, TOK_IDENT)) {
+            error(p, "read requires a variable as second argument");
+        }
+        char *var_name = current(p)->str_val;
+        advance(p);
+        Symbol *var_sym = symtab_lookup(&p->symbols, var_name);
+        if (!var_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", var_name);
+            error(p, msg);
+        }
+        free(var_name);
+        expect(p, TOK_RPAREN);
+
+        // Load fd from file variable
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("ldr x0, [x0]");  // x0 = file.fd
+
+        // Call readfromfd routine - returns char in x0 (-1 for EOF)
+        emit("bl L%d", rt_readfromfd);
+
+        // Store result in variable
+        if (var_sym->level < current_level) {
+            // Outer scope - save x0 first
+            emit("str x0, [sp, #-16]!");
+            emit_addr_outer(var_sym->offset, var_sym->level, current_level);
+            emit("mov x1, x0");
+            emit("ldr x0, [sp], #16");
+            emit("str x0, [x1]");
+        } else {
+            emit_store_fp(var_sym->offset);
+        }
         return;
     }
 

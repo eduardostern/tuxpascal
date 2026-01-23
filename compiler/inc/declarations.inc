@@ -1100,11 +1100,14 @@ begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration }
-  if tok_type = TOK_FORWARD then
+  { Check for forward declaration or interface declaration }
+  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
   begin
-    NextToken;
-    Expect(TOK_SEMICOLON);
+    if tok_type = TOK_FORWARD then
+    begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    end;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
@@ -1341,11 +1344,14 @@ begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration }
-  if tok_type = TOK_FORWARD then
+  { Check for forward declaration or interface declaration }
+  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
   begin
-    NextToken;
-    Expect(TOK_SEMICOLON);
+    if tok_type = TOK_FORWARD then
+    begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    end;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
@@ -1454,30 +1460,482 @@ begin
   end  { end of else for non-forward declaration }
 end;
 
-procedure ParseProgram;
+{ Write unit name to TPU file (from current_unit_name) }
+procedure TPUWriteUnitName;
 var
-  main_lbl: integer;
+  i: integer;
 begin
-  Expect(TOK_PROGRAM);
+  for i := 0 to current_unit_len - 1 do
+    writefilechar(tpu_file, current_unit_name[i])
+end;
+
+{ Write an integer to TPU file }
+procedure TPUWriteInt(n: integer);
+var
+  neg: integer;
+  digits: array[0..19] of integer;
+  count, i: integer;
+begin
+  neg := 0;
+  if n < 0 then
+  begin
+    neg := 1;
+    n := 0 - n
+  end;
+  count := 0;
+  if n = 0 then
+  begin
+    digits[0] := 48;
+    count := 1
+  end
+  else
+  begin
+    while n > 0 do
+    begin
+      digits[count] := 48 + (n mod 10);
+      n := n div 10;
+      count := count + 1
+    end
+  end;
+  if neg = 1 then
+    writefilechar(tpu_file, 45);  { '-' }
+  for i := count - 1 downto 0 do
+    writefilechar(tpu_file, digits[i])
+end;
+
+{ Write symbol name to TPU file }
+procedure TPUWriteSymName(idx: integer);
+var
+  base, i, c: integer;
+begin
+  base := idx * 32;
+  i := 0;
+  c := sym_name[base];
+  while c <> 0 do
+  begin
+    writefilechar(tpu_file, c);
+    i := i + 1;
+    c := sym_name[base + i]
+  end
+end;
+
+{ Write type name to TPU file }
+procedure TPUWriteType(t: integer);
+begin
+  if t = TYPE_INTEGER then
+    write(tpu_file, 'INTEGER')
+  else if t = TYPE_CHAR then
+    write(tpu_file, 'CHAR')
+  else if t = TYPE_BOOLEAN then
+    write(tpu_file, 'BOOLEAN')
+  else if t = TYPE_STRING then
+    write(tpu_file, 'STRING')
+  else if t = TYPE_REAL then
+    write(tpu_file, 'REAL')
+  else if t = TYPE_VOID then
+    write(tpu_file, 'VOID')
+  else if t = TYPE_POINTER then
+    write(tpu_file, 'POINTER')
+  else if t = TYPE_RECORD then
+    write(tpu_file, 'RECORD')
+  else if t = TYPE_ARRAY then
+    write(tpu_file, 'ARRAY')
+  else
+    write(tpu_file, 'UNKNOWN')
+end;
+
+{ Write TPU file for current unit }
+procedure WriteTPUFile;
+var
+  i, base, c, j: integer;
+begin
+  { Build filename in tok_str: UnitName.tpu }
+  for i := 0 to current_unit_len - 1 do
+    tok_str[i] := current_unit_name[i];
+  tok_str[current_unit_len] := 46;      { . }
+  tok_str[current_unit_len + 1] := 116; { t }
+  tok_str[current_unit_len + 2] := 112; { p }
+  tok_str[current_unit_len + 3] := 117; { u }
+  tok_str[current_unit_len + 4] := 0;
+
+  { Open file for writing using assigntokstr }
+  assigntokstr(tpu_file, 0, current_unit_len + 4);
+  rewrite(tpu_file);
+
+  { Write header }
+  writeln(tpu_file, 'TUXPASCAL_UNIT_V1');
+
+  { Write unit name }
+  write(tpu_file, 'UNIT ');
+  TPUWriteUnitName;
+  writeln(tpu_file);
+
+  { Write interface section }
+  writeln(tpu_file, 'INTERFACE');
+
+  { Write interface symbols }
+  for i := interface_start to interface_end do
+  begin
+    if sym_kind[i] = SYM_CONST then
+    begin
+      write(tpu_file, 'CONST ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_const_val[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_VAR then
+    begin
+      write(tpu_file, 'VAR ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_offset[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_PROCEDURE then
+    begin
+      write(tpu_file, 'PROC ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_var_param_flags[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_FUNCTION then
+    begin
+      write(tpu_file, 'FUNC ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_var_param_flags[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_TYPEDEF then
+    begin
+      write(tpu_file, 'TYPE ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_const_val[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      writeln(tpu_file)
+    end
+  end;
+
+  writeln(tpu_file, 'ENDINTERFACE');
+
+  close(tpu_file)
+end;
+
+{ Read a line from TPU file into tpu_line buffer }
+function TPUReadLine: integer;
+var
+  c: integer;
+begin
+  tpu_line_len := 0;
+  if eof(tpu_file) then
+  begin
+    TPUReadLine := 0
+  end
+  else
+  begin
+    while not eof(tpu_file) do
+    begin
+      read(tpu_file, c);
+      if c = 10 then
+      begin
+        tpu_line[tpu_line_len] := 0;
+        TPUReadLine := 1
+      end
+      else if c <> 13 then
+      begin
+        tpu_line[tpu_line_len] := c;
+        tpu_line_len := tpu_line_len + 1
+      end
+    end;
+    tpu_line[tpu_line_len] := 0;
+    TPUReadLine := 1
+  end
+end;
+
+{ Note: TPULineStartsWith removed - checks are inlined using first 3 chars }
+
+{ Parse integer from tpu_line at tpu_pos (updates tpu_pos) }
+function TPUParseInt: integer;
+var
+  neg, result: integer;
+begin
+  neg := 0;
+  result := 0;
+  if tpu_line[tpu_pos] = 45 then  { '-' }
+  begin
+    neg := 1;
+    tpu_pos := tpu_pos + 1
+  end;
+  while (tpu_line[tpu_pos] >= 48) and (tpu_line[tpu_pos] <= 57) do
+  begin
+    result := result * 10 + (tpu_line[tpu_pos] - 48);
+    tpu_pos := tpu_pos + 1
+  end;
+  if neg = 1 then
+    TPUParseInt := 0 - result
+  else
+    TPUParseInt := result
+end;
+
+{ Skip spaces in tpu_line at tpu_pos (updates tpu_pos) }
+procedure TPUSkipSpaces;
+begin
+  while tpu_line[tpu_pos] = 32 do
+    tpu_pos := tpu_pos + 1
+end;
+
+{ Parse identifier from tpu_line at tpu_pos, store in tok_str (updates tpu_pos) }
+procedure TPUParseIdent;
+begin
+  tok_len := 0;
+  TPUSkipSpaces;
+  while (tpu_line[tpu_pos] <> 32) and (tpu_line[tpu_pos] <> 0) do
+  begin
+    tok_str[tok_len] := tpu_line[tpu_pos];
+    tok_len := tok_len + 1;
+    tpu_pos := tpu_pos + 1
+  end;
+  tok_str[tok_len] := 0
+end;
+
+{ Parse type from tpu_line at tpu_pos, return TYPE_* constant }
+function TPUParseType: integer;
+begin
+  TPUParseIdent;
+  if (tok_str[0] = 73) and (tok_str[1] = 78) and (tok_str[2] = 84) then  { INT }
+    TPUParseType := TYPE_INTEGER
+  else if (tok_str[0] = 67) and (tok_str[1] = 72) and (tok_str[2] = 65) then  { CHA }
+    TPUParseType := TYPE_CHAR
+  else if (tok_str[0] = 66) and (tok_str[1] = 79) and (tok_str[2] = 79) then  { BOO }
+    TPUParseType := TYPE_BOOLEAN
+  else if (tok_str[0] = 83) and (tok_str[1] = 84) and (tok_str[2] = 82) then  { STR }
+    TPUParseType := TYPE_STRING
+  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 65) then  { REA }
+    TPUParseType := TYPE_REAL
+  else if (tok_str[0] = 86) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { VOI }
+    TPUParseType := TYPE_VOID
+  else if (tok_str[0] = 80) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { POI }
+    TPUParseType := TYPE_POINTER
+  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 67) then  { REC }
+    TPUParseType := TYPE_RECORD
+  else if (tok_str[0] = 65) and (tok_str[1] = 82) and (tok_str[2] = 82) then  { ARR }
+    TPUParseType := TYPE_ARRAY
+  else
+    TPUParseType := TYPE_INTEGER
+end;
+
+{ Load interface from a TPU file }
+function LoadTPUInterface: integer;
+var
+  idx: integer;
+  unit_base, i: integer;
+begin
+  LoadTPUInterface := 0;
+
+  { Read and verify header }
+  if TPUReadLine = 0 then
+  begin
+    LoadTPUInterface := -1
+  end
+  else
+  begin
+    { Check for TUXPASCAL_UNIT_V1 }
+    if (tpu_line[0] <> 84) or (tpu_line[1] <> 85) or (tpu_line[2] <> 88) then
+    begin
+      LoadTPUInterface := -1
+    end
+    else
+    begin
+      { Read UNIT line }
+      if TPUReadLine = 0 then
+        LoadTPUInterface := -1
+      else
+      begin
+        { Store unit name for symbol prefixing }
+        unit_base := loaded_count * 32;
+        tpu_pos := 5;  { Skip 'UNIT ' }
+        i := 0;
+        while (tpu_line[tpu_pos] <> 0) and (i < 31) do
+        begin
+          loaded_units[unit_base + i] := tpu_line[tpu_pos];
+          tpu_pos := tpu_pos + 1;
+          i := i + 1
+        end;
+        loaded_units[unit_base + i] := 0;
+
+        unit_sym_start[loaded_count] := sym_count;
+
+        { Read INTERFACE line }
+        if TPUReadLine = 0 then
+          LoadTPUInterface := -1
+        else
+        begin
+          { Parse interface declarations until ENDINTERFACE }
+          while TPUReadLine = 1 do
+          begin
+            if (tpu_line[0] = 69) and (tpu_line[1] = 78) and (tpu_line[2] = 68) then
+            begin
+              { ENDINTERFACE }
+              unit_sym_end[loaded_count] := sym_count - 1;
+              loaded_count := loaded_count + 1;
+              LoadTPUInterface := 1
+            end
+            else if (tpu_line[0] = 67) and (tpu_line[1] = 79) and (tpu_line[2] = 78) then
+            begin
+              { CONST name type value }
+              tpu_pos := 6;  { Skip 'CONST ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_CONST, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_const_val[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 86) and (tpu_line[1] = 65) and (tpu_line[2] = 82) then
+            begin
+              { VAR name type offset }
+              tpu_pos := 4;  { Skip 'VAR ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_VAR, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_offset[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 80) and (tpu_line[1] = 82) and (tpu_line[2] = 79) then
+            begin
+              { PROC name label flags }
+              tpu_pos := 5;  { Skip 'PROC ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, 0, 0);
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_var_param_flags[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 70) and (tpu_line[1] = 85) and (tpu_line[2] = 78) then
+            begin
+              { FUNC name type label flags }
+              tpu_pos := 5;  { Skip 'FUNC ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_var_param_flags[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 84) and (tpu_line[1] = 89) and (tpu_line[2] = 80) then
+            begin
+              { TYPE name kind const_val label }
+              tpu_pos := 5;  { Skip 'TYPE ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_const_val[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt
+            end
+          end
+        end
+      end
+    end
+  end
+end;
+
+{ Parse uses clause: uses Unit1, Unit2, ...; }
+procedure ParseUsesClause;
+var
+  i: integer;
+  tpu_path: array[0..63] of integer;
+begin
+  NextToken;  { consume 'uses' }
+  repeat
+    if tok_type <> TOK_IDENT then
+      Error(6);  { expected identifier }
+
+    { Build TPU filename: UnitName.tpu }
+    for i := 0 to tok_len - 1 do
+      tpu_path[i] := tok_str[i];
+    tpu_path[tok_len] := 46;      { . }
+    tpu_path[tok_len + 1] := 116; { t }
+    tpu_path[tok_len + 2] := 112; { p }
+    tpu_path[tok_len + 3] := 117; { u }
+    tpu_path[tok_len + 4] := 0;
+
+    { Open TPU file }
+    assigntokstr(tpu_file, 0, tok_len + 4);
+    for i := 0 to tok_len + 4 do
+      tok_str[i] := tpu_path[i];
+    assigntokstr(tpu_file, 0, tok_len + 4);
+    reset(tpu_file);
+
+    { Load interface symbols }
+    if LoadTPUInterface < 0 then
+      Error(18);  { unit not found or invalid }
+
+    close(tpu_file);
+
+    NextToken;
+    if tok_type = TOK_COMMA then
+      NextToken
+  until tok_type = TOK_SEMICOLON;
+  Expect(TOK_SEMICOLON)
+end;
+
+{ Parse a unit: unit Name; interface ... implementation ... end. }
+procedure ParseUnit;
+var
+  unit_lbl: integer;
+  i: integer;
+begin
+  { unit Name; }
+  NextToken;  { consume 'unit' }
   if tok_type <> TOK_IDENT then
-    Error(11);
+    Error(6);  { expected identifier }
+
+  { Store unit name for qualified symbol names }
+  current_unit_len := tok_len;
+  for i := 0 to tok_len - 1 do
+    current_unit_name[i] := tok_str[i];
+  current_unit_name[tok_len] := 0;
+
+  compiling_unit := 1;
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Emit header }
-  EmitGlobl;
+  { Emit unit header - no _main, just label for unit init }
   EmitAlign4;
-  EmitMain;
 
-  { Jump over runtime routines }
-  main_lbl := NewLabel;
-  EmitBranchLabel(main_lbl);
+  { Jump over runtime routines (units still need runtime for their code) }
+  unit_lbl := NewLabel;
+  EmitBranchLabel(unit_lbl);
 
-  { Emit runtime routines }
+  { Emit runtime routines needed by unit code }
   rt_print_int := NewLabel;
   rt_newline := NewLabel;
   rt_readchar := NewLabel;
   rt_print_char := NewLabel;
+  rt_write_char_fd := NewLabel;
   rt_read_int := NewLabel;
   rt_skip_line := NewLabel;
   rt_print_string := NewLabel;
@@ -1528,6 +1986,216 @@ begin
   EmitNewlineRuntime;
   EmitReadcharRuntime;
   EmitPrintCharRuntime;
+  EmitWriteCharFdRuntime;
+  EmitReadIntRuntime;
+  EmitSkipLineRuntime;
+  EmitPrintStringRuntime;
+  EmitPrintRealRuntime;
+  EmitReadRealRuntime;
+  EmitReadStringRuntime;
+  EmitHeapInitRuntime;
+  EmitAllocRuntime;
+  EmitFreeRuntime;
+  EmitStrCopyRuntime;
+  EmitStrCompareRuntime;
+  EmitStrConcatRuntime;
+  EmitStrCmpRuntime;
+  EmitStrPosRuntime;
+  EmitStrDeleteRuntime;
+  EmitStrInsertRuntime;
+  EmitIntToStrRuntime;
+  EmitStrToIntRuntime;
+  EmitStrLtrimRuntime;
+  EmitStrRtrimRuntime;
+  EmitStrTrimRuntime;
+  EmitClrScrRuntime;
+  EmitGotoXYRuntime;
+  EmitClrEolRuntime;
+  EmitTextColorRuntime;
+  EmitTextBackgroundRuntime;
+  EmitNormVideoRuntime;
+  EmitHighVideoRuntime;
+  EmitLowVideoRuntime;
+  EmitHideCursorRuntime;
+  EmitShowCursorRuntime;
+  EmitSleepRuntime;
+  EmitKeyPressedRuntime;
+  EmitInitKeyboardRuntime;
+  EmitDoneKeyboardRuntime;
+  EmitSinRuntime;
+  EmitCosRuntime;
+  EmitTanRuntime;
+  EmitExpRuntime;
+  EmitLnRuntime;
+  EmitRandomRuntime;
+  EmitArctanRuntime;
+  EmitArcsinRuntime;
+  EmitArccosRuntime;
+  EmitParamStrRuntime;
+
+  EmitLabel(unit_lbl);
+
+  { interface section }
+  Expect(TOK_INTERFACE);
+  in_interface := 1;
+  interface_start := sym_count;  { Track first interface symbol }
+
+  { Parse interface declarations (const, type, var, procedure/function headers) }
+  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
+        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
+        (tok_type = TOK_FUNCTION) do
+  begin
+    if tok_type = TOK_CONST then
+      ParseConstDeclarations
+    else if tok_type = TOK_TYPE_KW then
+      ParseTypeDeclarations
+    else if tok_type = TOK_VAR then
+      ParseVarDeclarations
+    else if tok_type = TOK_PROCEDURE then
+    begin
+      { In interface, only parse the header }
+      ParseProcedureDeclaration
+    end
+    else if tok_type = TOK_FUNCTION then
+    begin
+      ParseFunctionDeclaration
+    end
+  end;
+
+  interface_end := sym_count - 1;  { Track last interface symbol }
+  in_interface := 0;
+
+  { implementation section }
+  Expect(TOK_IMPLEMENTATION);
+
+  { Parse implementation (full procedure/function bodies) }
+  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
+        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
+        (tok_type = TOK_FUNCTION) do
+  begin
+    if tok_type = TOK_CONST then
+      ParseConstDeclarations
+    else if tok_type = TOK_TYPE_KW then
+      ParseTypeDeclarations
+    else if tok_type = TOK_VAR then
+      ParseVarDeclarations
+    else if tok_type = TOK_PROCEDURE then
+      ParseProcedureDeclaration
+    else if tok_type = TOK_FUNCTION then
+      ParseFunctionDeclaration
+  end;
+
+  { Optional initialization section }
+  if tok_type = TOK_BEGIN then
+  begin
+    { Unit initialization code }
+    EmitStp;
+    EmitMovFP;
+    NextToken;
+    while tok_type <> TOK_END do
+      ParseStatement;
+    Expect(TOK_END)
+  end;
+
+  Expect(TOK_DOT);
+
+  { Unit has no exit syscall - it returns to caller }
+  EmitLdp;
+  EmitRet;
+
+  { Write TPU file with interface information }
+  WriteTPUFile;
+
+  compiling_unit := 0
+end;
+
+procedure ParseProgram;
+var
+  main_lbl: integer;
+begin
+  { Check if this is a unit or program }
+  if tok_type = TOK_UNIT then
+  begin
+    ParseUnit;
+    halt(0)  { Unit compilation done }
+  end;
+
+  Expect(TOK_PROGRAM);
+  if tok_type <> TOK_IDENT then
+    Error(11);
+  NextToken;
+  Expect(TOK_SEMICOLON);
+
+  { Check for uses clause }
+  if tok_type = TOK_USES then
+    ParseUsesClause;
+
+  { Emit header }
+  EmitGlobl;
+  EmitAlign4;
+  EmitMain;
+
+  { Jump over runtime routines }
+  main_lbl := NewLabel;
+  EmitBranchLabel(main_lbl);
+
+  { Emit runtime routines }
+  rt_print_int := NewLabel;
+  rt_newline := NewLabel;
+  rt_readchar := NewLabel;
+  rt_print_char := NewLabel;
+  rt_write_char_fd := NewLabel;
+  rt_read_int := NewLabel;
+  rt_skip_line := NewLabel;
+  rt_print_string := NewLabel;
+  rt_print_real := NewLabel;
+  rt_read_real := NewLabel;
+  rt_read_string := NewLabel;
+  rt_heap_init := NewLabel;
+  rt_alloc := NewLabel;
+  rt_free := NewLabel;
+  rt_str_copy := NewLabel;
+  rt_str_compare := NewLabel;
+  rt_str_concat := NewLabel;
+  rt_str_cmp := NewLabel;
+  rt_str_pos := NewLabel;
+  rt_str_delete := NewLabel;
+  rt_str_insert := NewLabel;
+  rt_int_to_str := NewLabel;
+  rt_str_to_int := NewLabel;
+  rt_str_ltrim := NewLabel;
+  rt_str_rtrim := NewLabel;
+  rt_str_trim := NewLabel;
+  rt_clrscr := NewLabel;
+  rt_gotoxy := NewLabel;
+  rt_clreol := NewLabel;
+  rt_textcolor := NewLabel;
+  rt_textbackground := NewLabel;
+  rt_normvideo := NewLabel;
+  rt_highvideo := NewLabel;
+  rt_lowvideo := NewLabel;
+  rt_hidecursor := NewLabel;
+  rt_showcursor := NewLabel;
+  rt_sleep := NewLabel;
+  rt_keypressed := NewLabel;
+  rt_initkeyboard := NewLabel;
+  rt_donekeyboard := NewLabel;
+  rt_sin := NewLabel;
+  rt_cos := NewLabel;
+  rt_tan := NewLabel;
+  rt_exp := NewLabel;
+  rt_ln := NewLabel;
+  rt_random := NewLabel;
+  rt_arctan := NewLabel;
+  rt_arcsin := NewLabel;
+  rt_arccos := NewLabel;
+  rt_paramstr := NewLabel;
+
+  EmitPrintIntRuntime;
+  EmitNewlineRuntime;
+  EmitReadcharRuntime;
+  EmitPrintCharRuntime;
+  EmitWriteCharFdRuntime;
   EmitReadIntRuntime;
   EmitSkipLineRuntime;
   EmitPrintStringRuntime;
@@ -1650,4 +2318,13 @@ begin
   set_count := 0;
   rt_alloc := 0;
   rt_free := 0;
+  include_depth := 0;
+  compiling_unit := 0;
+  in_interface := 0;
+  current_unit_len := 0;
+  interface_start := 0;
+  interface_end := 0;
+  loaded_count := 0;
+  tpu_line_len := 0;
+  tpu_pos := 0;
 

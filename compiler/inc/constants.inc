@@ -77,6 +77,10 @@ const
   TOK_FILE = 141;    { file keyword }
   TOK_SET = 142;     { set keyword }
   TOK_IN = 143;      { in keyword (set membership) }
+  TOK_UNIT = 144;    { unit keyword }
+  TOK_INTERFACE = 145;      { interface keyword }
+  TOK_IMPLEMENTATION = 146; { implementation keyword }
+  TOK_USES = 147;    { uses keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -163,6 +167,7 @@ var
   rt_newline: integer;
   rt_readchar: integer;
   rt_print_char: integer;
+  rt_write_char_fd: integer;  { write single char to file: x0=fd, x1=char }
   rt_read_int: integer;
   rt_skip_line: integer;
   rt_print_string: integer;
@@ -283,4 +288,37 @@ var
     offset 0: fd (8 bytes) - file descriptor, -1 if not open
     offset 8: mode (8 bytes) - 0=closed, 1=read, 2=write, 3=append
     offset 16: filename (256 bytes) - null-terminated string }
+
+  { Include file support - using individual variables since bootstrap doesn't support array subscripts with eof }
+  include_file0, include_file1, include_file2, include_file3: text;
+  include_file4, include_file5, include_file6, include_file7: text;
+  include_depth: integer;                   { 0 = reading from stdin, >0 = in include }
+  include_line: array[0..7] of integer;     { Line number in each include file }
+  include_col: array[0..7] of integer;      { Column number in each include file }
+  include_ch: array[0..7] of integer;       { Current char in each include file }
+  include_pushback: array[0..7] of integer; { Pushback char for each include file }
+  include_path: array[0..2047] of integer;  { Paths of included files (256 chars * 8 files) }
+
+  { Unit/module support }
+  compiling_unit: integer;       { 0=program, 1=unit }
+  in_interface: integer;         { 1=in interface section }
+  current_unit_name: array[0..31] of integer;  { Name of current unit being compiled }
+  current_unit_len: integer;
+
+  { TPU file support }
+  tpu_file: text;                { File handle for reading/writing TPU }
+  tpu_line: array[0..1023] of integer;  { Buffer for reading TPU lines }
+  tpu_line_len: integer;         { Length of current line }
+  tpu_pos: integer;              { Current parse position in tpu_line }
+
+  { Interface symbol tracking - marks which symbols are exported }
+  interface_start: integer;      { First symbol index in interface section }
+  interface_end: integer;        { Last symbol index in interface section }
+
+  { Loaded units tracking }
+  loaded_units: array[0..511] of integer;  { Unit names (16 units * 32 chars) }
+  loaded_count: integer;         { Number of loaded units }
+  unit_sym_start: array[0..15] of integer;  { First symbol index for each unit }
+  unit_sym_end: array[0..15] of integer;    { Last symbol index for each unit }
+  unit_init_label: array[0..15] of integer; { Initialization label for each unit }
 

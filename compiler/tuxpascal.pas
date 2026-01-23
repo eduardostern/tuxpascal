@@ -83,6 +83,10 @@ const
   TOK_FILE = 141;    { file keyword }
   TOK_SET = 142;     { set keyword }
   TOK_IN = 143;      { in keyword (set membership) }
+  TOK_UNIT = 144;    { unit keyword }
+  TOK_INTERFACE = 145;      { interface keyword }
+  TOK_IMPLEMENTATION = 146; { implementation keyword }
+  TOK_USES = 147;    { uses keyword }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -169,6 +173,7 @@ var
   rt_newline: integer;
   rt_readchar: integer;
   rt_print_char: integer;
+  rt_write_char_fd: integer;  { write single char to file: x0=fd, x1=char }
   rt_read_int: integer;
   rt_skip_line: integer;
   rt_print_string: integer;
@@ -290,6 +295,39 @@ var
     offset 8: mode (8 bytes) - 0=closed, 1=read, 2=write, 3=append
     offset 16: filename (256 bytes) - null-terminated string }
 
+  { Include file support - using individual variables since bootstrap doesn't support array subscripts with eof }
+  include_file0, include_file1, include_file2, include_file3: text;
+  include_file4, include_file5, include_file6, include_file7: text;
+  include_depth: integer;                   { 0 = reading from stdin, >0 = in include }
+  include_line: array[0..7] of integer;     { Line number in each include file }
+  include_col: array[0..7] of integer;      { Column number in each include file }
+  include_ch: array[0..7] of integer;       { Current char in each include file }
+  include_pushback: array[0..7] of integer; { Pushback char for each include file }
+  include_path: array[0..2047] of integer;  { Paths of included files (256 chars * 8 files) }
+
+  { Unit/module support }
+  compiling_unit: integer;       { 0=program, 1=unit }
+  in_interface: integer;         { 1=in interface section }
+  current_unit_name: array[0..31] of integer;  { Name of current unit being compiled }
+  current_unit_len: integer;
+
+  { TPU file support }
+  tpu_file: text;                { File handle for reading/writing TPU }
+  tpu_line: array[0..1023] of integer;  { Buffer for reading TPU lines }
+  tpu_line_len: integer;         { Length of current line }
+  tpu_pos: integer;              { Current parse position in tpu_line }
+
+  { Interface symbol tracking - marks which symbols are exported }
+  interface_start: integer;      { First symbol index in interface section }
+  interface_end: integer;        { Last symbol index in interface section }
+
+  { Loaded units tracking }
+  loaded_units: array[0..511] of integer;  { Unit names (16 units * 32 chars) }
+  loaded_count: integer;         { Number of loaded units }
+  unit_sym_start: array[0..15] of integer;  { First symbol index for each unit }
+  unit_sym_end: array[0..15] of integer;    { Last symbol index for each unit }
+  unit_init_label: array[0..15] of integer; { Initialization label for each unit }
+
 { ----- Utility ----- }
 
 procedure Error(msg: integer);
@@ -401,7 +439,109 @@ end;
 
 { ----- Lexer ----- }
 
+{ Check if current include file is at EOF }
+function IncludeEof: integer;
+begin
+  IncludeEof := 0;
+  if include_depth = 1 then
+  begin if eof(include_file0) then IncludeEof := 1 end
+  else if include_depth = 2 then
+  begin if eof(include_file1) then IncludeEof := 1 end
+  else if include_depth = 3 then
+  begin if eof(include_file2) then IncludeEof := 1 end
+  else if include_depth = 4 then
+  begin if eof(include_file3) then IncludeEof := 1 end
+  else if include_depth = 5 then
+  begin if eof(include_file4) then IncludeEof := 1 end
+  else if include_depth = 6 then
+  begin if eof(include_file5) then IncludeEof := 1 end
+  else if include_depth = 7 then
+  begin if eof(include_file6) then IncludeEof := 1 end
+  else if include_depth = 8 then
+  begin if eof(include_file7) then IncludeEof := 1 end
+end;
+
+{ Read a character from current include file }
+function IncludeRead: integer;
+var
+  c: integer;
+begin
+  c := -1;
+  if include_depth = 1 then
+    read(include_file0, c)
+  else if include_depth = 2 then
+    read(include_file1, c)
+  else if include_depth = 3 then
+    read(include_file2, c)
+  else if include_depth = 4 then
+    read(include_file3, c)
+  else if include_depth = 5 then
+    read(include_file4, c)
+  else if include_depth = 6 then
+    read(include_file5, c)
+  else if include_depth = 7 then
+    read(include_file6, c)
+  else if include_depth = 8 then
+    read(include_file7, c);
+  IncludeRead := c
+end;
+
+{ Close current include file }
+procedure IncludeClose;
+begin
+  if include_depth = 1 then
+    close(include_file0)
+  else if include_depth = 2 then
+    close(include_file1)
+  else if include_depth = 3 then
+    close(include_file2)
+  else if include_depth = 4 then
+    close(include_file3)
+  else if include_depth = 5 then
+    close(include_file4)
+  else if include_depth = 6 then
+    close(include_file5)
+  else if include_depth = 7 then
+    close(include_file6)
+  else if include_depth = 8 then
+    close(include_file7)
+end;
+
+{ Read a single character from stdin or current include file }
+function ReadCurrentChar: integer;
+begin
+  if include_depth = 0 then
+    ReadCurrentChar := readchar
+  else
+  begin
+    if IncludeEof = 1 then
+      ReadCurrentChar := -1
+    else
+      ReadCurrentChar := IncludeRead
+  end
+end;
+
+{ Pop back to parent include file }
+procedure PopIncludeFile;
+begin
+  if include_depth > 0 then
+  begin
+    IncludeClose;
+    include_depth := include_depth - 1;
+    { Restore parent file state }
+    if include_depth > 0 then
+    begin
+      line_num := include_line[include_depth - 1];
+      col_num := include_col[include_depth - 1];
+      ch := include_ch[include_depth - 1];
+      pushback_ch := include_pushback[include_depth - 1]
+    end
+  end
+end;
+
 procedure NextChar;
+var
+  c: integer;
 begin
   if pushback_ch >= 0 then
   begin
@@ -410,7 +550,17 @@ begin
   end
   else
   begin
-    ch := readchar;
+    c := ReadCurrentChar;
+    { If EOF in include file, pop back to parent }
+    while (c = -1) and (include_depth > 0) do
+    begin
+      PopIncludeFile;
+      if include_depth = 0 then
+        c := readchar
+      else
+        c := ReadCurrentChar
+    end;
+    ch := c;
     if ch = 10 then
     begin
       line_num := line_num + 1;
@@ -421,18 +571,201 @@ begin
   end
 end;
 
+{ Open include file using filename from tok_str at given position }
+procedure IncludeOpenFromTokStr(start, len: integer);
+begin
+  if include_depth = 1 then
+  begin assigntokstr(include_file0, start, len); reset(include_file0) end
+  else if include_depth = 2 then
+  begin assigntokstr(include_file1, start, len); reset(include_file1) end
+  else if include_depth = 3 then
+  begin assigntokstr(include_file2, start, len); reset(include_file2) end
+  else if include_depth = 4 then
+  begin assigntokstr(include_file3, start, len); reset(include_file3) end
+  else if include_depth = 5 then
+  begin assigntokstr(include_file4, start, len); reset(include_file4) end
+  else if include_depth = 6 then
+  begin assigntokstr(include_file5, start, len); reset(include_file5) end
+  else if include_depth = 7 then
+  begin assigntokstr(include_file6, start, len); reset(include_file6) end
+  else if include_depth = 8 then
+  begin assigntokstr(include_file7, start, len); reset(include_file7) end
+end;
+
+{ Push a new include file onto the stack }
+procedure PushIncludeFile(path_start, path_len: integer);
+var
+  i: integer;
+begin
+  if include_depth >= 8 then
+    Error(17)  { include nesting too deep - Error halts }
+  else
+  begin
+    { Save current state }
+    if include_depth > 0 then
+    begin
+      include_line[include_depth - 1] := line_num;
+      include_col[include_depth - 1] := col_num;
+      include_ch[include_depth - 1] := ch;
+      include_pushback[include_depth - 1] := pushback_ch
+    end;
+
+    { Open include file }
+    include_depth := include_depth + 1;
+    IncludeOpenFromTokStr(path_start, path_len);
+
+    { Store path for reference (include_depth is already incremented) }
+    for i := 0 to path_len - 1 do
+      include_path[(include_depth - 1) * 256 + i] := tok_str[path_start + i];
+    include_path[(include_depth - 1) * 256 + path_len] := 0;
+
+    line_num := 1;
+    col_num := 0;
+    pushback_ch := -1;
+    { Read first character from new file }
+    ch := ReadCurrentChar
+  end
+end;
+
+{ Parse and process include directive: dollar-I or dollar-INCLUDE }
+procedure ParseIncludeDirective;
+var
+  i: integer;
+begin
+  { Skip whitespace after I or INCLUDE }
+  while (ch = 32) or (ch = 9) do
+    NextChar;
+
+  { Read filename until closing brace or whitespace }
+  i := 0;
+  while (ch <> 125) and (ch <> 32) and (ch <> 9) and (ch <> -1) and (i < 255) do
+  begin
+    tok_str[i] := ch;
+    i := i + 1;
+    NextChar
+  end;
+  tok_str[i] := 0;
+
+  { Skip to end of directive }
+  while (ch <> 125) and (ch <> -1) do
+    NextChar;
+  if ch = 125 then
+    NextChar;
+
+  { Process include }
+  if i > 0 then
+    PushIncludeFile(0, i)
+end;
+
 procedure SkipWhitespace;
+var
+  directive_char: integer;
 begin
   while (ch = 32) or (ch = 9) or (ch = 10) or (ch = 13) do
     NextChar;
-  { Skip comments }
+  { Skip comments and process directives }
   if ch = 123 then  { '{' }
   begin
-    while (ch <> 125) and (ch <> -1) do
+    NextChar;
+    { Check for compiler directive }
+    if ch = 36 then  { '$' }
+    begin
       NextChar;
-    if ch = 125 then
-      NextChar;
-    SkipWhitespace
+      directive_char := ToLower(ch);
+      if directive_char = 105 then  { 'i' }
+      begin
+        NextChar;
+        { Check for 'include' or just whitespace after 'i' }
+        if (ch = 32) or (ch = 9) or (ch = 125) then
+        begin
+          { Short form: dollar-I filename }
+          ParseIncludeDirective;
+          SkipWhitespace
+        end
+        else if ToLower(ch) = 110 then  { 'n' - could be 'include' }
+        begin
+          { Check for 'nclude' }
+          NextChar;
+          if ToLower(ch) = 99 then  { 'c' }
+          begin
+            NextChar;
+            if ToLower(ch) = 108 then  { 'l' }
+            begin
+              NextChar;
+              if ToLower(ch) = 117 then  { 'u' }
+              begin
+                NextChar;
+                if ToLower(ch) = 100 then  { 'd' }
+                begin
+                  NextChar;
+                  if ToLower(ch) = 101 then  { 'e' }
+                  begin
+                    NextChar;
+                    { Full form: dollar-INCLUDE filename }
+                    ParseIncludeDirective;
+                    SkipWhitespace
+                  end
+                  else
+                  begin
+                    { Unknown directive, skip to end }
+                    while (ch <> 125) and (ch <> -1) do NextChar;
+                    if ch = 125 then NextChar;
+                    SkipWhitespace
+                  end
+                end
+                else
+                begin
+                  while (ch <> 125) and (ch <> -1) do NextChar;
+                  if ch = 125 then NextChar;
+                  SkipWhitespace
+                end
+              end
+              else
+              begin
+                while (ch <> 125) and (ch <> -1) do NextChar;
+                if ch = 125 then NextChar;
+                SkipWhitespace
+              end
+            end
+            else
+            begin
+              while (ch <> 125) and (ch <> -1) do NextChar;
+              if ch = 125 then NextChar;
+              SkipWhitespace
+            end
+          end
+          else
+          begin
+            while (ch <> 125) and (ch <> -1) do NextChar;
+            if ch = 125 then NextChar;
+            SkipWhitespace
+          end
+        end
+        else
+        begin
+          { Unknown directive starting with 'i', skip }
+          while (ch <> 125) and (ch <> -1) do NextChar;
+          if ch = 125 then NextChar;
+          SkipWhitespace
+        end
+      end
+      else
+      begin
+        { Unknown directive, skip as comment }
+        while (ch <> 125) and (ch <> -1) do NextChar;
+        if ch = 125 then NextChar;
+        SkipWhitespace
+      end
+    end
+    else
+    begin
+      { Regular comment }
+      while (ch <> 125) and (ch <> -1) do
+        NextChar;
+      if ch = 125 then
+        NextChar;
+      SkipWhitespace
+    end
   end
 end;
 
@@ -668,21 +1001,46 @@ begin
           tok_type := TOK_TEXT;
       if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 105) then { fi }
         if (ToLower(tok_str[2]) = 108) and (ToLower(tok_str[3]) = 101) then { le }
-          tok_type := TOK_FILE
+          tok_type := TOK_FILE;
+      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 110) then { un }
+        if (ToLower(tok_str[2]) = 105) and (ToLower(tok_str[3]) = 116) then { it }
+          tok_type := TOK_UNIT;
+      if (ToLower(tok_str[0]) = 117) and (ToLower(tok_str[1]) = 115) then { us }
+        if (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 115) then { es }
+          tok_type := TOK_USES
     end;
     if tok_len = 9 then
+    begin
       if (ToLower(tok_str[0]) = 112) and (ToLower(tok_str[1]) = 114) then { pr }
         if (ToLower(tok_str[2]) = 111) and (ToLower(tok_str[3]) = 99) then { oc }
           if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 100) then { ed }
             if (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 114) then { ur }
               if ToLower(tok_str[8]) = 101 then { e }
                 tok_type := TOK_PROCEDURE;
+      { interface = 105,110,116,101,114,102,97,99,101 }
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 110) then { in }
+        if (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 101) then { te }
+          if (ToLower(tok_str[4]) = 114) and (ToLower(tok_str[5]) = 102) then { rf }
+            if (ToLower(tok_str[6]) = 97) and (ToLower(tok_str[7]) = 99) then { ac }
+              if ToLower(tok_str[8]) = 101 then { e }
+                tok_type := TOK_INTERFACE
+    end;
     if tok_len = 8 then
       if (ToLower(tok_str[0]) = 102) and (ToLower(tok_str[1]) = 117) then { fu }
         if (ToLower(tok_str[2]) = 110) and (ToLower(tok_str[3]) = 99) then { nc }
           if (ToLower(tok_str[4]) = 116) and (ToLower(tok_str[5]) = 105) then { ti }
             if (ToLower(tok_str[6]) = 111) and (ToLower(tok_str[7]) = 110) then { on }
-              tok_type := TOK_FUNCTION
+              tok_type := TOK_FUNCTION;
+    { implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
+    if tok_len = 14 then
+      if (ToLower(tok_str[0]) = 105) and (ToLower(tok_str[1]) = 109) then { im }
+        if (ToLower(tok_str[2]) = 112) and (ToLower(tok_str[3]) = 108) then { pl }
+          if (ToLower(tok_str[4]) = 101) and (ToLower(tok_str[5]) = 109) then { em }
+            if (ToLower(tok_str[6]) = 101) and (ToLower(tok_str[7]) = 110) then { en }
+              if (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 97) then { ta }
+                if (ToLower(tok_str[10]) = 116) and (ToLower(tok_str[11]) = 105) then { ti }
+                  if (ToLower(tok_str[12]) = 111) and (ToLower(tok_str[13]) = 110) then { on }
+                    tok_type := TOK_IMPLEMENTATION
   end
   else if ch = 39 then  { single quote - string }
   begin
@@ -1627,23 +1985,37 @@ begin
     { Now x8 has target frame, compute address }
     if offset < 0 then
     begin
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(35);
-      write(0 - offset);
-      EmitNL
+      EmitSubLargeOffset(0, 8, 0 - offset)
     end
     else
     begin
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(35);
-      write(offset);
-      EmitNL
+      if offset <= 4095 then
+      begin
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+        writechar(35);
+        write(offset);
+        EmitNL
+      end
+      else
+      begin
+        { Large positive offset: load offset into x10, then add }
+        { Save x8, use x10 for offset }
+        EmitIndent;
+        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+        writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL;
+        EmitMovX8(offset);
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL
+      end
     end
   end
   else
@@ -1652,24 +2024,32 @@ begin
     if offset < 0 then
     begin
       { Negative offset: use sub x0, x29, #abs(offset) }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-      writechar(35);
-      write(0 - offset);
-      EmitNL
+      EmitSubLargeOffset(0, 29, 0 - offset)
     end
     else
     begin
       { Positive offset: use add x0, x29, #offset }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-      writechar(35);
-      write(offset);
-      EmitNL
+      if offset <= 4095 then
+      begin
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+        writechar(35);
+        write(offset);
+        EmitNL
+      end
+      else
+      begin
+        { Large positive offset: load offset into x10, then add }
+        EmitMovX8(offset);
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL
+      end
     end
   end
 end;
@@ -2434,6 +2814,37 @@ begin
   EmitNL;
   EmitMovX16(33554436);  { 0x2000004 = write }
   EmitMovX0X20;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
+  writechar(120); writechar(49); writechar(44); writechar(32);
+  writechar(115); writechar(112);
+  EmitNL;
+  EmitIndent;
+  writechar(109); writechar(111); writechar(118); writechar(32);  { mov x2, #1 }
+  writechar(120); writechar(50); writechar(44); writechar(32);
+  writechar(35); writechar(49);
+  EmitNL;
+  EmitSvc;
+  EmitAddSP(16);
+  EmitLdp;
+  EmitRet
+end;
+
+procedure EmitWriteCharFdRuntime;
+begin
+  { Write char to fd routine - x0=fd, x1=char }
+  EmitLabel(rt_write_char_fd);
+  EmitStp;
+  EmitMovFP;
+  EmitSubSP(16);
+  { Store char on stack }
+  EmitIndent;
+  writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb w1, [sp] }
+  writechar(119); writechar(49); writechar(44); writechar(32);
+  writechar(91); writechar(115); writechar(112); writechar(93);
+  EmitNL;
+  { x0 already has fd, set up rest of syscall }
+  EmitMovX16(33554436);  { 0x2000004 = write }
   EmitIndent;
   writechar(109); writechar(111); writechar(118); writechar(32);  { mov x1, sp }
   writechar(120); writechar(49); writechar(44); writechar(32);
@@ -10013,6 +10424,235 @@ begin
       EmitBL(rt_readchar);
       expr_type := TYPE_INTEGER
     end
+    { getinputfd = 103,101,116,105,110,112,117,116,102,100 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 103) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 105) and (ToLower(tok_str[4]) = 110) and
+            (ToLower(tok_str[5]) = 112) and (ToLower(tok_str[6]) = 117) and (ToLower(tok_str[7]) = 116) and
+            (ToLower(tok_str[8]) = 102) and (ToLower(tok_str[9]) = 100) then
+    begin
+      { getinputfd - returns current input file descriptor (x19) }
+      NextToken;
+      if tok_type = TOK_LPAREN then
+      begin
+        NextToken;
+        Expect(TOK_RPAREN)
+      end;
+      { mov x0, x19 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(49); writechar(57);  { x19 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { getoutputfd = 103,101,116,111,117,116,112,117,116,102,100 (11 chars) }
+    else if (tok_len = 11) and (ToLower(tok_str[0]) = 103) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 116) and (ToLower(tok_str[3]) = 111) and (ToLower(tok_str[4]) = 117) and
+            (ToLower(tok_str[5]) = 116) and (ToLower(tok_str[6]) = 112) and (ToLower(tok_str[7]) = 117) and
+            (ToLower(tok_str[8]) = 116) and (ToLower(tok_str[9]) = 102) and (ToLower(tok_str[10]) = 100) then
+    begin
+      { getoutputfd - returns current output file descriptor (x20) }
+      NextToken;
+      if tok_type = TOK_LPAREN then
+      begin
+        NextToken;
+        Expect(TOK_RPAREN)
+      end;
+      { mov x0, x20 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(50); writechar(48);  { x20 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { readfd = 114,101,97,100,102,100 (6 chars) }
+    else if (tok_len = 6) and (ToLower(tok_str[0]) = 114) and (ToLower(tok_str[1]) = 101) and
+            (ToLower(tok_str[2]) = 97) and (ToLower(tok_str[3]) = 100) and (ToLower(tok_str[4]) = 102) and
+            (ToLower(tok_str[5]) = 100) then
+    begin
+      { readfd(fd) - read one char from fd, returns char or -1 for EOF }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { x0 = fd, save it then do read syscall }
+      { sub sp, sp, #16; str x0, [sp] - allocate buffer and save fd }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { mov x1, sp - buffer on stack }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(115); writechar(112);  { sp }
+      EmitNL;
+      { mov x2, #1 - read 1 byte }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { read syscall: x16 = 0x2000003 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(51);  { #3 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { Check if read returned >= 1 }
+      { cmp x0, #1; b.ge got_char; mov x0, #-1; b done; got_char: ldrb w0, [sp]; done: }
+      EmitIndent;
+      writechar(99); writechar(109); writechar(112); writechar(32);  { cmp }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      EmitIndent;
+      writechar(98); writechar(46); writechar(103); writechar(101); writechar(32);  { b.ge }
+      writechar(76); write(label_count);
+      EmitNL;
+      EmitMovX0(-1);
+      EmitBranchLabel(label_count + 1);
+      EmitLabel(label_count);
+      label_count := label_count + 1;
+      { ldrb w0, [sp] }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(98); writechar(32);  { ldrb }
+      writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+      EmitNL;
+      EmitLabel(label_count);
+      label_count := label_count + 1;
+      { add sp, sp, #16 - restore stack }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      expr_type := TYPE_INTEGER
+    end
+    { openfile = 111,112,101,110,102,105,108,101 (8 chars) }
+    else if TokIs8(111, 112, 101, 110, 102, 105, 108, 101) = 1 then
+    begin
+      { openfile(filename) - open file for reading, returns fd or -1 on error }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { x0 = Pascal string address, need to skip length byte for C string }
+      { add x0, x0, #1 }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { open syscall: x0=path, x1=O_RDONLY(0), x2=mode(0) }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(48);  { #0 }
+      EmitNL;
+      { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(53);  { #5 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { On macOS, carry flag set on error - convert errno to -1 }
+      { b.cc skip; mov x0, #-1; skip: }
+      EmitIndent;
+      writechar(98); writechar(46); writechar(99); writechar(99); writechar(32);  { b.cc }
+      writechar(76); write(label_count);
+      EmitNL;
+      EmitMovX0(-1);
+      EmitLabel(label_count);
+      label_count := label_count + 1;
+      expr_type := TYPE_INTEGER
+    end
+    { createfile = 99,114,101,97,116,101,102,105,108,101 (10 chars) }
+    else if (tok_len = 10) and (ToLower(tok_str[0]) = 99) and (ToLower(tok_str[1]) = 114) and
+            (ToLower(tok_str[2]) = 101) and (ToLower(tok_str[3]) = 97) and (ToLower(tok_str[4]) = 116) and
+            (ToLower(tok_str[5]) = 101) and (ToLower(tok_str[6]) = 102) and (ToLower(tok_str[7]) = 105) and
+            (ToLower(tok_str[8]) = 108) and (ToLower(tok_str[9]) = 101) then
+    begin
+      { createfile(filename) - create/open file for writing, returns fd or -1 }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { x0 = Pascal string address, need to skip length byte for C string }
+      { add x0, x0, #1 }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { open syscall: x0=path, x1=O_WRONLY|O_CREAT|O_TRUNC(1537), x2=mode(420=0644) }
+      { mov x1, #1537 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(49); writechar(53); writechar(51); writechar(55);  { #1537 }
+      EmitNL;
+      { mov x2, #420 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(52); writechar(50); writechar(48);  { #420 }
+      EmitNL;
+      { movz x16, #5; movk x16, #0x200, lsl #16 = 0x2000005 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(53);  { #5 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { On macOS, carry flag set on error - convert errno to -1 }
+      EmitIndent;
+      writechar(98); writechar(46); writechar(99); writechar(99); writechar(32);  { b.cc }
+      writechar(76); write(label_count);
+      EmitNL;
+      EmitMovX0(-1);
+      EmitLabel(label_count);
+      label_count := label_count + 1;
+      expr_type := TYPE_INTEGER
+    end
     { keypressed = 107,101,121,112,114,101,115,115,101,100 (10 chars) }
     else if (tok_len = 10) and (ToLower(tok_str[0]) = 107) and (ToLower(tok_str[1]) = 101) and
             (ToLower(tok_str[2]) = 121) and (ToLower(tok_str[3]) = 112) and (ToLower(tok_str[4]) = 114) and
@@ -13659,6 +14299,52 @@ begin
       Expect(TOK_RPAREN);
       EmitBL(rt_print_char)
     end
+    { writefilechar(file, char) - 119,114,105,116,101,102,105,108,101,99,104,97,114 }
+    else if (tok_len = 13) and (tok_str[0] = 119) and (tok_str[1] = 114) and
+            (tok_str[2] = 105) and (tok_str[3] = 116) and (tok_str[4] = 101) and
+            (tok_str[5] = 102) and (tok_str[6] = 105) and (tok_str[7] = 108) and
+            (tok_str[8] = 101) and (tok_str[9] = 99) and (tok_str[10] = 104) and
+            (tok_str[11] = 97) and (tok_str[12] = 114) then
+    begin
+      NextToken;
+      Expect(TOK_LPAREN);
+      { First arg: file variable }
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      { Load file fd into x0 }
+      EmitVarAddr(idx, scope_level);
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Push fd to stack }
+      EmitPushX0;
+      NextToken;
+      Expect(TOK_COMMA);
+      { Second arg: character expression }
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { x0 has char, pop fd into x1, swap }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+      writechar(44); writechar(32); writechar(35); writechar(49); writechar(54);  { , #16 }
+      EmitNL;
+      { Call write char to fd runtime: x0=fd, x1=char }
+      EmitBL(rt_write_char_fd)
+    end
     else if (tok_len = 8) and (tok_str[0] = 114) and (tok_str[1] = 101) and
             (tok_str[2] = 97) and (tok_str[3] = 100) and (tok_str[4] = 99) and
             (tok_str[5] = 104) and (tok_str[6] = 97) and (tok_str[7] = 114) then
@@ -13808,6 +14494,200 @@ begin
       writechar(120); writechar(49); writechar(93);  { x1] }
       EmitNL;
       { Initialize fd to -1 (not open) }
+      EmitVarAddr(idx, scope_level);
+      EmitPushX0;
+      EmitMovX0(-1);
+      EmitPopX1;
+      { str x0, [x1] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(120); writechar(49); writechar(93);  { [x1] }
+      EmitNL;
+      Expect(TOK_RPAREN)
+    end
+    { assigntokstr = 97,115,115,105,103,110,116,111,107,115,116,114 }
+    else if (tok_len = 12) and (tok_str[0] = 97) and (tok_str[1] = 115) and
+            (tok_str[2] = 115) and (tok_str[3] = 105) and (tok_str[4] = 103) and
+            (tok_str[5] = 110) and (tok_str[6] = 116) and (tok_str[7] = 111) and
+            (tok_str[8] = 107) and (tok_str[9] = 115) and (tok_str[10] = 116) and
+            (tok_str[11] = 114) then
+    begin
+      { assigntokstr(f, start, len) - assign filename from tok_str to file }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if (sym_type[idx] <> TYPE_FILE) and (sym_type[idx] <> TYPE_TEXT) then
+        Error(9);
+      NextToken;
+      Expect(TOK_COMMA);
+      { Parse start index }
+      ParseExpression;
+      EmitPushX0;  { save start }
+      Expect(TOK_COMMA);
+      { Parse length }
+      ParseExpression;
+      { x0 = len, stack has start }
+      { mov x2, x0 - x2 = len }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      EmitPopX1;  { x1 = start }
+      { Get address of tok_str using VarAddr }
+      { We need the tok_str global - find it in symbol table }
+      { For now, use direct offset calculation since tok_str is a global array }
+      { Get file var base address first }
+      EmitVarAddr(idx, scope_level);
+      { add x0, x0, #16 - point to filename area }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { Save dest address }
+      EmitPushX0;
+      { Get tok_str base address - look it up }
+      { str x1, [sp, #-16]! - save start index }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+      EmitNL;
+      { str x2, [sp, #-16]! - save len }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(32);  { str }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+      writechar(35); writechar(45); writechar(49); writechar(54); writechar(93); writechar(33);  { #-16]! }
+      EmitNL;
+      { Find tok_str in symbol table and get its address }
+      tok_str[0] := 116; tok_str[1] := 111; tok_str[2] := 107; tok_str[3] := 95;
+      tok_str[4] := 115; tok_str[5] := 116; tok_str[6] := 114; tok_str[7] := 0;
+      tok_len := 7;
+      arg_idx := SymLookup;
+      if arg_idx < 0 then
+        Error(3);  { tok_str not found }
+      EmitVarAddr(arg_idx, scope_level);  { x0 = tok_str base }
+      { mov x3, x0 - x3 = tok_str base }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL;
+      { ldr x2, [sp], #16 - restore len }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { ldr x1, [sp], #16 - restore start }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(91); writechar(115); writechar(112); writechar(93); writechar(44); writechar(32);  { [sp], }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { ldr x0, [sp], #16 - restore dest }
+      EmitPopX0;
+      { x3 + x1*8 = source address (tok_str elements are 8 bytes) }
+      { lsl x1, x1, #3 }
+      EmitIndent;
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(35); writechar(51);  { #3 }
+      EmitNL;
+      { add x3, x3, x1 - x3 = source address }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+      writechar(120); writechar(51); writechar(44); writechar(32);  { x3, }
+      writechar(120); writechar(49);  { x1 }
+      EmitNL;
+      { Copy loop: copy x2 characters from [x3] to [x0], skip length byte }
+      { add x0, x0, #1 - skip length byte position }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { Save x2 (len) for later length byte write }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(52); writechar(44); writechar(32);  { x4, }
+      writechar(120); writechar(50);  { x2 }
+      EmitNL;
+      lbl1 := NewLabel;
+      lbl2 := NewLabel;
+      EmitLabel(lbl1);
+      { cbz x2, done }
+      EmitIndent;
+      writechar(99); writechar(98); writechar(122); writechar(32);  { cbz }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(76);  { L }
+      write(lbl2);
+      EmitNL;
+      { ldr x5, [x3], #8 - load 8-byte integer from tok_str }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(53); writechar(44); writechar(32);  { x5, }
+      writechar(91); writechar(120); writechar(51); writechar(93); writechar(44); writechar(32);  { [x3], }
+      writechar(35); writechar(56);  { #8 }
+      EmitNL;
+      { strb w5, [x0], #1 - store as byte }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+      writechar(119); writechar(53); writechar(44); writechar(32);  { w5, }
+      writechar(91); writechar(120); writechar(48); writechar(93); writechar(44); writechar(32);  { [x0], }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { sub x2, x2, #1 }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      EmitBranchLabel(lbl1);
+      EmitLabel(lbl2);
+      { strb wzr, [x0] - null terminate }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+      writechar(119); writechar(122); writechar(114); writechar(44); writechar(32);  { wzr, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Write length byte at start of filename: x0-x4-1 = start address }
+      { sub x0, x0, x4 }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(52);  { x4 }
+      EmitNL;
+      { sub x0, x0, #1 }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { strb w4, [x0] - store length byte }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+      writechar(119); writechar(52); writechar(44); writechar(32);  { w4, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL;
+      { Initialize fd to -1 }
       EmitVarAddr(idx, scope_level);
       EmitPushX0;
       EmitMovX0(-1);
@@ -14049,6 +14929,191 @@ begin
       writechar(91); writechar(120); writechar(49); writechar(44); writechar(32);  { [x1, }
       writechar(35); writechar(56); writechar(93);  { #8] }
       EmitNL
+    end
+    { setinput = 115,101,116,105,110,112,117,116 }
+    else if (tok_len = 8) and (tok_str[0] = 115) and (tok_str[1] = 101) and
+            (tok_str[2] = 116) and (tok_str[3] = 105) and (tok_str[4] = 110) and
+            (tok_str[5] = 112) and (tok_str[6] = 117) and (tok_str[7] = 116) then
+    begin
+      { setinput(f) - set input file descriptor from text file variable }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if sym_type[idx] <> TYPE_TEXT then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Load fd from file variable and store in x19 }
+      EmitVarAddr(idx, scope_level);
+      { ldr x19, [x0] }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL
+    end
+    { setoutput = 115,101,116,111,117,116,112,117,116 }
+    else if (tok_len = 9) and (tok_str[0] = 115) and (tok_str[1] = 101) and
+            (tok_str[2] = 116) and (tok_str[3] = 111) and (tok_str[4] = 117) and
+            (tok_str[5] = 116) and (tok_str[6] = 112) and (tok_str[7] = 117) and
+            (tok_str[8] = 116) then
+    begin
+      { setoutput(f) - set output file descriptor from text file variable }
+      NextToken;
+      Expect(TOK_LPAREN);
+      if tok_type <> TOK_IDENT then
+        Error(6);
+      idx := SymLookup;
+      if idx < 0 then
+        Error(3);
+      if sym_type[idx] <> TYPE_TEXT then
+        Error(9);
+      NextToken;
+      Expect(TOK_RPAREN);
+      { Load fd from file variable and store in x20 }
+      EmitVarAddr(idx, scope_level);
+      { ldr x20, [x0] }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+      writechar(91); writechar(120); writechar(48); writechar(93);  { [x0] }
+      EmitNL
+    end
+    { setinputfd = 115,101,116,105,110,112,117,116,102,100 (10 chars) }
+    else if (tok_len = 10) and (tok_str[0] = 115) and (tok_str[1] = 101) and
+            (tok_str[2] = 116) and (tok_str[3] = 105) and (tok_str[4] = 110) and
+            (tok_str[5] = 112) and (tok_str[6] = 117) and (tok_str[7] = 116) and
+            (tok_str[8] = 102) and (tok_str[9] = 100) then
+    begin
+      { setinputfd(fd) - set input file descriptor directly from integer }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { mov x19, x0 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(57); writechar(44); writechar(32);  { x19, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL
+    end
+    { setoutputfd = 115,101,116,111,117,116,112,117,116,102,100 (11 chars) }
+    else if (tok_len = 11) and (tok_str[0] = 115) and (tok_str[1] = 101) and
+            (tok_str[2] = 116) and (tok_str[3] = 111) and (tok_str[4] = 117) and
+            (tok_str[5] = 116) and (tok_str[6] = 112) and (tok_str[7] = 117) and
+            (tok_str[8] = 116) and (tok_str[9] = 102) and (tok_str[10] = 100) then
+    begin
+      { setoutputfd(fd) - set output file descriptor directly from integer }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { mov x20, x0 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(48); writechar(44); writechar(32);  { x20, }
+      writechar(120); writechar(48);  { x0 }
+      EmitNL
+    end
+    { closefd = 99,108,111,115,101,102,100 (7 chars) }
+    else if (tok_len = 7) and (tok_str[0] = 99) and (tok_str[1] = 108) and
+            (tok_str[2] = 111) and (tok_str[3] = 115) and (tok_str[4] = 101) and
+            (tok_str[5] = 102) and (tok_str[6] = 100) then
+    begin
+      { closefd(fd) - close a file descriptor }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;
+      Expect(TOK_RPAREN);
+      { x0 = fd to close }
+      { close syscall: x16 = 0x2000006 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(54);  { #6 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc
+    end
+    { writefd = 119,114,105,116,101,102,100 (7 chars) }
+    else if (tok_len = 7) and (tok_str[0] = 119) and (tok_str[1] = 114) and
+            (tok_str[2] = 105) and (tok_str[3] = 116) and (tok_str[4] = 101) and
+            (tok_str[5] = 102) and (tok_str[6] = 100) then
+    begin
+      { writefd(fd, char) - write one char to fd }
+      NextToken;
+      Expect(TOK_LPAREN);
+      ParseExpression;  { fd }
+      EmitPushX0;
+      Expect(TOK_COMMA);
+      ParseExpression;  { char }
+      { x0 = char, stack top = fd }
+      { sub sp, sp, #16; strb w0, [sp] - store char in buffer }
+      EmitIndent;
+      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      { strb w0, [sp] }
+      EmitIndent;
+      writechar(115); writechar(116); writechar(114); writechar(98); writechar(32);  { strb }
+      writechar(119); writechar(48); writechar(44); writechar(32);  { w0, }
+      writechar(91); writechar(115); writechar(112); writechar(93);  { [sp] }
+      EmitNL;
+      { ldr x0, [sp, #16] - load fd from saved position }
+      EmitIndent;
+      writechar(108); writechar(100); writechar(114); writechar(32);  { ldr }
+      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+      writechar(91); writechar(115); writechar(112); writechar(44); writechar(32);  { [sp, }
+      writechar(35); writechar(49); writechar(54); writechar(93);  { #16] }
+      EmitNL;
+      { mov x1, sp - buffer address }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(49); writechar(44); writechar(32);  { x1, }
+      writechar(115); writechar(112);  { sp }
+      EmitNL;
+      { mov x2, #1 - write 1 byte }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+      writechar(120); writechar(50); writechar(44); writechar(32);  { x2, }
+      writechar(35); writechar(49);  { #1 }
+      EmitNL;
+      { write syscall: x16 = 0x2000004 }
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(122); writechar(32);  { movz }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(52);  { #4 }
+      EmitNL;
+      EmitIndent;
+      writechar(109); writechar(111); writechar(118); writechar(107); writechar(32);  { movk }
+      writechar(120); writechar(49); writechar(54); writechar(44); writechar(32);  { x16, }
+      writechar(35); writechar(48); writechar(120); writechar(50); writechar(48); writechar(48);  { #0x200 }
+      writechar(44); writechar(32);
+      writechar(108); writechar(115); writechar(108); writechar(32);  { lsl }
+      writechar(35); writechar(49); writechar(54);  { #16 }
+      EmitNL;
+      EmitSvc;
+      { add sp, sp, #32 - restore stack (16 for buffer + 16 for saved fd) }
+      EmitIndent;
+      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(115); writechar(112); writechar(44); writechar(32);  { sp, }
+      writechar(35); writechar(51); writechar(50);  { #32 }
+      EmitNL;
+      Expect(TOK_RPAREN)
     end
     { seek = 115,101,101,107 }
     else if (tok_len = 4) and (tok_str[0] = 115) and (tok_str[1] = 101) and
@@ -16441,11 +17506,14 @@ begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration }
-  if tok_type = TOK_FORWARD then
+  { Check for forward declaration or interface declaration }
+  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
   begin
-    NextToken;
-    Expect(TOK_SEMICOLON);
+    if tok_type = TOK_FORWARD then
+    begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    end;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
@@ -16682,11 +17750,14 @@ begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check for forward declaration }
-  if tok_type = TOK_FORWARD then
+  { Check for forward declaration or interface declaration }
+  if (tok_type = TOK_FORWARD) or (in_interface = 1) then
   begin
-    NextToken;
-    Expect(TOK_SEMICOLON);
+    if tok_type = TOK_FORWARD then
+    begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    end;
     PopScope(scope_level);
     scope_level := saved_level;
     local_offset := saved_offset
@@ -16795,30 +17866,482 @@ begin
   end  { end of else for non-forward declaration }
 end;
 
-procedure ParseProgram;
+{ Write unit name to TPU file (from current_unit_name) }
+procedure TPUWriteUnitName;
 var
-  main_lbl: integer;
+  i: integer;
 begin
-  Expect(TOK_PROGRAM);
+  for i := 0 to current_unit_len - 1 do
+    writefilechar(tpu_file, current_unit_name[i])
+end;
+
+{ Write an integer to TPU file }
+procedure TPUWriteInt(n: integer);
+var
+  neg: integer;
+  digits: array[0..19] of integer;
+  count, i: integer;
+begin
+  neg := 0;
+  if n < 0 then
+  begin
+    neg := 1;
+    n := 0 - n
+  end;
+  count := 0;
+  if n = 0 then
+  begin
+    digits[0] := 48;
+    count := 1
+  end
+  else
+  begin
+    while n > 0 do
+    begin
+      digits[count] := 48 + (n mod 10);
+      n := n div 10;
+      count := count + 1
+    end
+  end;
+  if neg = 1 then
+    writefilechar(tpu_file, 45);  { '-' }
+  for i := count - 1 downto 0 do
+    writefilechar(tpu_file, digits[i])
+end;
+
+{ Write symbol name to TPU file }
+procedure TPUWriteSymName(idx: integer);
+var
+  base, i, c: integer;
+begin
+  base := idx * 32;
+  i := 0;
+  c := sym_name[base];
+  while c <> 0 do
+  begin
+    writefilechar(tpu_file, c);
+    i := i + 1;
+    c := sym_name[base + i]
+  end
+end;
+
+{ Write type name to TPU file }
+procedure TPUWriteType(t: integer);
+begin
+  if t = TYPE_INTEGER then
+    write(tpu_file, 'INTEGER')
+  else if t = TYPE_CHAR then
+    write(tpu_file, 'CHAR')
+  else if t = TYPE_BOOLEAN then
+    write(tpu_file, 'BOOLEAN')
+  else if t = TYPE_STRING then
+    write(tpu_file, 'STRING')
+  else if t = TYPE_REAL then
+    write(tpu_file, 'REAL')
+  else if t = TYPE_VOID then
+    write(tpu_file, 'VOID')
+  else if t = TYPE_POINTER then
+    write(tpu_file, 'POINTER')
+  else if t = TYPE_RECORD then
+    write(tpu_file, 'RECORD')
+  else if t = TYPE_ARRAY then
+    write(tpu_file, 'ARRAY')
+  else
+    write(tpu_file, 'UNKNOWN')
+end;
+
+{ Write TPU file for current unit }
+procedure WriteTPUFile;
+var
+  i, base, c, j: integer;
+begin
+  { Build filename in tok_str: UnitName.tpu }
+  for i := 0 to current_unit_len - 1 do
+    tok_str[i] := current_unit_name[i];
+  tok_str[current_unit_len] := 46;      { . }
+  tok_str[current_unit_len + 1] := 116; { t }
+  tok_str[current_unit_len + 2] := 112; { p }
+  tok_str[current_unit_len + 3] := 117; { u }
+  tok_str[current_unit_len + 4] := 0;
+
+  { Open file for writing using assigntokstr }
+  assigntokstr(tpu_file, 0, current_unit_len + 4);
+  rewrite(tpu_file);
+
+  { Write header }
+  writeln(tpu_file, 'TUXPASCAL_UNIT_V1');
+
+  { Write unit name }
+  write(tpu_file, 'UNIT ');
+  TPUWriteUnitName;
+  writeln(tpu_file);
+
+  { Write interface section }
+  writeln(tpu_file, 'INTERFACE');
+
+  { Write interface symbols }
+  for i := interface_start to interface_end do
+  begin
+    if sym_kind[i] = SYM_CONST then
+    begin
+      write(tpu_file, 'CONST ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_const_val[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_VAR then
+    begin
+      write(tpu_file, 'VAR ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_offset[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_PROCEDURE then
+    begin
+      write(tpu_file, 'PROC ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_var_param_flags[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_FUNCTION then
+    begin
+      write(tpu_file, 'FUNC ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_var_param_flags[i]);
+      writeln(tpu_file)
+    end
+    else if sym_kind[i] = SYM_TYPEDEF then
+    begin
+      write(tpu_file, 'TYPE ');
+      TPUWriteSymName(i);
+      write(tpu_file, ' ');
+      TPUWriteType(sym_type[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_const_val[i]);
+      write(tpu_file, ' ');
+      TPUWriteInt(sym_label[i]);
+      writeln(tpu_file)
+    end
+  end;
+
+  writeln(tpu_file, 'ENDINTERFACE');
+
+  close(tpu_file)
+end;
+
+{ Read a line from TPU file into tpu_line buffer }
+function TPUReadLine: integer;
+var
+  c: integer;
+begin
+  tpu_line_len := 0;
+  if eof(tpu_file) then
+  begin
+    TPUReadLine := 0
+  end
+  else
+  begin
+    while not eof(tpu_file) do
+    begin
+      read(tpu_file, c);
+      if c = 10 then
+      begin
+        tpu_line[tpu_line_len] := 0;
+        TPUReadLine := 1
+      end
+      else if c <> 13 then
+      begin
+        tpu_line[tpu_line_len] := c;
+        tpu_line_len := tpu_line_len + 1
+      end
+    end;
+    tpu_line[tpu_line_len] := 0;
+    TPUReadLine := 1
+  end
+end;
+
+{ Note: TPULineStartsWith removed - checks are inlined using first 3 chars }
+
+{ Parse integer from tpu_line at tpu_pos (updates tpu_pos) }
+function TPUParseInt: integer;
+var
+  neg, result: integer;
+begin
+  neg := 0;
+  result := 0;
+  if tpu_line[tpu_pos] = 45 then  { '-' }
+  begin
+    neg := 1;
+    tpu_pos := tpu_pos + 1
+  end;
+  while (tpu_line[tpu_pos] >= 48) and (tpu_line[tpu_pos] <= 57) do
+  begin
+    result := result * 10 + (tpu_line[tpu_pos] - 48);
+    tpu_pos := tpu_pos + 1
+  end;
+  if neg = 1 then
+    TPUParseInt := 0 - result
+  else
+    TPUParseInt := result
+end;
+
+{ Skip spaces in tpu_line at tpu_pos (updates tpu_pos) }
+procedure TPUSkipSpaces;
+begin
+  while tpu_line[tpu_pos] = 32 do
+    tpu_pos := tpu_pos + 1
+end;
+
+{ Parse identifier from tpu_line at tpu_pos, store in tok_str (updates tpu_pos) }
+procedure TPUParseIdent;
+begin
+  tok_len := 0;
+  TPUSkipSpaces;
+  while (tpu_line[tpu_pos] <> 32) and (tpu_line[tpu_pos] <> 0) do
+  begin
+    tok_str[tok_len] := tpu_line[tpu_pos];
+    tok_len := tok_len + 1;
+    tpu_pos := tpu_pos + 1
+  end;
+  tok_str[tok_len] := 0
+end;
+
+{ Parse type from tpu_line at tpu_pos, return TYPE_* constant }
+function TPUParseType: integer;
+begin
+  TPUParseIdent;
+  if (tok_str[0] = 73) and (tok_str[1] = 78) and (tok_str[2] = 84) then  { INT }
+    TPUParseType := TYPE_INTEGER
+  else if (tok_str[0] = 67) and (tok_str[1] = 72) and (tok_str[2] = 65) then  { CHA }
+    TPUParseType := TYPE_CHAR
+  else if (tok_str[0] = 66) and (tok_str[1] = 79) and (tok_str[2] = 79) then  { BOO }
+    TPUParseType := TYPE_BOOLEAN
+  else if (tok_str[0] = 83) and (tok_str[1] = 84) and (tok_str[2] = 82) then  { STR }
+    TPUParseType := TYPE_STRING
+  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 65) then  { REA }
+    TPUParseType := TYPE_REAL
+  else if (tok_str[0] = 86) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { VOI }
+    TPUParseType := TYPE_VOID
+  else if (tok_str[0] = 80) and (tok_str[1] = 79) and (tok_str[2] = 73) then  { POI }
+    TPUParseType := TYPE_POINTER
+  else if (tok_str[0] = 82) and (tok_str[1] = 69) and (tok_str[2] = 67) then  { REC }
+    TPUParseType := TYPE_RECORD
+  else if (tok_str[0] = 65) and (tok_str[1] = 82) and (tok_str[2] = 82) then  { ARR }
+    TPUParseType := TYPE_ARRAY
+  else
+    TPUParseType := TYPE_INTEGER
+end;
+
+{ Load interface from a TPU file }
+function LoadTPUInterface: integer;
+var
+  idx: integer;
+  unit_base, i: integer;
+begin
+  LoadTPUInterface := 0;
+
+  { Read and verify header }
+  if TPUReadLine = 0 then
+  begin
+    LoadTPUInterface := -1
+  end
+  else
+  begin
+    { Check for TUXPASCAL_UNIT_V1 }
+    if (tpu_line[0] <> 84) or (tpu_line[1] <> 85) or (tpu_line[2] <> 88) then
+    begin
+      LoadTPUInterface := -1
+    end
+    else
+    begin
+      { Read UNIT line }
+      if TPUReadLine = 0 then
+        LoadTPUInterface := -1
+      else
+      begin
+        { Store unit name for symbol prefixing }
+        unit_base := loaded_count * 32;
+        tpu_pos := 5;  { Skip 'UNIT ' }
+        i := 0;
+        while (tpu_line[tpu_pos] <> 0) and (i < 31) do
+        begin
+          loaded_units[unit_base + i] := tpu_line[tpu_pos];
+          tpu_pos := tpu_pos + 1;
+          i := i + 1
+        end;
+        loaded_units[unit_base + i] := 0;
+
+        unit_sym_start[loaded_count] := sym_count;
+
+        { Read INTERFACE line }
+        if TPUReadLine = 0 then
+          LoadTPUInterface := -1
+        else
+        begin
+          { Parse interface declarations until ENDINTERFACE }
+          while TPUReadLine = 1 do
+          begin
+            if (tpu_line[0] = 69) and (tpu_line[1] = 78) and (tpu_line[2] = 68) then
+            begin
+              { ENDINTERFACE }
+              unit_sym_end[loaded_count] := sym_count - 1;
+              loaded_count := loaded_count + 1;
+              LoadTPUInterface := 1
+            end
+            else if (tpu_line[0] = 67) and (tpu_line[1] = 79) and (tpu_line[2] = 78) then
+            begin
+              { CONST name type value }
+              tpu_pos := 6;  { Skip 'CONST ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_CONST, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_const_val[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 86) and (tpu_line[1] = 65) and (tpu_line[2] = 82) then
+            begin
+              { VAR name type offset }
+              tpu_pos := 4;  { Skip 'VAR ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_VAR, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_offset[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 80) and (tpu_line[1] = 82) and (tpu_line[2] = 79) then
+            begin
+              { PROC name label flags }
+              tpu_pos := 5;  { Skip 'PROC ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, 0, 0);
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_var_param_flags[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 70) and (tpu_line[1] = 85) and (tpu_line[2] = 78) then
+            begin
+              { FUNC name type label flags }
+              tpu_pos := 5;  { Skip 'FUNC ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_var_param_flags[idx] := TPUParseInt
+            end
+            else if (tpu_line[0] = 84) and (tpu_line[1] = 89) and (tpu_line[2] = 80) then
+            begin
+              { TYPE name kind const_val label }
+              tpu_pos := 5;  { Skip 'TYPE ' }
+              TPUParseIdent;
+              idx := SymAdd(SYM_TYPEDEF, TYPE_RECORD, 0, 0);
+              TPUSkipSpaces;
+              sym_type[idx] := TPUParseType;
+              TPUSkipSpaces;
+              sym_const_val[idx] := TPUParseInt;
+              TPUSkipSpaces;
+              sym_label[idx] := TPUParseInt
+            end
+          end
+        end
+      end
+    end
+  end
+end;
+
+{ Parse uses clause: uses Unit1, Unit2, ...; }
+procedure ParseUsesClause;
+var
+  i: integer;
+  tpu_path: array[0..63] of integer;
+begin
+  NextToken;  { consume 'uses' }
+  repeat
+    if tok_type <> TOK_IDENT then
+      Error(6);  { expected identifier }
+
+    { Build TPU filename: UnitName.tpu }
+    for i := 0 to tok_len - 1 do
+      tpu_path[i] := tok_str[i];
+    tpu_path[tok_len] := 46;      { . }
+    tpu_path[tok_len + 1] := 116; { t }
+    tpu_path[tok_len + 2] := 112; { p }
+    tpu_path[tok_len + 3] := 117; { u }
+    tpu_path[tok_len + 4] := 0;
+
+    { Open TPU file }
+    assigntokstr(tpu_file, 0, tok_len + 4);
+    for i := 0 to tok_len + 4 do
+      tok_str[i] := tpu_path[i];
+    assigntokstr(tpu_file, 0, tok_len + 4);
+    reset(tpu_file);
+
+    { Load interface symbols }
+    if LoadTPUInterface < 0 then
+      Error(18);  { unit not found or invalid }
+
+    close(tpu_file);
+
+    NextToken;
+    if tok_type = TOK_COMMA then
+      NextToken
+  until tok_type = TOK_SEMICOLON;
+  Expect(TOK_SEMICOLON)
+end;
+
+{ Parse a unit: unit Name; interface ... implementation ... end. }
+procedure ParseUnit;
+var
+  unit_lbl: integer;
+  i: integer;
+begin
+  { unit Name; }
+  NextToken;  { consume 'unit' }
   if tok_type <> TOK_IDENT then
-    Error(11);
+    Error(6);  { expected identifier }
+
+  { Store unit name for qualified symbol names }
+  current_unit_len := tok_len;
+  for i := 0 to tok_len - 1 do
+    current_unit_name[i] := tok_str[i];
+  current_unit_name[tok_len] := 0;
+
+  compiling_unit := 1;
   NextToken;
   Expect(TOK_SEMICOLON);
 
-  { Emit header }
-  EmitGlobl;
+  { Emit unit header - no _main, just label for unit init }
   EmitAlign4;
-  EmitMain;
 
-  { Jump over runtime routines }
-  main_lbl := NewLabel;
-  EmitBranchLabel(main_lbl);
+  { Jump over runtime routines (units still need runtime for their code) }
+  unit_lbl := NewLabel;
+  EmitBranchLabel(unit_lbl);
 
-  { Emit runtime routines }
+  { Emit runtime routines needed by unit code }
   rt_print_int := NewLabel;
   rt_newline := NewLabel;
   rt_readchar := NewLabel;
   rt_print_char := NewLabel;
+  rt_write_char_fd := NewLabel;
   rt_read_int := NewLabel;
   rt_skip_line := NewLabel;
   rt_print_string := NewLabel;
@@ -16869,6 +18392,216 @@ begin
   EmitNewlineRuntime;
   EmitReadcharRuntime;
   EmitPrintCharRuntime;
+  EmitWriteCharFdRuntime;
+  EmitReadIntRuntime;
+  EmitSkipLineRuntime;
+  EmitPrintStringRuntime;
+  EmitPrintRealRuntime;
+  EmitReadRealRuntime;
+  EmitReadStringRuntime;
+  EmitHeapInitRuntime;
+  EmitAllocRuntime;
+  EmitFreeRuntime;
+  EmitStrCopyRuntime;
+  EmitStrCompareRuntime;
+  EmitStrConcatRuntime;
+  EmitStrCmpRuntime;
+  EmitStrPosRuntime;
+  EmitStrDeleteRuntime;
+  EmitStrInsertRuntime;
+  EmitIntToStrRuntime;
+  EmitStrToIntRuntime;
+  EmitStrLtrimRuntime;
+  EmitStrRtrimRuntime;
+  EmitStrTrimRuntime;
+  EmitClrScrRuntime;
+  EmitGotoXYRuntime;
+  EmitClrEolRuntime;
+  EmitTextColorRuntime;
+  EmitTextBackgroundRuntime;
+  EmitNormVideoRuntime;
+  EmitHighVideoRuntime;
+  EmitLowVideoRuntime;
+  EmitHideCursorRuntime;
+  EmitShowCursorRuntime;
+  EmitSleepRuntime;
+  EmitKeyPressedRuntime;
+  EmitInitKeyboardRuntime;
+  EmitDoneKeyboardRuntime;
+  EmitSinRuntime;
+  EmitCosRuntime;
+  EmitTanRuntime;
+  EmitExpRuntime;
+  EmitLnRuntime;
+  EmitRandomRuntime;
+  EmitArctanRuntime;
+  EmitArcsinRuntime;
+  EmitArccosRuntime;
+  EmitParamStrRuntime;
+
+  EmitLabel(unit_lbl);
+
+  { interface section }
+  Expect(TOK_INTERFACE);
+  in_interface := 1;
+  interface_start := sym_count;  { Track first interface symbol }
+
+  { Parse interface declarations (const, type, var, procedure/function headers) }
+  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
+        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
+        (tok_type = TOK_FUNCTION) do
+  begin
+    if tok_type = TOK_CONST then
+      ParseConstDeclarations
+    else if tok_type = TOK_TYPE_KW then
+      ParseTypeDeclarations
+    else if tok_type = TOK_VAR then
+      ParseVarDeclarations
+    else if tok_type = TOK_PROCEDURE then
+    begin
+      { In interface, only parse the header }
+      ParseProcedureDeclaration
+    end
+    else if tok_type = TOK_FUNCTION then
+    begin
+      ParseFunctionDeclaration
+    end
+  end;
+
+  interface_end := sym_count - 1;  { Track last interface symbol }
+  in_interface := 0;
+
+  { implementation section }
+  Expect(TOK_IMPLEMENTATION);
+
+  { Parse implementation (full procedure/function bodies) }
+  while (tok_type = TOK_CONST) or (tok_type = TOK_TYPE_KW) or
+        (tok_type = TOK_VAR) or (tok_type = TOK_PROCEDURE) or
+        (tok_type = TOK_FUNCTION) do
+  begin
+    if tok_type = TOK_CONST then
+      ParseConstDeclarations
+    else if tok_type = TOK_TYPE_KW then
+      ParseTypeDeclarations
+    else if tok_type = TOK_VAR then
+      ParseVarDeclarations
+    else if tok_type = TOK_PROCEDURE then
+      ParseProcedureDeclaration
+    else if tok_type = TOK_FUNCTION then
+      ParseFunctionDeclaration
+  end;
+
+  { Optional initialization section }
+  if tok_type = TOK_BEGIN then
+  begin
+    { Unit initialization code }
+    EmitStp;
+    EmitMovFP;
+    NextToken;
+    while tok_type <> TOK_END do
+      ParseStatement;
+    Expect(TOK_END)
+  end;
+
+  Expect(TOK_DOT);
+
+  { Unit has no exit syscall - it returns to caller }
+  EmitLdp;
+  EmitRet;
+
+  { Write TPU file with interface information }
+  WriteTPUFile;
+
+  compiling_unit := 0
+end;
+
+procedure ParseProgram;
+var
+  main_lbl: integer;
+begin
+  { Check if this is a unit or program }
+  if tok_type = TOK_UNIT then
+  begin
+    ParseUnit;
+    halt(0)  { Unit compilation done }
+  end;
+
+  Expect(TOK_PROGRAM);
+  if tok_type <> TOK_IDENT then
+    Error(11);
+  NextToken;
+  Expect(TOK_SEMICOLON);
+
+  { Check for uses clause }
+  if tok_type = TOK_USES then
+    ParseUsesClause;
+
+  { Emit header }
+  EmitGlobl;
+  EmitAlign4;
+  EmitMain;
+
+  { Jump over runtime routines }
+  main_lbl := NewLabel;
+  EmitBranchLabel(main_lbl);
+
+  { Emit runtime routines }
+  rt_print_int := NewLabel;
+  rt_newline := NewLabel;
+  rt_readchar := NewLabel;
+  rt_print_char := NewLabel;
+  rt_write_char_fd := NewLabel;
+  rt_read_int := NewLabel;
+  rt_skip_line := NewLabel;
+  rt_print_string := NewLabel;
+  rt_print_real := NewLabel;
+  rt_read_real := NewLabel;
+  rt_read_string := NewLabel;
+  rt_heap_init := NewLabel;
+  rt_alloc := NewLabel;
+  rt_free := NewLabel;
+  rt_str_copy := NewLabel;
+  rt_str_compare := NewLabel;
+  rt_str_concat := NewLabel;
+  rt_str_cmp := NewLabel;
+  rt_str_pos := NewLabel;
+  rt_str_delete := NewLabel;
+  rt_str_insert := NewLabel;
+  rt_int_to_str := NewLabel;
+  rt_str_to_int := NewLabel;
+  rt_str_ltrim := NewLabel;
+  rt_str_rtrim := NewLabel;
+  rt_str_trim := NewLabel;
+  rt_clrscr := NewLabel;
+  rt_gotoxy := NewLabel;
+  rt_clreol := NewLabel;
+  rt_textcolor := NewLabel;
+  rt_textbackground := NewLabel;
+  rt_normvideo := NewLabel;
+  rt_highvideo := NewLabel;
+  rt_lowvideo := NewLabel;
+  rt_hidecursor := NewLabel;
+  rt_showcursor := NewLabel;
+  rt_sleep := NewLabel;
+  rt_keypressed := NewLabel;
+  rt_initkeyboard := NewLabel;
+  rt_donekeyboard := NewLabel;
+  rt_sin := NewLabel;
+  rt_cos := NewLabel;
+  rt_tan := NewLabel;
+  rt_exp := NewLabel;
+  rt_ln := NewLabel;
+  rt_random := NewLabel;
+  rt_arctan := NewLabel;
+  rt_arcsin := NewLabel;
+  rt_arccos := NewLabel;
+  rt_paramstr := NewLabel;
+
+  EmitPrintIntRuntime;
+  EmitNewlineRuntime;
+  EmitReadcharRuntime;
+  EmitPrintCharRuntime;
+  EmitWriteCharFdRuntime;
   EmitReadIntRuntime;
   EmitSkipLineRuntime;
   EmitPrintStringRuntime;
@@ -16991,6 +18724,15 @@ begin
   set_count := 0;
   rt_alloc := 0;
   rt_free := 0;
+  include_depth := 0;
+  compiling_unit := 0;
+  in_interface := 0;
+  current_unit_len := 0;
+  interface_start := 0;
+  interface_end := 0;
+  loaded_count := 0;
+  tpu_line_len := 0;
+  tpu_pos := 0;
 
   { Read first character and token }
   NextChar;

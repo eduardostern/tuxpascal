@@ -134,6 +134,7 @@ Controls: Arrow keys or WASD, Space to drop, Q to quit.
 | **Keyboard** | `KeyPressed`, `InitKeyboard`, `DoneKeyboard` - non-blocking input for games |
 | **Parameters** | By value, by reference (`var`), nested scopes with static links |
 | **Directives** | `{$I filename}`, `{$INCLUDE filename}` - include files |
+| **Units** | `unit`, `interface`, `implementation`, `uses` - modular compilation (partial) |
 
 ## Project Structure
 

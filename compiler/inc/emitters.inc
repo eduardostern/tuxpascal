@@ -698,23 +698,37 @@ begin
     { Now x8 has target frame, compute address }
     if offset < 0 then
     begin
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(35);
-      write(0 - offset);
-      EmitNL
+      EmitSubLargeOffset(0, 8, 0 - offset)
     end
     else
     begin
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
-      writechar(35);
-      write(offset);
-      EmitNL
+      if offset <= 4095 then
+      begin
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(56); writechar(44); writechar(32);  { x8, }
+        writechar(35);
+        write(offset);
+        EmitNL
+      end
+      else
+      begin
+        { Large positive offset: load offset into x10, then add }
+        { Save x8, use x10 for offset }
+        EmitIndent;
+        writechar(109); writechar(111); writechar(118); writechar(32);  { mov }
+        writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL;
+        EmitMovX8(offset);
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(57); writechar(44); writechar(32);  { x9, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL
+      end
     end
   end
   else
@@ -723,24 +737,32 @@ begin
     if offset < 0 then
     begin
       { Negative offset: use sub x0, x29, #abs(offset) }
-      EmitIndent;
-      writechar(115); writechar(117); writechar(98); writechar(32);  { sub }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-      writechar(35);
-      write(0 - offset);
-      EmitNL
+      EmitSubLargeOffset(0, 29, 0 - offset)
     end
     else
     begin
       { Positive offset: use add x0, x29, #offset }
-      EmitIndent;
-      writechar(97); writechar(100); writechar(100); writechar(32);  { add }
-      writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
-      writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
-      writechar(35);
-      write(offset);
-      EmitNL
+      if offset <= 4095 then
+      begin
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+        writechar(35);
+        write(offset);
+        EmitNL
+      end
+      else
+      begin
+        { Large positive offset: load offset into x10, then add }
+        EmitMovX8(offset);
+        EmitIndent;
+        writechar(97); writechar(100); writechar(100); writechar(32);  { add }
+        writechar(120); writechar(48); writechar(44); writechar(32);  { x0, }
+        writechar(120); writechar(50); writechar(57); writechar(44); writechar(32);  { x29, }
+        writechar(120); writechar(56);  { x8 }
+        EmitNL
+      end
     end
   end
 end;
