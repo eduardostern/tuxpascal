@@ -38,6 +38,7 @@ typedef enum {
     TOK_CHAR_TYPE,
     TOK_BOOLEAN_TYPE,
     TOK_STRING_TYPE,
+    TOK_TEXT_TYPE,
     TOK_TRUE,
     TOK_FALSE,
     TOK_AND,

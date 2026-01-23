@@ -9,12 +9,14 @@ static Type t_char = {TYPE_CHAR, 0, 0, NULL};
 static Type t_boolean = {TYPE_BOOLEAN, 0, 0, NULL};
 static Type t_string = {TYPE_STRING, 0, 0, NULL};
 static Type t_void = {TYPE_VOID, 0, 0, NULL};
+static Type t_text = {TYPE_TEXT, 0, 0, NULL};
 
 Type *type_integer(void) { return &t_integer; }
 Type *type_char(void) { return &t_char; }
 Type *type_boolean(void) { return &t_boolean; }
 Type *type_string(void) { return &t_string; }
 Type *type_void(void) { return &t_void; }
+Type *type_text(void) { return &t_text; }
 
 Type *type_array(int64_t lo, int64_t hi, Type *elem) {
     Type *t = malloc(sizeof(Type));
@@ -34,6 +36,7 @@ int type_size(Type *t) {
         case TYPE_ARRAY:
             return (t->array_hi - t->array_lo + 1) * type_size(t->array_elem);
         case TYPE_VOID: return 0;
+        case TYPE_TEXT: return 272; // fd(8) + mode(8) + filename(256)
     }
     return 0;
 }

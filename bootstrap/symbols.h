@@ -11,6 +11,7 @@ typedef enum {
     TYPE_STRING,
     TYPE_ARRAY,
     TYPE_VOID,
+    TYPE_TEXT,
 } TypeKind;
 
 typedef struct Type {
@@ -68,6 +69,7 @@ Type *type_char(void);
 Type *type_boolean(void);
 Type *type_string(void);
 Type *type_void(void);
+Type *type_text(void);
 Type *type_array(int64_t lo, int64_t hi, Type *elem);
 
 int type_size(Type *t);

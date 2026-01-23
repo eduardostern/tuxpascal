@@ -650,6 +650,426 @@ static void emit_file_init(void) {
     emit_label(skip_input);
 }
 
+// Emit string copy routine - copies Pascal string from x1 to x0 (null-terminated)
+// Input: x0 = dest address, x1 = src address (Pascal string: first byte is length)
+static int emit_str_copy_routine(void) {
+    int label = new_label();
+    emit_raw("\n// String copy routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+
+    // Load length from first byte of source
+    emit("ldrb w2, [x1]");
+    emit("add x1, x1, #1");     // skip length byte
+
+    // Copy loop
+    int loop = new_label();
+    int done = new_label();
+    emit_label(loop);
+    emit("cbz w2, L%d", done);
+    emit("ldrb w3, [x1], #1");
+    emit("strb w3, [x0], #1");
+    emit("sub w2, w2, #1");
+    emit("b L%d", loop);
+
+    emit_label(done);
+    // Null-terminate
+    emit("strb wzr, [x0]");
+
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit reset routine - open file for reading
+// Input: x0 = pointer to file variable (272 bytes: fd[8], mode[8], filename[256])
+static int emit_reset_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Reset (open for reading) routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+    emit("str x0, [sp]");      // save file var pointer
+
+    // Open file: open(filename, O_RDONLY, 0)
+    emit("add x0, x0, #16");   // x0 = &filename
+    emit("mov x1, #0");        // O_RDONLY
+    emit("mov x2, #0");        // mode
+    emit("mov x16, #5");       // open syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Store fd and mode
+    emit("ldr x1, [sp]");      // file var pointer
+    emit("str x0, [x1]");      // store fd at offset 0
+    emit("mov x2, #1");        // mode = 1 (read)
+    emit("str x2, [x1, #8]");  // store mode at offset 8
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit rewrite routine - open file for writing
+// Input: x0 = pointer to file variable
+static int emit_rewrite_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Rewrite (open for writing) routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+    emit("str x0, [sp]");      // save file var pointer
+
+    // Open file: open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)
+    emit("add x0, x0, #16");   // x0 = &filename
+    emit("movz x1, #0x601");   // O_WRONLY|O_CREAT|O_TRUNC
+    emit("mov x2, #420");      // mode 0644
+    emit("mov x16, #5");       // open syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Store fd and mode
+    emit("ldr x1, [sp]");      // file var pointer
+    emit("str x0, [x1]");      // store fd at offset 0
+    emit("mov x2, #2");        // mode = 2 (write)
+    emit("str x2, [x1, #8]");  // store mode at offset 8
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit close routine - close file
+// Input: x0 = pointer to file variable
+static int emit_close_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Close file routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+    emit("str x0, [sp]");      // save file var pointer
+
+    // Close file: close(fd)
+    emit("ldr x0, [x0]");      // load fd
+    emit("mov x16, #6");       // close syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Set fd = -1, mode = 0
+    emit("ldr x1, [sp]");      // file var pointer
+    emit("mov x0, #-1");
+    emit("str x0, [x1]");      // fd = -1
+    emit("str xzr, [x1, #8]"); // mode = 0
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit eof routine - check if at end of file
+// Input: x0 = pointer to file variable
+// Output: x0 = 1 if EOF, 0 otherwise
+static int emit_eof_routine(void) {
+    int label = new_label();
+    emit_raw("\n// EOF check routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+
+    // Load fd
+    emit("ldr x0, [x0]");      // fd
+
+    // Get current position with lseek(fd, 0, SEEK_CUR)
+    emit("str x0, [sp]");      // save fd
+    emit("mov x1, #0");        // offset = 0
+    emit("mov x2, #1");        // SEEK_CUR
+    emit("mov x16, #199");     // lseek syscall (0xC7)
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+    emit("str x0, [sp, #8]");  // save current pos
+
+    // Get file size with lseek(fd, 0, SEEK_END)
+    emit("ldr x0, [sp]");      // fd
+    emit("mov x1, #0");        // offset = 0
+    emit("mov x2, #2");        // SEEK_END
+    emit("mov x16, #199");     // lseek
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+    emit("mov x3, x0");        // save file size in x3
+
+    // Restore position with lseek(fd, saved_pos, SEEK_SET)
+    emit("ldr x0, [sp]");      // fd
+    emit("ldr x1, [sp, #8]");  // saved position
+    emit("mov x2, #0");        // SEEK_SET
+    emit("mov x16, #199");     // lseek
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Compare current pos with file size
+    emit("ldr x0, [sp, #8]");  // current pos
+    emit("cmp x0, x3");        // compare with file size
+    emit("cset x0, ge");       // x0 = 1 if current >= size (EOF)
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit write integer to fd routine
+// Input: x0 = fd, x1 = value to write
+static int emit_write_int_to_fd_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Write integer to fd routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #48");
+
+    emit("str x0, [sp, #32]"); // save fd
+    emit("mov x19, x1");       // save number
+
+    emit("mov x20, #0");       // digit count
+
+    // Handle negative
+    int positive = new_label();
+    emit("cmp x19, #0");
+    emit("b.ge L%d", positive);
+
+    // Print minus
+    emit("mov x0, #'-'");
+    emit("strb w0, [sp]");
+    emit("ldr x0, [sp, #32]"); // fd
+    emit("mov x1, sp");
+    emit("mov x2, #1");
+    emit_write_syscall();
+    emit("neg x19, x19");
+
+    emit_label(positive);
+
+    // Handle zero
+    int not_zero = new_label();
+    emit("cmp x19, #0");
+    emit("b.ne L%d", not_zero);
+
+    emit("mov x0, #'0'");
+    emit("strb w0, [sp]");
+    emit("ldr x0, [sp, #32]"); // fd
+    emit("mov x1, sp");
+    emit("mov x2, #1");
+    emit_write_syscall();
+    int done = new_label();
+    emit("b L%d", done);
+
+    emit_label(not_zero);
+
+    // Extract digits loop
+    int loop = new_label();
+    int loop_done = new_label();
+    emit_label(loop);
+
+    emit("cmp x19, #0");
+    emit("b.eq L%d", loop_done);
+
+    emit("mov x21, #10");
+    emit("sdiv x22, x19, x21");
+    emit("msub x23, x22, x21, x19");
+    emit("add x23, x23, #'0'");
+
+    emit("add x24, sp, x20");
+    emit("strb w23, [x24]");
+
+    emit("add x20, x20, #1");
+    emit("mov x19, x22");
+    emit("b L%d", loop);
+
+    emit_label(loop_done);
+
+    // Print digits in reverse
+    int print_loop = new_label();
+    int print_done = new_label();
+    emit_label(print_loop);
+
+    emit("cmp x20, #0");
+    emit("b.eq L%d", print_done);
+
+    emit("sub x20, x20, #1");
+    emit("add x24, sp, x20");
+    emit("ldrb w0, [x24]");
+    emit("strb w0, [sp, #31]");
+
+    emit("ldr x0, [sp, #32]"); // fd
+    emit("add x1, sp, #31");
+    emit("mov x2, #1");
+    emit_write_syscall();
+
+    emit("b L%d", print_loop);
+
+    emit_label(print_done);
+    emit_label(done);
+
+    emit("add sp, sp, #48");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit write char to fd routine
+// Input: x0 = fd, x1 = char to write
+static int emit_write_char_to_fd_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Write char to fd routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+
+    emit("strb w1, [sp]");     // store char
+    // x0 already has fd
+    emit("mov x1, sp");        // buffer
+    emit("mov x2, #1");        // 1 byte
+    emit_write_syscall();
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit read integer from fd routine
+// Input: x0 = fd
+// Output: x0 = integer value read
+static int emit_read_int_from_fd_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Read integer from fd routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #32");
+
+    emit("str x0, [sp, #16]"); // save fd
+    emit("mov x19, #0");       // result = 0
+    emit("mov x20, #0");       // sign = 0 (positive)
+    emit("mov x21, #0");       // started = 0
+
+    // Skip whitespace and read digits
+    int read_loop = new_label();
+    int done = new_label();
+    int check_digit = new_label();
+    int skip_neg = new_label();
+
+    emit_label(read_loop);
+    // Read one character
+    emit("ldr x0, [sp, #16]"); // fd
+    emit("mov x1, sp");        // buffer
+    emit("mov x2, #1");        // read 1 byte
+    emit("mov x16, #3");       // read syscall
+    emit("movk x16, #0x200, lsl #16");
+    emit("svc #0x80");
+
+    // Check if read failed (EOF)
+    emit("cmp x0, #1");
+    emit("b.lt L%d", done);
+
+    // Load the character
+    emit("ldrb w0, [sp]");
+
+    // If we haven't started, skip whitespace
+    emit("cbnz x21, L%d", check_digit);
+    emit("cmp w0, #' '");
+    emit("b.eq L%d", read_loop);
+    emit("cmp w0, #9");        // tab
+    emit("b.eq L%d", read_loop);
+    emit("cmp w0, #10");       // newline
+    emit("b.eq L%d", read_loop);
+    emit("cmp w0, #13");       // carriage return
+    emit("b.eq L%d", read_loop);
+
+    // Check for minus sign (only valid as first char)
+    emit("cmp w0, #'-'");
+    emit("b.ne L%d", check_digit);
+    emit("mov x20, #1");       // sign = negative
+    emit("mov x21, #1");       // started
+    emit("b L%d", read_loop);
+
+    emit_label(check_digit);
+    // Check if it's a digit
+    emit("cmp w0, #'0'");
+    emit("b.lt L%d", done);
+    emit("cmp w0, #'9'");
+    emit("b.gt L%d", done);
+
+    // Accumulate digit
+    emit("mov x21, #1");       // started
+    emit("sub w0, w0, #'0'");
+    emit("and x0, x0, #0xFF"); // zero-extend to 64-bit
+    emit("mov x22, #10");
+    emit("mul x19, x19, x22");
+    emit("add x19, x19, x0");
+    emit("b L%d", read_loop);
+
+    emit_label(done);
+    // Apply sign
+    emit("cbz x20, L%d", skip_neg);
+    emit("neg x19, x19");
+    emit_label(skip_neg);
+    emit("mov x0, x19");
+
+    emit("add sp, sp, #32");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
+// Emit newline to fd routine
+// Input: x0 = fd
+static int emit_newline_fd_routine(void) {
+    int label = new_label();
+    emit_raw("\n// Write newline to fd routine");
+    emit_label(label);
+
+    emit("stp x29, x30, [sp, #-16]!");
+    emit("mov x29, sp");
+    emit("sub sp, sp, #16");
+
+    emit("mov x1, #10");       // newline
+    emit("strb w1, [sp]");
+    // x0 already has fd
+    emit("mov x1, sp");
+    emit("mov x2, #1");
+    emit_write_syscall();
+
+    emit("add sp, sp, #16");
+    emit("ldp x29, x30, [sp], #16");
+    emit("ret");
+
+    return label;
+}
+
 // Runtime routine labels
 static int rt_print_int = -1;
 static int rt_newline = -1;
@@ -658,6 +1078,15 @@ static int rt_print_char = -1;
 static int rt_openfile = -1;
 static int rt_closefile = -1;
 static int rt_readfromfd = -1;
+static int rt_str_copy = -1;
+static int rt_reset = -1;
+static int rt_rewrite = -1;
+static int rt_close = -1;
+static int rt_eof = -1;
+static int rt_write_int_fd = -1;
+static int rt_write_char_fd = -1;
+static int rt_read_int_fd = -1;
+static int rt_newline_fd = -1;
 
 // Parse factor
 static void parse_factor(Parser *p) {
@@ -723,6 +1152,37 @@ static void parse_factor(Parser *p) {
             parse_expression(p);  // fd in x0
             expect(p, TOK_RPAREN);
             emit("bl L%d", rt_readfromfd);  // returns char/-1 in x0
+            return;
+        }
+        if (strcmp(lower, "eof") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            // Expect a file variable
+            if (!check(p, TOK_IDENT)) {
+                error(p, "eof requires a file variable");
+            }
+            char *file_name = current(p)->str_val;
+            advance(p);
+            Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+            if (!file_sym) {
+                char msg[100];
+                snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+                error(p, msg);
+            }
+            if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+                error(p, "eof requires a text file variable");
+            }
+            free(file_name);
+            expect(p, TOK_RPAREN);
+            // Load address of file variable
+            int current_level = p->symbols.current->level;
+            if (file_sym->level < current_level) {
+                emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+            } else {
+                emit_addr_fp(file_sym->offset);
+            }
+            emit("bl L%d", rt_eof);
             return;
         }
         if (strcmp(lower, "addrof") == 0) {
@@ -1042,7 +1502,45 @@ static void parse_assignment_or_call(Parser *p) {
         bool newline = (strcmp(lower_name, "writeln") == 0);
         free(name);
 
+        int file_fd_saved = 0;  // Whether we saved a file fd to stack
+
         if (match(p, TOK_LPAREN)) {
+            // Check if first argument is a file variable
+            if (check(p, TOK_IDENT)) {
+                // Make a copy of the identifier to check (don't free token's str_val)
+                char first_arg_copy[256];
+                strncpy(first_arg_copy, current(p)->str_val, 255);
+                first_arg_copy[255] = '\0';
+                Symbol *first_sym = symtab_lookup(&p->symbols, first_arg_copy);
+                if (first_sym && first_sym->type && first_sym->type->kind == TYPE_TEXT) {
+                    // First arg is a file variable - consume it and load its fd
+                    free(current(p)->str_val);  // Now we can free since we consumed it
+                    advance(p);
+                    int current_level = p->symbols.current->level;
+                    if (first_sym->level < current_level) {
+                        emit_addr_outer(first_sym->offset, first_sym->level, current_level);
+                    } else {
+                        emit_addr_fp(first_sym->offset);
+                    }
+                    emit("ldr x0, [x0]");  // load fd from file variable
+                    emit("str x0, [sp, #-16]!");  // save fd on stack
+                    file_fd_saved = 1;
+
+                    if (!match(p, TOK_COMMA)) {
+                        // No more arguments, just write newline if needed
+                        expect(p, TOK_RPAREN);
+                        if (newline) {
+                            emit("ldr x0, [sp], #16");  // pop fd
+                            emit("bl L%d", rt_newline_fd);
+                        } else {
+                            emit("add sp, sp, #16");  // discard fd
+                        }
+                        return;
+                    }
+                }
+                // If not a file variable, don't free - let normal expression parsing handle it
+            }
+
             do {
                 if (check(p, TOK_STRING)) {
                     char *str = current(p)->str_val;
@@ -1052,21 +1550,38 @@ static void parse_assignment_or_call(Parser *p) {
 
                     emit("adrp x1, str%d@PAGE", id);
                     emit("add x1, x1, str%d@PAGEOFF", id);
-                    emit("mov x0, #1");
+                    if (file_fd_saved) {
+                        emit("ldur x0, [sp]");  // load fd from stack (don't pop)
+                    } else {
+                        emit("mov x0, x28");  // use default output fd
+                    }
                     emit("mov x2, #%d", len);
                     emit_write_syscall();
 
                     free(str);
                 } else {
                     parse_expression(p);
-                    emit("bl L%d", rt_print_int);
+                    if (file_fd_saved) {
+                        emit("mov x1, x0");        // value to write
+                        emit("ldur x0, [sp]");     // fd from stack
+                        emit("bl L%d", rt_write_int_fd);
+                    } else {
+                        emit("bl L%d", rt_print_int);
+                    }
                 }
             } while (match(p, TOK_COMMA));
             expect(p, TOK_RPAREN);
         }
 
         if (newline) {
-            emit("bl L%d", rt_newline);
+            if (file_fd_saved) {
+                emit("ldr x0, [sp], #16");  // pop fd
+                emit("bl L%d", rt_newline_fd);
+            } else {
+                emit("bl L%d", rt_newline);
+            }
+        } else if (file_fd_saved) {
+            emit("add sp, sp, #16");  // discard fd
         }
         return;
     }
@@ -1089,6 +1604,164 @@ static void parse_assignment_or_call(Parser *p) {
             emit("mov x0, #0");
         }
         emit_exit_syscall();
+        return;
+    }
+
+    if (strcmp(lower_name, "assign") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        // First argument: file variable
+        if (!check(p, TOK_IDENT)) {
+            error(p, "assign requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "assign requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_COMMA);
+        // Second argument: filename string
+        if (!check(p, TOK_STRING)) {
+            error(p, "assign requires a string literal for filename");
+        }
+        char *filename_str = current(p)->str_val;
+        advance(p);
+        expect(p, TOK_RPAREN);
+
+        // Add string to data section and copy to file variable offset 16
+        int len = strlen(filename_str);
+        int id = add_string(filename_str, len);
+        free(filename_str);
+
+        // Load address of filename in data section
+        emit("adrp x1, str%d@PAGE", id);
+        emit("add x1, x1, str%d@PAGEOFF", id);
+        // Load destination address (file var + 16)
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("add x0, x0, #16");  // offset to filename field
+        // Copy string (simple byte copy since it's a C string from .ascii)
+        emit("mov x2, #%d", len);
+        int copy_loop = new_label();
+        int copy_done = new_label();
+        emit_label(copy_loop);
+        emit("cbz x2, L%d", copy_done);
+        emit("ldrb w3, [x1], #1");
+        emit("strb w3, [x0], #1");
+        emit("sub x2, x2, #1");
+        emit("b L%d", copy_loop);
+        emit_label(copy_done);
+        emit("strb wzr, [x0]");  // null-terminate
+        // Initialize fd to -1 and mode to 0
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("mov x1, #-1");
+        emit("str x1, [x0]");      // fd = -1
+        emit("str xzr, [x0, #8]"); // mode = 0
+        return;
+    }
+
+    if (strcmp(lower_name, "reset") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        if (!check(p, TOK_IDENT)) {
+            error(p, "reset requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "reset requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_RPAREN);
+        // Load address of file variable
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("bl L%d", rt_reset);
+        return;
+    }
+
+    if (strcmp(lower_name, "rewrite") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        if (!check(p, TOK_IDENT)) {
+            error(p, "rewrite requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "rewrite requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_RPAREN);
+        // Load address of file variable
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("bl L%d", rt_rewrite);
+        return;
+    }
+
+    if (strcmp(lower_name, "close") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        if (!check(p, TOK_IDENT)) {
+            error(p, "close requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "close requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_RPAREN);
+        // Load address of file variable
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("bl L%d", rt_close);
         return;
     }
 
@@ -1377,6 +2050,9 @@ static Type *parse_type(Parser *p) {
     }
     if (match(p, TOK_STRING_TYPE)) {
         return type_string();
+    }
+    if (match(p, TOK_TEXT_TYPE)) {
+        return type_text();
     }
     if (match(p, TOK_ARRAY)) {
         expect(p, TOK_LBRACKET);
@@ -1868,6 +2544,15 @@ int parser_compile(Parser *p, const char *output_path) {
     rt_openfile = emit_openfile_routine();
     rt_closefile = emit_closefile_routine();
     rt_readfromfd = emit_readfromfd_routine();
+    rt_str_copy = emit_str_copy_routine();
+    rt_reset = emit_reset_routine();
+    rt_rewrite = emit_rewrite_routine();
+    rt_close = emit_close_routine();
+    rt_eof = emit_eof_routine();
+    rt_write_int_fd = emit_write_int_to_fd_routine();
+    rt_write_char_fd = emit_write_char_to_fd_routine();
+    rt_read_int_fd = emit_read_int_from_fd_routine();
+    rt_newline_fd = emit_newline_fd_routine();
 
     // Main program
     emit_raw("\n// Main program");

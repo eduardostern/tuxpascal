@@ -29,6 +29,7 @@ static const struct { const char *name; TokenType type; } keywords[] = {
     {"char", TOK_CHAR_TYPE},
     {"boolean", TOK_BOOLEAN_TYPE},
     {"string", TOK_STRING_TYPE},
+    {"text", TOK_TEXT_TYPE},
     {"true", TOK_TRUE},
     {"false", TOK_FALSE},
     {"and", TOK_AND},
@@ -245,7 +246,7 @@ const char *token_name(TokenType type) {
         "begin", "end", "if", "then", "else",
         "while", "do", "repeat", "until",
         "for", "to", "downto", "case", "of",
-        "array", "integer", "char", "boolean", "string",
+        "array", "integer", "char", "boolean", "string", "text",
         "true", "false", "and", "or", "not", "div", "mod", "forward",
         "+", "-", "*", "/", ":=", "=", "<>", "<", ">", "<=", ">=",
         "(", ")", "[", "]", ",", ";", ":", ".", ".."
