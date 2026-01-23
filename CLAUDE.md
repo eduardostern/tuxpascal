@@ -59,20 +59,21 @@ make help         # Show all targets
 
 **Pascal compiler (after building):**
 ```bash
-./build/bin/tpc <input.pas> [-o <output>] [-S] [-c]
+./build/bin/tpc <input.pas> [-o <output>] [-S] [-c] [-I<path>]
 ```
 
 The `tpc` wrapper provides a clang-like CLI. The raw compiler (`tuxpascal`) is a stdin/stdout filter.
-
-**Bootstrap compiler (for development):**
-```bash
-./build/bootstrap/tpc <input.pas> [-o <output>] [-S]
-```
 
 Options:
 - `-o <file>` - Output file name
 - `-S` - Output assembly only (.s)
 - `-c` - Compile only, don't link (.o)
+- `-I<path>` - Add directory to unit search path
+
+**Bootstrap compiler (for development):**
+```bash
+./build/bootstrap/tpc <input.pas> [-o <output>] [-S]
+```
 
 ## Rebuilding After Changes
 
@@ -176,5 +177,13 @@ ENDINTERFACE
 4. Program emits `bl _UnitName_ProcName` for unit calls
 5. Program emits `bl _UnitName_init` at startup for each unit
 6. The tpc wrapper auto-links unit `.o` files
+
+### Build System Features
+
+The `tpc` wrapper provides:
+- **Auto-dependency tracking**: Recursively compiles unit dependencies
+- **Timestamp checking**: Only recompiles units when source is newer than object
+- **Include paths**: `-I<path>` flag adds directories to unit search path
+- **Automatic linking**: Links all required `.o` files when building executables
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.

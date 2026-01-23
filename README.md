@@ -164,7 +164,15 @@ tpc -c myunit.pas
 
 # Compile a program that uses the unit (auto-links)
 tpc myprogram.pas
+
+# Add include path for units in another directory
+tpc -I/path/to/units myprogram.pas
 ```
+
+The build system automatically:
+- Compiles unit dependencies recursively
+- Tracks timestamps to avoid unnecessary recompilation
+- Links all required `.o` files
 
 ---
 
@@ -405,6 +413,24 @@ Found a bug? Want to add a feature? Remember that warm feeling when you submitte
 2. Make your changes to `compiler/inc/*.inc`
 3. Run `make self-host` to verify
 4. Submit a pull request
+
+---
+
+## Built with Claude Code
+
+This compiler was developed with significant assistance from [Claude Code](https://claude.ai/code), Anthropic's AI coding assistant. What started as a bootstrap compiler in C evolved into a fully self-hosting Pascal compiler through iterative pair programming sessions.
+
+Claude helped with:
+- Designing the single-pass recursive descent architecture
+- Implementing ARM64 assembly code generation
+- Adding features like records, pointers, sets, enums, and file I/O
+- Building the unit system with TPU files and cross-unit linking
+- Creating the build system with automatic dependency tracking
+- Debugging the self-hosting verification process
+
+The collaboration demonstrated that AI can be a powerful partner for systems programming - understanding low-level details like calling conventions, stack management, and assembly syntax while maintaining the high-level vision of recreating the Turbo Pascal experience.
+
+*"Pair programming with an AI that knows both Pascal AND ARM64? Anders would have shipped Delphi a year early."*
 
 ---
 
