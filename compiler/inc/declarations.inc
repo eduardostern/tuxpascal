@@ -1116,7 +1116,14 @@ begin
   begin
 
   { Emit procedure label and prolog - save x29, x30, static link }
-  EmitLabel(proc_label);
+  { For units, use named labels to avoid conflicts when linking }
+  if compiling_unit = 1 then
+  begin
+    EmitGloblCurrentUnit(idx);  { Export the symbol }
+    EmitUnitLabel(idx)
+  end
+  else
+    EmitLabel(proc_label);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);  { Allocate space for static link }
@@ -1360,7 +1367,14 @@ begin
   begin
 
   { Emit function label and prolog - save x29, x30, static link }
-  EmitLabel(func_label);
+  { For units, use named labels to avoid conflicts when linking }
+  if compiling_unit = 1 then
+  begin
+    EmitGloblCurrentUnit(idx);  { Export the symbol }
+    EmitUnitLabel(idx)
+  end
+  else
+    EmitLabel(func_label);
   EmitStp;
   EmitMovFP;
   EmitSubSP(16);  { Allocate space for static link }
@@ -1549,9 +1563,9 @@ procedure WriteTPUFile;
 var
   i, base, c, j: integer;
 begin
-  { Build filename in tok_str: UnitName.tpu }
+  { Build filename in tok_str: unitname.tpu (lowercase) }
   for i := 0 to current_unit_len - 1 do
-    tok_str[i] := current_unit_name[i];
+    tok_str[i] := ToLower(current_unit_name[i]);
   tok_str[current_unit_len] := 46;      { . }
   tok_str[current_unit_len + 1] := 116; { t }
   tok_str[current_unit_len + 2] := 112; { p }
@@ -1641,22 +1655,18 @@ end;
 function TPUReadLine: integer;
 var
   c: integer;
+  done: integer;
 begin
   tpu_line_len := 0;
-  if eof(tpu_file) then
+  TPUReadLine := 0;
+  done := 0;
+  if not eof(tpu_file) then
   begin
-    TPUReadLine := 0
-  end
-  else
-  begin
-    while not eof(tpu_file) do
+    while (not eof(tpu_file)) and (done = 0) do
     begin
       read(tpu_file, c);
       if c = 10 then
-      begin
-        tpu_line[tpu_line_len] := 0;
-        TPUReadLine := 1
-      end
+        done := 1
       else if c <> 13 then
       begin
         tpu_line[tpu_line_len] := c;
@@ -1664,7 +1674,10 @@ begin
       end
     end;
     tpu_line[tpu_line_len] := 0;
-    TPUReadLine := 1
+    if tpu_line_len > 0 then
+      TPUReadLine := 1
+    else if done = 1 then
+      TPUReadLine := 1  { empty line is still a line }
   end
 end;
 
@@ -1824,6 +1837,7 @@ begin
               tpu_pos := 5;  { Skip 'PROC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_PROCEDURE, TYPE_VOID, 0, 0);
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
               TPUSkipSpaces;
               sym_label[idx] := TPUParseInt;
               TPUSkipSpaces;
@@ -1835,6 +1849,7 @@ begin
               tpu_pos := 5;  { Skip 'FUNC ' }
               TPUParseIdent;
               idx := SymAdd(SYM_FUNCTION, TYPE_INTEGER, 0, 0);
+              sym_unit_idx[idx] := loaded_count;  { Mark as imported from this unit }
               TPUSkipSpaces;
               sym_type[idx] := TPUParseType;
               TPUSkipSpaces;
@@ -1866,26 +1881,22 @@ end;
 procedure ParseUsesClause;
 var
   i: integer;
-  tpu_path: array[0..63] of integer;
 begin
   NextToken;  { consume 'uses' }
   repeat
     if tok_type <> TOK_IDENT then
       Error(6);  { expected identifier }
 
-    { Build TPU filename: UnitName.tpu }
+    { Build TPU filename in tok_str: unitname.tpu (lowercase for case-insensitivity) }
     for i := 0 to tok_len - 1 do
-      tpu_path[i] := tok_str[i];
-    tpu_path[tok_len] := 46;      { . }
-    tpu_path[tok_len + 1] := 116; { t }
-    tpu_path[tok_len + 2] := 112; { p }
-    tpu_path[tok_len + 3] := 117; { u }
-    tpu_path[tok_len + 4] := 0;
+      tok_str[i] := ToLower(tok_str[i]);
+    tok_str[tok_len] := 46;      { . }
+    tok_str[tok_len + 1] := 116; { t }
+    tok_str[tok_len + 2] := 112; { p }
+    tok_str[tok_len + 3] := 117; { u }
+    tok_str[tok_len + 4] := 0;
 
     { Open TPU file }
-    assigntokstr(tpu_file, 0, tok_len + 4);
-    for i := 0 to tok_len + 4 do
-      tok_str[i] := tpu_path[i];
     assigntokstr(tpu_file, 0, tok_len + 4);
     reset(tpu_file);
 
@@ -2085,21 +2096,28 @@ begin
       ParseFunctionDeclaration
   end;
 
+  { Unit initialization entry point - always emit even if no init code }
+  EmitGloblUnitInit;
+  EmitUnitInitLabel;
+  EmitStp;
+  EmitMovFP;
+
   { Optional initialization section }
   if tok_type = TOK_BEGIN then
   begin
-    { Unit initialization code }
-    EmitStp;
-    EmitMovFP;
     NextToken;
     while tok_type <> TOK_END do
+    begin
       ParseStatement;
+      if tok_type = TOK_SEMICOLON then
+        NextToken
+    end;
     Expect(TOK_END)
   end;
 
   Expect(TOK_DOT);
 
-  { Unit has no exit syscall - it returns to caller }
+  { Unit init returns to caller }
   EmitLdp;
   EmitRet;
 
@@ -2111,7 +2129,7 @@ end;
 
 procedure ParseProgram;
 var
-  main_lbl: integer;
+  main_lbl, i: integer;
 begin
   { Check if this is a unit or program }
   if tok_type = TOK_UNIT then
@@ -2263,6 +2281,10 @@ begin
 
   EmitFileOpenInit;
   EmitBL(rt_heap_init);
+
+  { Call unit initialization routines }
+  for i := 0 to loaded_count - 1 do
+    EmitBLUnitInit(i);
 
   ParseBlock;
 

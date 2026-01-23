@@ -44,6 +44,7 @@ begin
   sym_const_val[sym_count] := 0;
   sym_is_var_param[sym_count] := 0;
   sym_var_param_flags[sym_count] := 0;
+  sym_unit_idx[sym_count] := -1;  { -1 = local symbol, >= 0 = imported from unit }
   sym_count := sym_count + 1;
   SymAdd := sym_count - 1
 end;

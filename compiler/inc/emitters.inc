@@ -1231,3 +1231,113 @@ begin
   EmitNL
 end;
 
+{ ----- Unit Symbol Emitters ----- }
+
+{ Write symbol name from sym_name array }
+procedure WriteSymName(sym_idx: integer);
+var
+  base, i, c: integer;
+begin
+  base := sym_idx * 32;
+  i := 0;
+  c := sym_name[base];
+  while c <> 0 do
+  begin
+    writechar(c);
+    i := i + 1;
+    c := sym_name[base + i]
+  end
+end;
+
+{ Write current unit name (from current_unit_name) }
+procedure WriteCurrentUnitName;
+var
+  i: integer;
+begin
+  for i := 0 to current_unit_len - 1 do
+    writechar(current_unit_name[i])
+end;
+
+{ Write loaded unit name (from loaded_units array) }
+procedure WriteLoadedUnitName(unit_idx: integer);
+var
+  base, i, c: integer;
+begin
+  base := unit_idx * 32;
+  i := 0;
+  c := loaded_units[base];
+  while c <> 0 do
+  begin
+    writechar(c);
+    i := i + 1;
+    c := loaded_units[base + i]
+  end
+end;
+
+{ Emit .globl _UnitName_SymName for current unit export }
+procedure EmitGloblCurrentUnit(sym_idx: integer);
+begin
+  writechar(46); writechar(103); writechar(108); writechar(111);
+  writechar(98); writechar(108); writechar(32);  { .globl }
+  writechar(95);  { _ }
+  WriteCurrentUnitName;
+  writechar(95);  { _ }
+  WriteSymName(sym_idx);
+  EmitNL
+end;
+
+{ Emit _UnitName_SymName: label for current unit }
+procedure EmitUnitLabel(sym_idx: integer);
+begin
+  writechar(95);  { _ }
+  WriteCurrentUnitName;
+  writechar(95);  { _ }
+  WriteSymName(sym_idx);
+  writechar(58);  { : }
+  EmitNL
+end;
+
+{ Emit bl _UnitName_SymName for calling imported unit procedure }
+procedure EmitBLUnitProc(unit_idx, sym_idx: integer);
+begin
+  EmitIndent;
+  writechar(98); writechar(108); writechar(32);  { bl }
+  writechar(95);  { _ }
+  WriteLoadedUnitName(unit_idx);
+  writechar(95);  { _ }
+  WriteSymName(sym_idx);
+  EmitNL
+end;
+
+{ Emit .globl _UnitName_init for unit initialization }
+procedure EmitGloblUnitInit;
+begin
+  writechar(46); writechar(103); writechar(108); writechar(111);
+  writechar(98); writechar(108); writechar(32);  { .globl }
+  writechar(95);  { _ }
+  WriteCurrentUnitName;
+  writechar(95); writechar(105); writechar(110); writechar(105); writechar(116);  { _init }
+  EmitNL
+end;
+
+{ Emit _UnitName_init: label for unit initialization }
+procedure EmitUnitInitLabel;
+begin
+  writechar(95);  { _ }
+  WriteCurrentUnitName;
+  writechar(95); writechar(105); writechar(110); writechar(105); writechar(116);  { _init }
+  writechar(58);  { : }
+  EmitNL
+end;
+
+{ Emit bl _UnitName_init for calling unit initialization }
+procedure EmitBLUnitInit(unit_idx: integer);
+begin
+  EmitIndent;
+  writechar(98); writechar(108); writechar(32);  { bl }
+  writechar(95);  { _ }
+  WriteLoadedUnitName(unit_idx);
+  writechar(95); writechar(105); writechar(110); writechar(105); writechar(116);  { _init }
+  EmitNL
+end;
+

@@ -2652,7 +2652,11 @@ begin
         end;
         { Set up static link for callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        EmitBL(sym_label[idx]);
+        { Check if calling imported unit procedure }
+        if sym_unit_idx[idx] >= 0 then
+          EmitBLUnitProc(sym_unit_idx[idx], idx)
+        else
+          EmitBL(sym_label[idx]);
         expr_type := sym_type[idx]  { function return type }
       end
       else
@@ -5630,7 +5634,11 @@ begin
         end;
         { Set up static link for callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        EmitBL(sym_label[idx])
+        { Check if calling imported unit procedure }
+        if sym_unit_idx[idx] >= 0 then
+          EmitBLUnitProc(sym_unit_idx[idx], idx)
+        else
+          EmitBL(sym_label[idx])
       end
       else if (sym_kind[idx] = SYM_VAR) or (sym_kind[idx] = SYM_PARAM) then
       begin

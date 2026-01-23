@@ -128,6 +128,7 @@ var
   sym_label: array[0..499] of integer;
   sym_is_var_param: array[0..499] of integer;  { 1 if var parameter (pass by ref) }
   sym_var_param_flags: array[0..499] of integer;  { bitmap: bit i = 1 if param i is var (for proc/func) }
+  sym_unit_idx: array[0..499] of integer;  { unit index for imported symbols, -1 for local }
   sym_count: integer;
 
   { Record field table }

@@ -59,10 +59,10 @@ make help         # Show all targets
 
 **Pascal compiler (after building):**
 ```bash
-./build/bin/tpc <input.pas> [-o <output>] [-S]
+./build/bin/tpc <input.pas> [-o <output>] [-S] [-c]
 ```
 
-The `tpc` wrapper provides a user-friendly CLI. The raw compiler (`tuxpascal`) is a stdin/stdout filter.
+The `tpc` wrapper provides a clang-like CLI. The raw compiler (`tuxpascal`) is a stdin/stdout filter.
 
 **Bootstrap compiler (for development):**
 ```bash
@@ -70,8 +70,9 @@ The `tpc` wrapper provides a user-friendly CLI. The raw compiler (`tuxpascal`) i
 ```
 
 Options:
-- `-o <file>` - Output file name (default: a.out)
-- `-S` - Output assembly only (don't assemble/link)
+- `-o <file>` - Output file name
+- `-S` - Output assembly only (.s)
+- `-c` - Compile only, don't link (.o)
 
 ## Rebuilding After Changes
 
@@ -133,13 +134,27 @@ The parser emits ARM64 assembly directly as it parses. Key patterns:
 
 **Procedures/Functions:** Parameters, local variables, nested scopes with static link chain, forward declarations
 
-**Include Directives:** `{$I filename}` or `{$INCLUDE filename}` - processed by bootstrap compiler only
+**Include Directives:** `{$I filename}` or `{$INCLUDE filename}` - nested includes up to 8 levels
 
-**Units (partial):** `unit`, `interface`, `implementation`, `uses` - unit parsing and TPU file generation
+**Units:** `unit`, `interface`, `implementation`, `uses` - full unit compilation and linking
 
-## TPU File Format
+## Unit Compilation
 
-When compiling a unit, the compiler generates a `.tpu` file containing interface metadata:
+Units are compiled separately and linked with programs that use them:
+
+```bash
+# Compile a unit (generates .o and .tpu)
+tpc -c myunit.pas
+
+# Compile a program that uses the unit (auto-links)
+tpc myprogram.pas -o myprogram
+```
+
+When compiling a unit, the compiler generates:
+- Assembly/object code with unit-prefixed labels (`_UnitName_ProcName`)
+- A `.tpu` file containing interface metadata (lowercase filename)
+
+### TPU File Format
 
 ```
 TUXPASCAL_UNIT_V1
@@ -153,10 +168,13 @@ TYPE name kind const_val label
 ENDINTERFACE
 ```
 
-The assembly code goes to stdout (redirected to `.s` file by the wrapper). The TPU file is used when other programs `uses` the unit to import interface symbols.
+### Unit Workflow
 
-## Not Yet Fully Implemented
-
-- Units: TPU loading for `uses` clause, inter-unit linking, unit initialization calls
+1. Unit code emits `.globl _UnitName_ProcName` labels for exports
+2. Unit initialization emits `_UnitName_init` entry point
+3. Programs calling `uses MyUnit` load `myunit.tpu` for symbols
+4. Program emits `bl _UnitName_ProcName` for unit calls
+5. Program emits `bl _UnitName_init` at startup for each unit
+6. The tpc wrapper auto-links unit `.o` files
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.
