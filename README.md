@@ -16,7 +16,7 @@
 
 [![Self-Hosting](https://img.shields.io/badge/Self--Hosting-Verified-brightgreen)]()
 [![Platform](https://img.shields.io/badge/Platform-ARM64%20macOS-blue)]()
-[![License](https://img.shields.io/badge/License-Unlicense-blue)]()
+[![License](https://img.shields.io/badge/License-MIT-green)]()
 [![Borland Spirit](https://img.shields.io/badge/Borland%20Spirit-100%25-red)]()
 
 </div>
@@ -422,9 +422,9 @@ Found a bug? Want to add a feature? Remember that warm feeling when you submitte
 
 ## License
 
-**Unlicense** - Public Domain. No restrictions. No attribution required.
+**MIT License** - Do whatever you want, just keep the copyright notice.
 
-Use it, sell it, modify it, claim you wrote it, print it and wallpaper your bathroom with it. We don't care. Just make something beautiful.
+Use it, sell it, modify it, make it closed source, we don't care. The only rule: include the license file so everyone knows Eduardo Stern wrote the original (and can't sue him for his own code).
 
 *"Treat this compiler like a book"* - The Borland Way
 
