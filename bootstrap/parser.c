@@ -1185,6 +1185,26 @@ static void parse_factor(Parser *p) {
             emit("bl L%d", rt_eof);
             return;
         }
+        if (strcmp(lower, "paramcount") == 0) {
+            advance(p);
+            free(name);
+            if (match(p, TOK_LPAREN)) {
+                expect(p, TOK_RPAREN);
+            }
+            // Return argc - 1 (x25 holds argc from emit_file_init)
+            emit("sub x0, x25, #1");
+            return;
+        }
+        if (strcmp(lower, "paramstr") == 0) {
+            advance(p);
+            free(name);
+            expect(p, TOK_LPAREN);
+            parse_expression(p);  // index in x0
+            expect(p, TOK_RPAREN);
+            // Return argv[n] - pointer to C string (x26 holds argv)
+            emit("ldr x0, [x26, x0, lsl #3]");  // x0 = argv[x0]
+            return;
+        }
         if (strcmp(lower, "addrof") == 0) {
             advance(p);
             free(name);
@@ -1627,43 +1647,68 @@ static void parse_assignment_or_call(Parser *p) {
         }
         free(file_name);
         expect(p, TOK_COMMA);
-        // Second argument: filename string
-        if (!check(p, TOK_STRING)) {
-            error(p, "assign requires a string literal for filename");
-        }
-        char *filename_str = current(p)->str_val;
-        advance(p);
-        expect(p, TOK_RPAREN);
 
-        // Add string to data section and copy to file variable offset 16
-        int len = strlen(filename_str);
-        int id = add_string(filename_str, len);
-        free(filename_str);
+        // Second argument: filename - can be string literal or expression
+        if (check(p, TOK_STRING)) {
+            // String literal - add to data section
+            char *filename_str = current(p)->str_val;
+            advance(p);
+            expect(p, TOK_RPAREN);
 
-        // Load address of filename in data section
-        emit("adrp x1, str%d@PAGE", id);
-        emit("add x1, x1, str%d@PAGEOFF", id);
-        // Load destination address (file var + 16)
-        int current_level = p->symbols.current->level;
-        if (file_sym->level < current_level) {
-            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+            int len = strlen(filename_str);
+            int id = add_string(filename_str, len);
+            free(filename_str);
+
+            // Load address of filename in data section
+            emit("adrp x1, str%d@PAGE", id);
+            emit("add x1, x1, str%d@PAGEOFF", id);
+            // Load destination address (file var + 16)
+            int current_level = p->symbols.current->level;
+            if (file_sym->level < current_level) {
+                emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+            } else {
+                emit_addr_fp(file_sym->offset);
+            }
+            emit("add x0, x0, #16");  // offset to filename field
+            // Copy string with known length
+            emit("mov x2, #%d", len);
+            int copy_loop = new_label();
+            int copy_done = new_label();
+            emit_label(copy_loop);
+            emit("cbz x2, L%d", copy_done);
+            emit("ldrb w3, [x1], #1");
+            emit("strb w3, [x0], #1");
+            emit("sub x2, x2, #1");
+            emit("b L%d", copy_loop);
+            emit_label(copy_done);
+            emit("strb wzr, [x0]");  // null-terminate
         } else {
-            emit_addr_fp(file_sym->offset);
+            // Expression (e.g., paramstr(n)) - evaluate and copy C string
+            parse_expression(p);  // string pointer in x0
+            expect(p, TOK_RPAREN);
+
+            emit("mov x1, x0");  // source string pointer
+            // Load destination address (file var + 16)
+            int current_level = p->symbols.current->level;
+            if (file_sym->level < current_level) {
+                emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+            } else {
+                emit_addr_fp(file_sym->offset);
+            }
+            emit("add x0, x0, #16");  // offset to filename field
+            // Copy null-terminated string
+            int copy_loop = new_label();
+            int copy_done = new_label();
+            emit_label(copy_loop);
+            emit("ldrb w3, [x1], #1");
+            emit("strb w3, [x0], #1");
+            emit("cbz w3, L%d", copy_done);
+            emit("b L%d", copy_loop);
+            emit_label(copy_done);
         }
-        emit("add x0, x0, #16");  // offset to filename field
-        // Copy string (simple byte copy since it's a C string from .ascii)
-        emit("mov x2, #%d", len);
-        int copy_loop = new_label();
-        int copy_done = new_label();
-        emit_label(copy_loop);
-        emit("cbz x2, L%d", copy_done);
-        emit("ldrb w3, [x1], #1");
-        emit("strb w3, [x0], #1");
-        emit("sub x2, x2, #1");
-        emit("b L%d", copy_loop);
-        emit_label(copy_done);
-        emit("strb wzr, [x0]");  // null-terminate
+
         // Initialize fd to -1 and mode to 0
+        int current_level = p->symbols.current->level;
         if (file_sym->level < current_level) {
             emit_addr_outer(file_sym->offset, file_sym->level, current_level);
         } else {
@@ -1762,6 +1807,66 @@ static void parse_assignment_or_call(Parser *p) {
             emit_addr_fp(file_sym->offset);
         }
         emit("bl L%d", rt_close);
+        return;
+    }
+
+    if (strcmp(lower_name, "setinput") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        if (!check(p, TOK_IDENT)) {
+            error(p, "setinput requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "setinput requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_RPAREN);
+        // Load fd from file variable and store in x27
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("ldr x27, [x0]");  // x27 = file.fd
+        return;
+    }
+
+    if (strcmp(lower_name, "setoutput") == 0) {
+        free(name);
+        expect(p, TOK_LPAREN);
+        if (!check(p, TOK_IDENT)) {
+            error(p, "setoutput requires a file variable");
+        }
+        char *file_name = current(p)->str_val;
+        advance(p);
+        Symbol *file_sym = symtab_lookup(&p->symbols, file_name);
+        if (!file_sym) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "undefined variable '%s'", file_name);
+            error(p, msg);
+        }
+        if (!file_sym->type || file_sym->type->kind != TYPE_TEXT) {
+            error(p, "setoutput requires a text file variable");
+        }
+        free(file_name);
+        expect(p, TOK_RPAREN);
+        // Load fd from file variable and store in x28
+        int current_level = p->symbols.current->level;
+        if (file_sym->level < current_level) {
+            emit_addr_outer(file_sym->offset, file_sym->level, current_level);
+        } else {
+            emit_addr_fp(file_sym->offset);
+        }
+        emit("ldr x28, [x0]");  // x28 = file.fd
         return;
     }
 
