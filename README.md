@@ -119,7 +119,21 @@ End.
 All your favorites are here: `ClrScr`, `GotoXY`, `TextColor`, `TextBackground`, `KeyPressed`, `ReadKey`...
 
 ### Graphics & Sound (TuxGraph Library)
-Want to go beyond text mode? TuxPascal includes a native graphics library using macOS Core Graphics and Core Audio:
+Want to go beyond text mode? TuxPascal includes a native graphics library using macOS Core Graphics and Core Audio. Write arcade games the way Borland intended - pure Pascal, direct hardware access, no frameworks in between.
+
+<div align="center">
+
+![Space Invaders in TuxPascal](docs/graphinvaders.png)
+
+*Space Invaders - 1000 lines of pure Pascal, authentic Atari 2600 style*
+
+</div>
+
+The `graphinvaders.pas` example recreates the 1978 arcade classic in authentic Borland style:
+- **External declarations** for C library functions (just like Turbo Pascal's inline assembly)
+- **Sprite rendering** with `gfx_fill_rect` - blocky pixels exactly like the Atari 2600
+- **Retro sound effects** with `snd_beep` square waves - the authentic arcade experience
+- **Game loop architecture** that any 1980s programmer would recognize
 
 ```pascal
 Program GraphicsDemo;
@@ -148,8 +162,7 @@ End.
 
 Build graphics programs with:
 ```bash
-tpc examples/graphtetris.pas -o graphtetris.s
-clang -o graphtetris graphtetris.s lib/tuxgraph.o -framework Cocoa -framework CoreGraphics -framework AudioToolbox
+tpc examples/graphinvaders.pas -ltuxgraph -o graphinvaders
 ```
 
 ---
@@ -540,6 +553,8 @@ The collaboration demonstrated that AI can be a powerful partner for systems pro
 *To Anders Hejlsberg, who proved that compilers could be both fast and friendly.*
 
 *To Philippe Kahn, who made Borland the Microsoft-slayer of the 1980s.*
+
+*To Tomohiro Nishikado, who created Space Invaders in 1978 and gave us all something to code in our computer labs.*
 
 *And to every programmer who ever typed `BEGIN` and felt the world make sense.*
 

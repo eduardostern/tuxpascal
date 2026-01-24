@@ -69,6 +69,8 @@ Options:
 - `-S` - Output assembly only (.s)
 - `-c` - Compile only, don't link (.o)
 - `-I<path>` - Add directory to unit search path
+- `-ltuxgraph` - Link with TuxGraph library (graphics and sound)
+- `-ltuxnet` - Link with TuxNet library (networking)
 
 **Bootstrap compiler (for development):**
 ```bash
@@ -233,12 +235,11 @@ A native Objective-C graphics and sound library for TuxPascal programs.
 ### Building Graphics Programs
 
 ```bash
-# Compile Pascal to assembly
-./build/bin/tuxpascal < examples/graphtetris.pas > /tmp/graphtetris.s
+# Build the TuxGraph library first (one-time)
+make -C lib
 
-# Link with tuxgraph library
-clang -o graphtetris /tmp/graphtetris.s lib/tuxgraph.o \
-  -framework Cocoa -framework CoreGraphics -framework AudioToolbox
+# Compile and link with TuxGraph
+tpc examples/graphinvaders.pas -ltuxgraph -o graphinvaders
 ```
 
 ### Graphics Functions
