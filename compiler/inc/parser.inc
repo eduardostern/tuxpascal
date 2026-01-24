@@ -216,6 +216,452 @@ Begin
   End
   Else If tok_type = TOK_IDENT Then
   Begin
+    { First check if this is a user-defined symbol (variable, function, etc.) }
+    { User symbols take precedence over builtin functions }
+    idx := SymLookup;
+    If (idx >= 0) Or (with_rec_idx >= 0) Then
+    Begin
+      { Handle user-defined symbol or with-field }
+      If with_rec_idx >= 0 Then
+      Begin
+        arg_count := FindField(with_rec_type);
+        If arg_count >= 0 Then
+        Begin
+          { Found field - generate access code }
+          NextToken;
+          If sym_level[with_rec_idx] < scope_level Then
+          Begin
+            EmitFollowChain(sym_level[with_rec_idx], scope_level);
+            EmitAddrOffset(0, 8, sym_offset[with_rec_idx] + field_offset[arg_count])
+          End
+          Else
+            EmitAddrOffset(0, 29, sym_offset[with_rec_idx] + field_offset[arg_count]);
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            WriteLn('    ldr d0, [x0]');
+            expr_type := TYPE_REAL
+          End
+          Else
+          Begin
+            WriteLn('    ldr x0, [x0]');
+            expr_type := field_type[arg_count]
+          End
+        End
+        Else
+        Begin
+          { Field not found, use idx if valid }
+          If idx < 0 Then
+            Error(3)
+        End
+      End;
+      If (with_rec_idx < 0) Or (arg_count < 0) Then
+      Begin
+      NextToken;
+      If sym_kind[idx] = SYM_CONST Then
+      Begin
+        EmitMovX0(sym_const_val[idx]);
+        expr_type := TYPE_INTEGER
+      End
+      Else If (sym_kind[idx] = SYM_VAR) Or (sym_kind[idx] = SYM_PARAM) Then
+      Begin
+        If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+        Begin
+          { Array element access: arr[index] Or arr[index].field }
+          NextToken;  { consume '[' }
+          ParseExpression;  { index In x0 }
+          Expect(TOK_RBRACKET);
+          { Subtract low bound }
+          EmitPushX0;
+          EmitMovX0(sym_const_val[idx]);  { low bound }
+          EmitPopX1;
+          { x0 = x1 - x0 = index - low_bound }
+          WriteLn('    sub x0, x1, x0');
+          { Check If Array Of records }
+          If sym_var_param_flags[idx] > 0 Then
+          Begin
+            { Array Of records - multiply by Record size }
+            lbl1 := sym_label[sym_var_param_flags[idx] - 1];  { Record size }
+            EmitPushX0;
+            EmitMovX0(lbl1);
+            EmitPopX1;
+            { mul x0, x1, x0 }
+            WriteLn('    mul x0, x1, x0');
+          End
+          Else
+          Begin
+            { Basic Type - multiply by 8 using lsl #3 }
+            WriteLn('    lsl x0, x0, #3');
+          End;
+          { Get base address: frame + offset (offset is negative) }
+          If sym_level[idx] < scope_level Then
+          Begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
+          End
+          Else
+            EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
+          { Compute element address: x1 - x0 }
+          WriteLn('    sub x1, x1, x0');
+          { Check For field access on Array Of records }
+          If (sym_var_param_flags[idx] > 0) And (tok_type = TOK_DOT) Then
+          Begin
+            NextToken;  { consume '.' }
+            arg_count := FindField(sym_var_param_flags[idx] - 1);
+            If arg_count < 0 Then
+              Error(11);
+            NextToken;  { consume field name }
+            { Add field offset: x1 = x1 + offset }
+            If field_offset[arg_count] > 0 Then
+              EmitAddrOffset(1, 1, field_offset[arg_count]);
+            { Load field value }
+            If field_type[arg_count] = TYPE_REAL Then
+            Begin
+              WriteLn('    ldr d0, [x1]');
+              expr_type := TYPE_REAL
+            End
+            Else
+            Begin
+              WriteLn('    ldr x0, [x1]');
+              expr_type := field_type[arg_count]
+            End
+          End
+          Else
+          Begin
+            { Load element value }
+            WriteLn('    ldr x0, [x1]');
+          End
+        End
+        Else If (sym_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
+        Begin
+          { Record field access: rec.field Or rec.field.subfield... }
+          NextToken;  { consume '.' }
+          If tok_type <> TOK_IDENT Then
+            Error(11);
+          { Find the field In the Record Type }
+          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count For field_idx }
+          If arg_count < 0 Then
+            Error(15);  { undefined field }
+          { Compute address: base + field_offset }
+          { Base is at [x29 + sym_offset] For local, field at positive offset from there }
+          If sym_level[idx] < scope_level Then
+          Begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            EmitAddrOffset(0, 8, sym_offset[idx] + field_offset[arg_count])
+          End
+          Else
+            EmitAddrOffset(0, 29, sym_offset[idx] + field_offset[arg_count]);
+          NextToken;
+          { Handle nested Record fields: x0 has address, check For more dots }
+          While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
+          Begin
+            NextToken;  { consume '.' }
+            If tok_type <> TOK_IDENT Then
+              Error(11);
+            { Find sub-field In the nested Record Type }
+            lbl1 := arg_count;  { save current field index }
+            arg_count := FindField(field_rec_type[lbl1]);
+            If arg_count < 0 Then
+              Error(15);
+            { Add sub-field offset To x0 }
+            If field_offset[arg_count] > 0 Then
+              EmitAddrOffset(0, 0, field_offset[arg_count]);
+            NextToken
+          End;
+          { Load from final computed address }
+          If field_type[arg_count] = TYPE_REAL Then
+          Begin
+            WriteLn('    ldr d0, [x0]');
+            expr_type := TYPE_REAL
+          End
+          Else If field_type[arg_count] = TYPE_RECORD Then
+          Begin
+            { Accessing a nested Record as a whole - keep address In x0 }
+            expr_type := TYPE_RECORD
+          End
+          Else
+          Begin
+            WriteLn('    ldr x0, [x0]');
+            expr_type := field_type[arg_count]
+          End
+        End
+        Else
+        Begin
+          { Load variable value - check For Var param And Type }
+          If sym_type[idx] = TYPE_REAL Then
+          Begin
+            If sym_level[idx] < scope_level Then
+              EmitLdurD0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            Else
+              EmitLdurD0(sym_offset[idx]);
+            { If Var param, d0 contains address - dereference it }
+            If sym_is_var_param[idx] = 1 Then
+            Begin
+              { fmov x0, d0; ldr d0, [x0] }
+              EmitFmovX0D0;
+              WriteLn('    ldr d0, [x0]');
+            End;
+            expr_type := TYPE_REAL
+          End
+          Else If sym_type[idx] = TYPE_STRING Then
+          Begin
+            { String variable - return address }
+            EmitVarAddr(idx, scope_level);
+            expr_type := TYPE_STRING;
+            { Check For String indexing s[i] }
+            If tok_type = TOK_LBRACKET Then
+            Begin
+              NextToken;  { consume '[' }
+              EmitPushX0;  { save String base address }
+              ParseExpression;  { index In x0 }
+              Expect(TOK_RBRACKET);
+              { x0 = index, stack has base address }
+              EmitPopX1;  { x1 = base address }
+              { Add index To base: x0 = x1 + x0 }
+              WriteLn('    add x0, x1, x0');
+              { Load byte at [x0]: ldrb w0, [x0] }
+              WriteLn('    ldrb w0, [x0]');
+              expr_type := TYPE_CHAR
+            End
+          End
+          Else If sym_type[idx] = TYPE_POINTER Then
+          Begin
+            { Pointer variable }
+            If sym_level[idx] < scope_level Then
+              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            Else
+              EmitLdurX0(sym_offset[idx]);
+            { If Var param, x0 contains address - dereference it }
+            If sym_is_var_param[idx] = 1 Then
+              WriteLn('    ldr x0, [x0]');
+            { Check For dereference operator ^ }
+            If tok_type = TOK_CARET Then
+            Begin
+              NextToken;
+              { Check For Array dereference With index: pa^[i] }
+              If (ptr_ultimate_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+              Begin
+                NextToken;
+                ParseExpression;
+                Expect(TOK_RBRACKET);
+                { x0 = index, stack has base address }
+                EmitPushX0;
+                If sym_level[idx] < scope_level Then
+                  EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+                Else
+                  EmitLdurX0(sym_offset[idx]);
+                If sym_is_var_param[idx] = 1 Then
+                  WriteLn('    ldr x0, [x0]');
+                EmitPushX0;
+                EmitPopX1;
+                EmitPopX0;
+                { Subtract low bound }
+                arg_count := sym_label[idx];  { ptr_arr index }
+                EmitPushX0;
+                EmitMovX0(ptr_arr_lo[arg_count]);
+                EmitPopX1;
+                { x0 = x1 - x0 = index - low_bound }
+                WriteLn('    sub x0, x1, x0');
+                { Multiply by 8 using lsl #3 }
+                WriteLn('    lsl x0, x0, #3');
+                { Add To base: x1 = base + offset }
+                EmitPopX1;  { x1 = base address }
+                WriteLn('    add x0, x1, x0');
+                { Load element value }
+                If ptr_arr_elem[arg_count] = TYPE_REAL Then
+                Begin
+                  WriteLn('    ldr d0, [x0]');
+                  expr_type := TYPE_REAL
+                End
+                Else
+                Begin
+                  WriteLn('    ldr x0, [x0]');
+                  expr_type := ptr_arr_elem[arg_count]
+                End
+              End
+              Else If ptr_ultimate_type[idx] = TYPE_REAL Then
+              Begin
+                expr_type := TYPE_REAL
+              End
+              Else
+              Begin
+                expr_type := ptr_ultimate_type[idx]
+              End
+            End
+          End
+          Else If sym_kind[idx] = SYM_FUNCTION Then
+          Begin
+            { Function call - pass args In x0-x7 }
+            arg_count := 0;
+            var_flags := sym_var_param_flags[idx];
+            If tok_type = TOK_LPAREN Then
+            Begin
+              NextToken;
+              If tok_type <> TOK_RPAREN Then
+              Begin
+                { Evaluate all args And push To stack }
+                Repeat
+                  If tok_type = TOK_COMMA Then NextToken;
+                  { Check If this is a Var parameter }
+                  If IsVarParam(var_flags, arg_count) = 1 Then
+                  Begin
+                    { Var param - pass address Of variable }
+                    If tok_type <> TOK_IDENT Then
+                      Error(6);  { Var param requires variable }
+                    var_arg_idx := SymLookup;
+                    If var_arg_idx < 0 Then
+                      Error(3);
+                    NextToken;
+                    { Check For Array element - pass address Of element }
+                    If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+                    Begin
+                      NextToken;  { consume '[' }
+                      ParseExpression;  { index In x0 }
+                      Expect(TOK_RBRACKET);
+                      { Compute element address }
+                      EmitPushX0;
+                      EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                      EmitPopX1;
+                      { x0 = x1 - x0 = index - low_bound }
+                      WriteLn('    sub x0, x1, x0');
+                      { Multiply by 8 using lsl #3 }
+                      WriteLn('    lsl x0, x0, #3');
+                      { Get base address And subtract element offset }
+                      If sym_level[var_arg_idx] < scope_level Then
+                      Begin
+                        EmitFollowChain(sym_level[var_arg_idx], scope_level);
+                        EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
+                      End
+                      Else
+                        EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
+                      { Address = base - element_offset }
+                      WriteLn('    sub x0, x1, x0');
+                    End
+                    Else
+                      { Simple variable - emit address }
+                      EmitVarAddr(var_arg_idx, scope_level)
+                  End
+                  Else
+                  Begin
+                    { Value param - evaluate expression }
+                    ParseExpression
+                  End;
+                  EmitPushX0;
+                  arg_count := arg_count + 1
+                Until tok_type <> TOK_COMMA
+              End;
+              Expect(TOK_RPAREN)
+            End;
+            { Pop args from stack into registers In reverse order }
+            For i := arg_count - 1 DownTo 0 Do
+            Begin
+              Write('    ldr x'); Write(i); WriteLn(', [sp], #16');
+            End;
+            { Set up static link For callee }
+            EmitStaticLink(sym_level[idx], scope_level);
+            { Check If calling imported Unit Procedure }
+            If sym_unit_idx[idx] >= 0 Then
+              EmitBLUnitProc(sym_unit_idx[idx], idx)
+            Else
+              EmitBL(sym_label[idx]);
+            expr_type := sym_type[idx]  { Function return Type }
+          End
+          Else
+          Begin
+            { Regular Integer/Char/Boolean variable }
+            If sym_level[idx] < scope_level Then
+              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+            Else
+              EmitLdurX0(sym_offset[idx]);
+            { If Var param, x0 contains address - dereference it }
+            If sym_is_var_param[idx] = 1 Then
+              WriteLn('    ldr x0, [x0]');
+            expr_type := sym_type[idx]
+          End
+        End
+      End
+      Else If sym_kind[idx] = SYM_FUNCTION Then
+      Begin
+        { Function call - pass args In x0-x7 }
+        arg_count := 0;
+        var_flags := sym_var_param_flags[idx];
+        If tok_type = TOK_LPAREN Then
+        Begin
+          NextToken;
+          If tok_type <> TOK_RPAREN Then
+          Begin
+            { Evaluate all args And push To stack }
+            Repeat
+              If tok_type = TOK_COMMA Then NextToken;
+              { Check If this is a Var parameter }
+              If IsVarParam(var_flags, arg_count) = 1 Then
+              Begin
+                { Var param - pass address Of variable }
+                If tok_type <> TOK_IDENT Then
+                  Error(6);  { Var param requires variable }
+                var_arg_idx := SymLookup;
+                If var_arg_idx < 0 Then
+                  Error(3);
+                NextToken;
+                { Check For Array element - pass address Of element }
+                If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
+                Begin
+                  NextToken;  { consume '[' }
+                  ParseExpression;  { index In x0 }
+                  Expect(TOK_RBRACKET);
+                  { Compute element address }
+                  EmitPushX0;
+                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitPopX1;
+                  { x0 = x1 - x0 = index - low_bound }
+                  WriteLn('    sub x0, x1, x0');
+                  { Multiply by 8 using lsl #3 }
+                  WriteLn('    lsl x0, x0, #3');
+                  { Get base address And subtract element offset }
+                  If sym_level[var_arg_idx] < scope_level Then
+                  Begin
+                    EmitFollowChain(sym_level[var_arg_idx], scope_level);
+                    EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
+                  End
+                  Else
+                    EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
+                  { Address = base - element_offset }
+                  WriteLn('    sub x0, x1, x0');
+                End
+                Else
+                  { Simple variable - emit address }
+                  EmitVarAddr(var_arg_idx, scope_level)
+              End
+              Else
+              Begin
+                { Value param - evaluate expression }
+                ParseExpression
+              End;
+              EmitPushX0;
+              arg_count := arg_count + 1
+            Until tok_type <> TOK_COMMA
+          End;
+          Expect(TOK_RPAREN)
+        End;
+        { Pop args from stack into registers In reverse order }
+        For i := arg_count - 1 DownTo 0 Do
+        Begin
+          Write('    ldr x'); Write(i); WriteLn(', [sp], #16');
+        End;
+        { Set up static link For callee }
+        EmitStaticLink(sym_level[idx], scope_level);
+        { Check If calling imported Unit Procedure }
+        If sym_unit_idx[idx] >= 0 Then
+          EmitBLUnitProc(sym_unit_idx[idx], idx)
+        Else
+          EmitBL(sym_label[idx]);
+        expr_type := sym_type[idx]  { Function return Type }
+      End
+      Else
+        Error(4)
+      End  { End Of If (with_rec_idx < 0) Or (arg_count < 0) }
+    End  { End Of user-defined symbol handling }
+    Else
+    Begin
     { Check For built-In functions: ReadChar, keypressed, Ord, Chr }
     { ReadChar = 114,101,97,100,99,104,97,114 }
     If TokIs8(114, 101, 97, 100, 99, 104, 97, 114) = 1 Then
@@ -1376,445 +1822,8 @@ Begin
       expr_type := TYPE_STRING
     End
     Else
-    Begin
-      { Check For With context - try To find identifier as a field }
-      If with_rec_idx >= 0 Then
-      Begin
-        arg_count := FindField(with_rec_type);  { reuse arg_count For field_idx }
-        If arg_count >= 0 Then
-        Begin
-          { Found field - generate access code }
-          NextToken;
-          { Compute address: base + field_offset }
-          If sym_level[with_rec_idx] < scope_level Then
-          Begin
-            EmitFollowChain(sym_level[with_rec_idx], scope_level);
-            EmitAddrOffset(0, 8, sym_offset[with_rec_idx] + field_offset[arg_count])
-          End
-          Else
-            EmitAddrOffset(0, 29, sym_offset[with_rec_idx] + field_offset[arg_count]);
-          { Load from computed address }
-          If field_type[arg_count] = TYPE_REAL Then
-          Begin
-            WriteLn('    ldr d0, [x0]');
-            expr_type := TYPE_REAL
-          End
-          Else
-          Begin
-            WriteLn('    ldr x0, [x0]');
-            expr_type := field_type[arg_count]
-          End
-        End
-        Else
-        Begin
-          { Field Not found, proceed With normal lookup }
-          idx := SymLookup;
-          If idx < 0 Then
-            Error(3);  { undefined identifier }
-          { Continue With the normal identifier handling below }
-        End
-      End
-      Else
-      Begin
-        idx := SymLookup;
-        If idx < 0 Then
-          Error(3);  { undefined identifier }
-      End;
-      { Skip If we already handled With field }
-      If (with_rec_idx < 0) Or (arg_count < 0) Then
-      Begin
-      NextToken;
-      If sym_kind[idx] = SYM_CONST Then
-      Begin
-        EmitMovX0(sym_const_val[idx]);
-        expr_type := TYPE_INTEGER
-      End
-      Else If (sym_kind[idx] = SYM_VAR) Or (sym_kind[idx] = SYM_PARAM) Then
-      Begin
-        If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
-        Begin
-          { Array element access: arr[index] Or arr[index].field }
-          NextToken;  { consume '[' }
-          ParseExpression;  { index In x0 }
-          Expect(TOK_RBRACKET);
-          { Subtract low bound }
-          EmitPushX0;
-          EmitMovX0(sym_const_val[idx]);  { low bound }
-          EmitPopX1;
-          { x0 = x1 - x0 = index - low_bound }
-          WriteLn('    sub x0, x1, x0');
-          { Check If Array Of records }
-          If sym_var_param_flags[idx] > 0 Then
-          Begin
-            { Array Of records - multiply by Record size }
-            lbl1 := sym_label[sym_var_param_flags[idx] - 1];  { Record size }
-            EmitPushX0;
-            EmitMovX0(lbl1);
-            EmitPopX1;
-            { mul x0, x1, x0 }
-            WriteLn('    mul x0, x1, x0');
-          End
-          Else
-          Begin
-            { Basic Type - multiply by 8 using lsl #3 }
-            WriteLn('    lsl x0, x0, #3');
-          End;
-          { Get base address: frame + offset (offset is negative) }
-          If sym_level[idx] < scope_level Then
-          Begin
-            EmitFollowChain(sym_level[idx], scope_level);
-            EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
-          End
-          Else
-            EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
-          { Compute element address: x1 - x0 }
-          WriteLn('    sub x1, x1, x0');
-          { Check For field access on Array Of records }
-          If (sym_var_param_flags[idx] > 0) And (tok_type = TOK_DOT) Then
-          Begin
-            NextToken;  { consume '.' }
-            arg_count := FindField(sym_var_param_flags[idx] - 1);
-            If arg_count < 0 Then
-              Error(11);
-            NextToken;  { consume field name }
-            { Add field offset: x1 = x1 + offset }
-            If field_offset[arg_count] > 0 Then
-              EmitAddrOffset(1, 1, field_offset[arg_count]);
-            { Load field value }
-            If field_type[arg_count] = TYPE_REAL Then
-            Begin
-              WriteLn('    ldr d0, [x1]');
-              expr_type := TYPE_REAL
-            End
-            Else
-            Begin
-              WriteLn('    ldr x0, [x1]');
-              expr_type := field_type[arg_count]
-            End
-          End
-          Else
-          Begin
-            { Load element value }
-            WriteLn('    ldr x0, [x1]');
-          End
-        End
-        Else If (sym_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
-        Begin
-          { Record field access: rec.field Or rec.field.subfield... }
-          NextToken;  { consume '.' }
-          If tok_type <> TOK_IDENT Then
-            Error(11);
-          { Find the field In the Record Type }
-          arg_count := FindField(sym_const_val[idx]);  { reuse arg_count For field_idx }
-          If arg_count < 0 Then
-            Error(15);  { undefined field }
-          { Compute address: base + field_offset }
-          { Base is at [x29 + sym_offset] For local, field at positive offset from there }
-          If sym_level[idx] < scope_level Then
-          Begin
-            EmitFollowChain(sym_level[idx], scope_level);
-            EmitAddrOffset(0, 8, sym_offset[idx] + field_offset[arg_count])
-          End
-          Else
-            EmitAddrOffset(0, 29, sym_offset[idx] + field_offset[arg_count]);
-          NextToken;
-          { Handle nested Record fields: x0 has address, check For more dots }
-          While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
-          Begin
-            NextToken;  { consume '.' }
-            If tok_type <> TOK_IDENT Then
-              Error(11);
-            { Find sub-field In the nested Record Type }
-            lbl1 := arg_count;  { save current field index }
-            arg_count := FindField(field_rec_type[lbl1]);
-            If arg_count < 0 Then
-              Error(15);
-            { Add sub-field offset To x0 }
-            If field_offset[arg_count] > 0 Then
-              EmitAddrOffset(0, 0, field_offset[arg_count]);
-            NextToken
-          End;
-          { Load from final computed address }
-          If field_type[arg_count] = TYPE_REAL Then
-          Begin
-            WriteLn('    ldr d0, [x0]');
-            expr_type := TYPE_REAL
-          End
-          Else If field_type[arg_count] = TYPE_RECORD Then
-          Begin
-            { Accessing a nested Record as a whole - keep address In x0 }
-            expr_type := TYPE_RECORD
-          End
-          Else
-          Begin
-            WriteLn('    ldr x0, [x0]');
-            expr_type := field_type[arg_count]
-          End
-        End
-        Else
-        Begin
-          { Load variable value - check For Var param And Type }
-          If sym_type[idx] = TYPE_REAL Then
-          Begin
-            If sym_level[idx] < scope_level Then
-              EmitLdurD0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            Else
-              EmitLdurD0(sym_offset[idx]);
-            { If Var param, d0 contains address - dereference it }
-            If sym_is_var_param[idx] = 1 Then
-            Begin
-              { fmov x0, d0; ldr d0, [x0] }
-              EmitFmovX0D0;
-              WriteLn('    ldr d0, [x0]');
-            End;
-            expr_type := TYPE_REAL
-          End
-          Else If sym_type[idx] = TYPE_STRING Then
-          Begin
-            { For strings, emit the address (strings are pass-by-reference) }
-            EmitVarAddr(idx, scope_level);
-            expr_type := TYPE_STRING;
-            { Check For String indexing s[i] }
-            If tok_type = TOK_LBRACKET Then
-            Begin
-              NextToken;  { consume '[' }
-              EmitPushX0;  { save String base address }
-              ParseExpression;  { index In x0 }
-              Expect(TOK_RBRACKET);
-              { x0 = index, stack has base address }
-              EmitPopX1;  { x1 = base address }
-              { Add index To base: x0 = x1 + x0 }
-              WriteLn('    add x0, x1, x0');
-              { Load byte at [x0]: ldrb w0, [x0] }
-              WriteLn('    ldrb w0, [x0]');
-              expr_type := TYPE_CHAR
-            End
-          End
-          Else
-          Begin
-            If sym_level[idx] < scope_level Then
-              EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
-            Else
-              EmitLdurX0(sym_offset[idx]);
-            { If Var param, x0 now contains address - dereference it }
-            If sym_is_var_param[idx] = 1 Then
-            Begin
-              WriteLn('    ldr x0, [x0]');
-            End;
-            expr_type := sym_type[idx]
-          End
-        End;
-        { Track pointer base Type If this is a pointer }
-        If sym_type[idx] = TYPE_POINTER Then
-          ptr_base_type := sym_const_val[idx];
-        { Check For pointer dereference }
-        If (sym_type[idx] = TYPE_POINTER) And (tok_type = TOK_CARET) Then
-        Begin
-          { Count consecutive ^ tokens }
-          lbl1 := 0;  { deref count }
-          While tok_type = TOK_CARET Do
-          Begin
-            lbl1 := lbl1 + 1;
-            NextToken
-          End;
-          { lbl2 = remaining depth after derefs }
-          lbl2 := ptr_depth[idx] - lbl1;
-          { Emit dereference operations }
-          { For pointer-To-Array, don't emit final deref - Array base is the pointer value }
-          { For pointer-To-Record With field access, don't emit final deref - Record base is the pointer value }
-          If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_ARRAY) Then
-            arg_count := lbl1 - 1
-          Else If (lbl2 = 0) And (ptr_ultimate_type[idx] = TYPE_RECORD) And (tok_type = TOK_DOT) Then
-            arg_count := lbl1 - 1
-          Else
-            arg_count := lbl1;
-          For i := 1 To arg_count Do
-          Begin
-            WriteLn('    ldr x0, [x0]');
-          End;
-          { Determine result Type }
-          If lbl2 > 0 Then
-          Begin
-            { Still have pointer levels remaining }
-            expr_type := TYPE_POINTER;
-            ptr_base_type := TYPE_POINTER
-          End
-          Else If ptr_ultimate_type[idx] = TYPE_RECORD Then
-          Begin
-            { Reached Record - check For field access }
-            If tok_type = TOK_DOT Then
-            Begin
-              NextToken;  { consume '.' }
-              { Find field In the Record Type }
-              arg_count := FindField(ptr_ultimate_rec[idx]);
-              If arg_count < 0 Then
-                Error(11);  { unknown field }
-              NextToken;  { consume field name }
-              { Add field offset To pointer: add x0, x0, #offset }
-              If field_offset[arg_count] > 0 Then
-                EmitAddrOffset(0, 0, field_offset[arg_count]);
-              { Handle nested Record fields }
-              While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
-              Begin
-                NextToken;  { consume '.' }
-                If tok_type <> TOK_IDENT Then
-                  Error(11);
-                var_arg_idx := arg_count;  { save current field index }
-                arg_count := FindField(field_rec_type[var_arg_idx]);
-                If arg_count < 0 Then
-                  Error(15);
-                If field_offset[arg_count] > 0 Then
-                  EmitAddrOffset(0, 0, field_offset[arg_count]);
-                NextToken
-              End;
-              { Load field value }
-              If field_type[arg_count] = TYPE_REAL Then
-              Begin
-                WriteLn('    ldr d0, [x0]');
-                expr_type := TYPE_REAL
-              End
-              Else If field_type[arg_count] = TYPE_RECORD Then
-                expr_type := TYPE_RECORD
-              Else
-              Begin
-                WriteLn('    ldr x0, [x0]');
-                expr_type := field_type[arg_count]
-              End
-            End
-            Else
-            Begin
-              { Just p^ without field access - address In x0 }
-              expr_type := TYPE_RECORD
-            End
-          End
-          Else If ptr_ultimate_type[idx] = TYPE_ARRAY Then
-          Begin
-            { Pointer To Array - check For indexing pa^[i] }
-            If tok_type = TOK_LBRACKET Then
-            Begin
-              NextToken;  { consume '[' }
-              EmitPushX0;  { save Array base address }
-              ParseExpression;  { index In x0 }
-              Expect(TOK_RBRACKET);
-              { x0 = index, stack has base address }
-              { Subtract low bound }
-              arg_count := sym_label[idx];  { ptr_arr index }
-              EmitPushX0;
-              EmitMovX0(ptr_arr_lo[arg_count]);
-              EmitPopX1;
-              { x0 = x1 - x0 = index - low_bound }
-              WriteLn('    sub x0, x1, x0');
-              { Multiply by 8 using lsl #3 }
-              WriteLn('    lsl x0, x0, #3');
-              { Add To base: x1 = base + offset }
-              EmitPopX1;  { x1 = base address }
-              WriteLn('    add x0, x1, x0');
-              { Load element value }
-              If ptr_arr_elem[arg_count] = TYPE_REAL Then
-              Begin
-                WriteLn('    ldr d0, [x0]');
-                expr_type := TYPE_REAL
-              End
-              Else
-              Begin
-                WriteLn('    ldr x0, [x0]');
-                expr_type := ptr_arr_elem[arg_count]
-              End
-            End
-            Else
-              expr_type := TYPE_ARRAY  { Just pa^ without indexing }
-          End
-          Else If ptr_ultimate_type[idx] = TYPE_REAL Then
-          Begin
-            expr_type := TYPE_REAL
-          End
-          Else
-          Begin
-            expr_type := ptr_ultimate_type[idx]
-          End
-        End
-      End
-      Else If sym_kind[idx] = SYM_FUNCTION Then
-      Begin
-        { Function call - pass args In x0-x7 }
-        arg_count := 0;
-        var_flags := sym_var_param_flags[idx];
-        If tok_type = TOK_LPAREN Then
-        Begin
-          NextToken;
-          If tok_type <> TOK_RPAREN Then
-          Begin
-            { Evaluate all args And push To stack }
-            Repeat
-              If tok_type = TOK_COMMA Then NextToken;
-              { Check If this is a Var parameter }
-              If IsVarParam(var_flags, arg_count) = 1 Then
-              Begin
-                { Var param - pass address Of variable }
-                If tok_type <> TOK_IDENT Then
-                  Error(6);  { Var param requires variable }
-                var_arg_idx := SymLookup;
-                If var_arg_idx < 0 Then
-                  Error(3);
-                NextToken;
-                { Check For Array element - pass address Of element }
-                If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
-                Begin
-                  NextToken;  { consume '[' }
-                  ParseExpression;  { index In x0 }
-                  Expect(TOK_RBRACKET);
-                  { Compute element address }
-                  EmitPushX0;
-                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
-                  EmitPopX1;
-                  { x0 = x1 - x0 = index - low_bound }
-                  WriteLn('    sub x0, x1, x0');
-                  { Multiply by 8 using lsl #3 }
-                  WriteLn('    lsl x0, x0, #3');
-                  { Get base address And subtract element offset }
-                  If sym_level[var_arg_idx] < scope_level Then
-                  Begin
-                    EmitFollowChain(sym_level[var_arg_idx], scope_level);
-                    EmitSubLargeOffset(1, 8, 0 - sym_offset[var_arg_idx])
-                  End
-                  Else
-                    EmitSubLargeOffset(1, 29, 0 - sym_offset[var_arg_idx]);
-                  { Address = base - element_offset }
-                  WriteLn('    sub x0, x1, x0');
-                End
-                Else
-                  { Simple variable - emit address }
-                  EmitVarAddr(var_arg_idx, scope_level)
-              End
-              Else
-              Begin
-                { Value param - evaluate expression }
-                ParseExpression
-              End;
-              EmitPushX0;
-              arg_count := arg_count + 1
-            Until tok_type <> TOK_COMMA
-          End;
-          Expect(TOK_RPAREN)
-        End;
-        { Pop args from stack into registers In reverse order }
-        For i := arg_count - 1 DownTo 0 Do
-        Begin
-          Write('    ldr x'); Write(i); WriteLn(', [sp], #16');
-        End;
-        { Set up static link For callee }
-        EmitStaticLink(sym_level[idx], scope_level);
-        { Check If calling imported Unit Procedure }
-        If sym_unit_idx[idx] >= 0 Then
-          EmitBLUnitProc(sym_unit_idx[idx], idx)
-        Else
-          EmitBL(sym_label[idx]);
-        expr_type := sym_type[idx]  { Function return Type }
-      End
-      Else
-        Error(4)
-      End  { End Of If (with_rec_idx < 0) Or (arg_count < 0) }
-    End  { End Of Else For non-builtin ident }
+      Error(3)  { undefined identifier - not a user symbol or builtin }
+    End  { End of builtin function checks }
   End  { End Of Else If tok_type = TOK_IDENT }
   Else
     Error(5)

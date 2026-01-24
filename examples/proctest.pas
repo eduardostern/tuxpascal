@@ -8,9 +8,9 @@ begin
   writeln(n)
 end;
 
-function Double(x: integer): integer;
+function DoubleIt(x: integer): integer;
 begin
-  Double := x * 2
+  DoubleIt := x * 2
 end;
 
 function Factorial(n: integer): integer;
@@ -23,8 +23,8 @@ end;
 
 begin
   PrintNum(42);
-  a := Double(21);
+  a := DoubleIt(21);
   PrintNum(a);
-  PrintNum(Double(10));
+  PrintNum(DoubleIt(10));
   writeln(Factorial(6))
 end.

@@ -399,9 +399,65 @@ No optimization passes. No register allocation. Just honest, predictable code ge
 
 ---
 
-## Known Limitations
+## Reserved Words
 
-- **Maximum 8 parameters** - Procedures and functions support up to 8 parameters
+The following identifiers are reserved and cannot be used as variable, procedure, or function names:
+
+### Keywords
+```
+and        array      begin      boolean    case       char
+const      div        do         downto     else       end
+false      file       for        forward    function   if
+implementation        in         integer    interface  mod
+nil        not        of         or         procedure  program
+read       readln     real       record     repeat     set
+string     text       then       to         true       type
+unit       until      uses       var        while      with
+```
+
+### Type Aliases (also reserved)
+These type names are reserved as they map to base types:
+```
+byte       → integer     single    → real
+word       → integer     double    → real
+longint    → integer     extended  → real
+int64      → integer
+shortint   → integer
+longword   → integer
+cardinal   → integer
+```
+
+---
+
+## Compiler Limits
+
+### Comparison with Classic Turbo Pascal
+
+| Resource | TuxPascal | Turbo Pascal 3.0 | Turbo Pascal 7.0 |
+|----------|-----------|------------------|------------------|
+| **Heap memory** | 1 MB | 32 KB | Up to 640 KB |
+| **Data segment** | No limit* | 64 KB | 64 KB |
+| **String length** | 255 | 255 | 255 |
+| **Set elements** | 64 | 256 | 256 |
+| **Integer size** | 64-bit | 16-bit | 16-bit |
+| **Real precision** | IEEE 754 double | 6 bytes (48-bit) | 6 bytes / IEEE 754 |
+
+*\*TuxPascal runs on 64-bit ARM64 macOS without DOS memory model restrictions*
+
+### TuxPascal Specific Limits
+
+| Resource | Limit | Description |
+|----------|-------|-------------|
+| **Symbols** | 500 | Total variables, constants, procedures, functions |
+| **Record fields** | 200 | Total fields across all record types |
+| **Parameters** | 8 | Maximum parameters per procedure/function |
+| **Identifier length** | 32 | Maximum characters in an identifier |
+| **Include nesting** | 8 | Maximum depth of `{$I}` include directives |
+| **Units** | 16 | Maximum units that can be loaded |
+| **Pointer arrays** | 100 | Maximum pointer-to-array type definitions |
+| **File types** | 100 | Maximum `file of` type definitions |
+| **Enum types** | 100 | Maximum enumerated type definitions |
+| **Subrange types** | 100 | Maximum subrange type definitions |
 
 ---
 
