@@ -276,7 +276,7 @@ Begin
           EmitPopX1;
           { x0 = x1 - x0 = index - low_bound }
           WriteLn('    sub x0, x1, x0');
-          { Check If Array Of records }
+          { Check If Array Of records Or strings }
           If sym_var_param_flags[idx] > 0 Then
           Begin
             { Array Of records - multiply by Record size }
@@ -286,6 +286,11 @@ Begin
             EmitPopX1;
             { mul x0, x1, x0 }
             WriteLn('    mul x0, x1, x0');
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - multiply by 256 using lsl #8 }
+            WriteLn('    lsl x0, x0, #8');
           End
           Else
           Begin
@@ -324,6 +329,12 @@ Begin
               WriteLn('    ldr x0, [x1]');
               expr_type := field_type[arg_count]
             End
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - return address Of String element }
+            WriteLn('    mov x0, x1');
+            expr_type := TYPE_STRING
           End
           Else
           Begin
@@ -1408,17 +1419,47 @@ Begin
       End
       Else If tok_type = TOK_IDENT Then
       Begin
-        { Must be a String variable }
+        { String variable Or Array Of String element }
         idx := SymLookup;
         If idx < 0 Then
           Error(3);
-        If sym_type[idx] <> TYPE_STRING Then
+        If sym_type[idx] = TYPE_STRING Then
+        Begin
+          NextToken;
+          { Load String address }
+          EmitVarAddr(idx, scope_level);
+          { Load Length byte from [x0] }
+          WriteLn('    ldrb w0, [x0]');
+        End
+        Else If (sym_type[idx] = TYPE_ARRAY) And (sym_var_param_flags[idx] = -1) Then
+        Begin
+          { Array Of String - need To parse index And get element address }
+          NextToken;
+          Expect(TOK_LBRACKET);
+          ParseExpression;  { index In x0 }
+          Expect(TOK_RBRACKET);
+          { Subtract low bound }
+          EmitPushX0;
+          EmitMovX0(sym_const_val[idx]);
+          EmitPopX1;
+          WriteLn('    sub x0, x1, x0');
+          { Multiply by 256 }
+          WriteLn('    lsl x0, x0, #8');
+          { Get base address }
+          If sym_level[idx] < scope_level Then
+          Begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
+          End
+          Else
+            EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
+          { Compute element address }
+          WriteLn('    sub x0, x1, x0');
+          { Load Length byte from [x0] }
+          WriteLn('    ldrb w0, [x0]');
+        End
+        Else
           Error(9);
-        NextToken;
-        { Load String address }
-        EmitVarAddr(idx, scope_level);
-        { Load Length byte from [x0] }
-        WriteLn('    ldrb w0, [x0]');
       End
       Else
         Error(9);
@@ -2367,7 +2408,10 @@ Begin
     NextToken;
     Expect(TOK_ASSIGN);
     ParseExpression;
-    EmitSturX0(sym_offset[idx]);
+    If sym_level[idx] < scope_level Then
+      EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+    Else
+      EmitSturX0(sym_offset[idx]);
 
     lbl1 := NewLabel;  { condition check }
     lbl2 := NewLabel;  { loop End / Break target }
@@ -2386,7 +2430,11 @@ Begin
       EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { load loop Var }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       { ldur x1, [sp] - load End value from stack }
       WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
@@ -2395,9 +2443,15 @@ Begin
       ParseStatement;
       { Continue target - increment }
       EmitLabel(lbl3);
-      EmitLdurX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       WriteLn('    add x0, x0, #1');
-      EmitSturX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { Restore old Break/Continue labels }
@@ -2413,7 +2467,11 @@ Begin
       EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { load loop Var }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       { ldur x1, [sp] - load End value from stack }
       WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
@@ -2422,9 +2480,15 @@ Begin
       ParseStatement;
       { Continue target - decrement }
       EmitLabel(lbl3);
-      EmitLdurX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       WriteLn('    sub x0, x0, #1');
-      EmitSturX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { Restore old Break/Continue labels }
@@ -4071,7 +4135,8 @@ Begin
       Begin
       NextToken;
 
-      If sym_kind[idx] = SYM_PROCEDURE Then
+      If (sym_kind[idx] = SYM_PROCEDURE) Or
+         ((sym_kind[idx] = SYM_FUNCTION) And (tok_type = TOK_LPAREN)) Then
       Begin
         { Procedure call - pass args In x0-x7 }
         arg_count := 0;
@@ -4173,6 +4238,11 @@ Begin
             EmitPopX1;
             WriteLn('    mul x0, x1, x0');
           End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - multiply by 256 }
+            WriteLn('    lsl x0, x0, #8');
+          End
           Else
           Begin
             WriteLn('    lsl x0, x0, #3');
@@ -4213,6 +4283,28 @@ Begin
               EmitPopX1;
               WriteLn('    str x0, [x1]');
             End
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - use rt_str_copy }
+            EmitPushX1;  { save dest address }
+            Expect(TOK_ASSIGN);
+            ParseExpression;  { source String address In x0 }
+            If expr_type = TYPE_CHAR Then
+            Begin
+              { Single character - convert to 1-char string on heap }
+              WriteLn('    mov x3, x0');  { save char value }
+              WriteLn('    mov x0, x21');  { x0 = heap pointer (string addr) }
+              WriteLn('    mov x4, #1');
+              WriteLn('    strb w4, [x0]');  { store length = 1 }
+              WriteLn('    strb w3, [x0, #1]');  { store char }
+              WriteLn('    add x21, x21, #256');  { advance heap }
+              expr_type := TYPE_STRING
+            End;
+            { x0 = source, need To call rt_str_copy(dest, source) }
+            WriteLn('    mov x1, x0');  { x1 = source }
+            EmitPopX0;  { x0 = dest }
+            EmitBL(rt_str_copy)
           End
           Else
           Begin
@@ -4440,41 +4532,27 @@ Begin
           Begin
           { String assignment }
           Expect(TOK_ASSIGN);
-          If tok_type = TOK_STRING Then
+          { Parse String expression (literal, variable, copy, concat, Or + expressions) }
+          ParseExpression;
+          If expr_type = TYPE_CHAR Then
           Begin
-            { Assign from String literal }
-            { Compute base address Of String variable into x8 }
-            If sym_level[idx] < scope_level Then
-            Begin
-              EmitFollowChain(sym_level[idx], scope_level);
-              EmitAddrOffset(8, 8, sym_offset[idx])
-            End
-            Else
-              EmitAddrOffset(8, 29, sym_offset[idx]);
-            { Store Length at [x8] }
-            EmitMovX0(tok_len);
-            WriteLn('    strb w0, [x8]');
-            { Store each character at [x8+1], [x8+2], etc }
-            For i := 0 To tok_len - 1 Do
-            Begin
-              EmitMovX0(tok_str[i]);
-              Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
-            End;
-            NextToken
-          End
-          Else
-          Begin
-            { Parse String expression (variable, copy, concat, Or + expressions) }
-            ParseExpression;
-            If expr_type <> TYPE_STRING Then
-              Error(12);  { expected String }
-            { x0 = source String address, copy To dest }
-            WriteLn('    mov x1, x0');
-            { Get dest address into x0 }
-            EmitVarAddr(idx, scope_level);
-            { Call rt_str_copy(x0=dest, x1=source) }
-            EmitBL(rt_str_copy)
-          End
+            { Single character - convert to 1-char string on heap }
+            WriteLn('    mov x3, x0');  { save char value }
+            WriteLn('    mov x0, x21');  { x0 = heap pointer (string addr) }
+            WriteLn('    mov x4, #1');
+            WriteLn('    strb w4, [x0]');  { store length = 1 }
+            WriteLn('    strb w3, [x0, #1]');  { store char }
+            WriteLn('    add x21, x21, #256');  { advance heap }
+            expr_type := TYPE_STRING
+          End;
+          If expr_type <> TYPE_STRING Then
+            Error(12);  { expected String }
+          { x0 = source String address, copy To dest }
+          WriteLn('    mov x1, x0');
+          { Get dest address into x0 }
+          EmitVarAddr(idx, scope_level);
+          { Call rt_str_copy(x0=dest, x1=source) }
+          EmitBL(rt_str_copy)
           End  { End Of Else For String whole assignment }
         End
         Else If sym_type[idx] = TYPE_REAL Then

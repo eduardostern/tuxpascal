@@ -91,6 +91,26 @@ Begin
           End
         End
       End
+      Else If tok_type = TOK_STRING_TYPE Then
+      Begin
+        { Array Of String Type - 256 bytes per element }
+        NextToken;
+        arr_size := (hi_bound - lo_bound + 1) * 256;
+        For j := first_idx To idx Do
+        Begin
+          sym_type[j] := TYPE_ARRAY;
+          sym_const_val[j] := lo_bound;
+          sym_label[j] := arr_size;
+          sym_var_param_flags[j] := -1;  { -1 = String element Type }
+          If j = first_idx Then
+            local_offset := local_offset - (arr_size - 8)
+          Else
+          Begin
+            sym_offset[j] := local_offset - 8;
+            local_offset := sym_offset[j] - (arr_size - 8)
+          End
+        End
+      End
       Else If tok_type = TOK_IDENT Then
       Begin
         { Array Of Record Type }
