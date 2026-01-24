@@ -412,6 +412,14 @@ Begin
     Write('Type mismatch')
   Else If code = 20 Then
     Write('Duplicate identifier')
+  Else If code = 21 Then
+    Write('Too many symbols (max 500)')
+  Else If code = 22 Then
+    Write('Too many record fields (max 200)')
+  Else If code = 23 Then
+    Write('Too many types (max 100)')
+  Else If code = 24 Then
+    Write('Too many units (max 16)')
   Else
   Begin
     Write('Unknown error (code ');
@@ -1311,16 +1319,20 @@ Procedure CopyTokenToSym(idx: Integer);
 Var
   i: Integer;
   base: Integer;
+  len: Integer;
 Begin
-  { sym_name is flattened: base = idx * 32 }
+  { sym_name is flattened: base = idx * 32, truncate names > 31 chars }
   base := idx * 32;
+  len := tok_len;
+  If len > 31 Then
+    len := 31;
   i := 0;
-  While i < tok_len Do
+  While i < len Do
   Begin
     sym_name[base + i] := tok_str[i];
     i := i + 1
   End;
-  sym_name[base + tok_len] := 0
+  sym_name[base + len] := 0
 End;
 
 Function SymLookup: Integer;
@@ -1342,6 +1354,8 @@ End;
 
 Function SymAdd(kind, typ, level, offset: Integer): Integer;
 Begin
+  If sym_count >= 500 Then
+    Error(21);  { Too many symbols }
   CopyTokenToSym(sym_count);
   sym_kind[sym_count] := kind;
   sym_type[sym_count] := typ;
@@ -10526,6 +10540,8 @@ Begin
           sym_offset[j] := local_offset
         End
       End;
+      If file_count >= 100 Then
+        Error(23);
       file_count := file_count + 1
     End
     Else If tok_type = TOK_SET Then
@@ -10536,6 +10552,8 @@ Begin
       If tok_type = TOK_CHAR_TYPE Then
       Begin
         { Set Of Char - Uses 64-bit bitmask }
+        If set_count >= 100 Then
+          Error(23);
         For j := first_idx To idx Do
         Begin
           sym_type[j] := TYPE_SET;
@@ -10556,6 +10574,8 @@ Begin
         If tok_type <> TOK_INTEGER Then Error(9);
         hi_bound := tok_int;
         NextToken;
+        If set_count >= 100 Then
+          Error(23);
         For j := first_idx To idx Do
         Begin
           sym_type[j] := TYPE_SET;
@@ -10573,6 +10593,8 @@ Begin
         If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And
            (sym_type[base_idx] = TYPE_ENUM) Then
         Begin
+          If set_count >= 100 Then
+            Error(23);
           For j := first_idx To idx Do
           Begin
             sym_type[j] := TYPE_SET;
@@ -10629,6 +10651,8 @@ Begin
         Else
           base_idx := TYPE_INTEGER;  { default }
         { Store In ptr_arr arrays }
+        If ptr_arr_count >= 100 Then
+          Error(23);
         ptr_arr_lo[ptr_arr_count] := hi_bound;
         ptr_arr_hi[ptr_arr_count] := arr_size;
         ptr_arr_elem[ptr_arr_count] := base_idx;
@@ -10843,6 +10867,8 @@ Begin
             Error(11);
 
           { Save field name }
+          If field_count >= 200 Then
+            Error(22);
           base_idx := field_count * 32;
           For i := 0 To tok_len - 1 Do
             field_name[base_idx + i] := tok_str[i];
@@ -10946,6 +10972,8 @@ Begin
           If tok_type = TOK_COLON Then
           Begin
             { It's a tag field }
+            If field_count >= 200 Then
+              Error(22);
             field_count := field_count + 1;
             NextToken;
             { Parse tag Type }
@@ -10999,6 +11027,8 @@ Begin
             Repeat
               If tok_type <> TOK_IDENT Then
                 Error(11);
+              If field_count >= 200 Then
+                Error(22);
               base_idx := field_count * 32;
               For i := 0 To tok_len - 1 Do
                 field_name[base_idx + i] := tok_str[i];
@@ -11078,6 +11108,8 @@ Begin
     Else If tok_type = TOK_LPAREN Then
     Begin
       { Enumerated Type: (Red, Green, Blue) }
+      If enum_count >= 100 Then
+        Error(23);
       sym_type[type_idx] := TYPE_ENUM;
       sym_const_val[type_idx] := enum_count;  { index into enum arrays }
       enum_low[enum_count] := 0;
@@ -11104,6 +11136,8 @@ Begin
     Else If tok_type = TOK_SET Then
     Begin
       { Set Type: Set Of Char / Set Of EnumType / Set Of 0..63 }
+      If set_count >= 100 Then
+        Error(23);
       sym_type[type_idx] := TYPE_SET;
       NextToken;  { consume 'Set' }
       Expect(TOK_OF);
@@ -11186,6 +11220,8 @@ Begin
         hi_val := tok_int
       Else
         Error(9);
+      If subr_count >= 100 Then
+        Error(23);
       sym_type[type_idx] := TYPE_SUBRANGE;
       sym_const_val[type_idx] := subr_count;  { index into subrange arrays }
       subr_low[subr_count] := lo_val;
@@ -11214,6 +11250,8 @@ Begin
           If (base_idx < 0) Or (sym_kind[base_idx] <> SYM_CONST) Then
             Error(9);
           hi_val := sym_const_val[base_idx];
+          If subr_count >= 100 Then
+            Error(23);
           sym_type[type_idx] := TYPE_SUBRANGE;
           sym_const_val[type_idx] := subr_count;
           subr_low[subr_count] := lo_val;
@@ -12138,6 +12176,8 @@ Begin
       Else
       Begin
         { Store Unit name For symbol prefixing }
+        If loaded_count >= 16 Then
+          Error(24);
         unit_base := loaded_count * 32;
         tpu_pos := 5;  { Skip 'Unit ' }
         i := 0;

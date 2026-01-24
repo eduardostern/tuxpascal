@@ -79,6 +79,14 @@ Begin
     Write('Type mismatch')
   Else If code = 20 Then
     Write('Duplicate identifier')
+  Else If code = 21 Then
+    Write('Too many symbols (max 500)')
+  Else If code = 22 Then
+    Write('Too many record fields (max 200)')
+  Else If code = 23 Then
+    Write('Too many types (max 100)')
+  Else If code = 24 Then
+    Write('Too many units (max 16)')
   Else
   Begin
     Write('Unknown error (code ');

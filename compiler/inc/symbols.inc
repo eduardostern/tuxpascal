@@ -4,16 +4,20 @@ Procedure CopyTokenToSym(idx: Integer);
 Var
   i: Integer;
   base: Integer;
+  len: Integer;
 Begin
-  { sym_name is flattened: base = idx * 32 }
+  { sym_name is flattened: base = idx * 32, truncate names > 31 chars }
   base := idx * 32;
+  len := tok_len;
+  If len > 31 Then
+    len := 31;
   i := 0;
-  While i < tok_len Do
+  While i < len Do
   Begin
     sym_name[base + i] := tok_str[i];
     i := i + 1
   End;
-  sym_name[base + tok_len] := 0
+  sym_name[base + len] := 0
 End;
 
 Function SymLookup: Integer;
@@ -35,6 +39,8 @@ End;
 
 Function SymAdd(kind, typ, level, offset: Integer): Integer;
 Begin
+  If sym_count >= 500 Then
+    Error(21);  { Too many symbols }
   CopyTokenToSym(sym_count);
   sym_kind[sym_count] := kind;
   sym_type[sym_count] := typ;
