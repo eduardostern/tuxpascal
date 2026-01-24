@@ -558,9 +558,11 @@ Begin
             End;
             { Set up static link For callee }
             EmitStaticLink(sym_level[idx], scope_level);
-            { Check If calling imported Unit Procedure }
+            { Check If calling imported Unit Procedure or external C function }
             If sym_unit_idx[idx] >= 0 Then
               EmitBLUnitProc(sym_unit_idx[idx], idx)
+            Else If sym_is_external[idx] = 1 Then
+              EmitBLExternal(idx)
             Else
               EmitBL(sym_label[idx]);
             expr_type := sym_type[idx]  { Function return Type }
@@ -649,9 +651,11 @@ Begin
         End;
         { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check If calling imported Unit Procedure }
+        { Check If calling imported Unit Procedure or external C function }
         If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
+        Else If sym_is_external[idx] = 1 Then
+          EmitBLExternal(idx)
         Else
           EmitBL(sym_label[idx]);
         expr_type := sym_type[idx]  { Function return Type }
@@ -4137,9 +4141,11 @@ Begin
         End;
         { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check If calling imported Unit Procedure }
+        { Check If calling imported Unit Procedure or external C function }
         If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
+        Else If sym_is_external[idx] = 1 Then
+          EmitBLExternal(idx)
         Else
           EmitBL(sym_label[idx])
       End

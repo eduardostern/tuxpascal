@@ -118,6 +118,40 @@ End.
 
 All your favorites are here: `ClrScr`, `GotoXY`, `TextColor`, `TextBackground`, `KeyPressed`, `ReadKey`...
 
+### Graphics & Sound (TuxGraph Library)
+Want to go beyond text mode? TuxPascal includes a native graphics library using macOS Core Graphics and Core Audio:
+
+```pascal
+Program GraphicsDemo;
+
+{ Declare external functions }
+function gfx_init(width, height: integer): integer; external;
+procedure gfx_close; external;
+procedure gfx_fill_rect(x, y, w, h, color: integer); external;
+procedure gfx_present; external;
+procedure snd_beep(frequency, duration: integer); external;
+
+Begin
+  if gfx_init(640, 480) = 1 then
+  begin
+    snd_beep(440, 100);  { A4 note }
+    gfx_fill_rect(100, 100, 200, 150, $FF0000);  { Red rectangle }
+    gfx_present;
+    gfx_close
+  end
+End.
+```
+
+**Graphics Functions:** `gfx_init`, `gfx_close`, `gfx_clear`, `gfx_set_pixel`, `gfx_line`, `gfx_rect`, `gfx_fill_rect`, `gfx_circle`, `gfx_fill_circle`, `gfx_present`, `gfx_read_key`, `gfx_sleep`
+
+**Sound Functions:** `snd_beep` (square wave), `snd_tone` (sine wave), `snd_noise`, `snd_volume`
+
+Build graphics programs with:
+```bash
+tpc examples/graphtetris.pas -o graphtetris.s
+clang -o graphtetris graphtetris.s lib/tuxgraph.o -framework Cocoa -framework CoreGraphics -framework AudioToolbox
+```
+
 ---
 
 ## Installation

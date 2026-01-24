@@ -81,6 +81,7 @@ Const
   TOK_INTERFACE = 145;      { Interface keyword }
   TOK_IMPLEMENTATION = 146; { Implementation keyword }
   TOK_USES = 147;    { Uses keyword }
+  TOK_EXTERNAL = 148; { External keyword for C library linking }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -129,6 +130,7 @@ Var
   sym_is_var_param: Array[0..499] Of Integer;  { 1 If Var parameter (pass by ref) }
   sym_var_param_flags: Array[0..499] Of Integer;  { bitmap: bit i = 1 If param i is Var (For proc/func) }
   sym_unit_idx: Array[0..499] Of Integer;  { Unit index For imported symbols, -1 For local }
+  sym_is_external: Array[0..499] Of Integer;  { 1 if external C function }
   sym_count: Integer;
 
   { Record field table }

@@ -230,6 +230,22 @@ Begin
   Write('    bl L'); WriteLn(lbl)
 End;
 
+Procedure EmitBLExternal(sym_idx: Integer);
+Var
+  i, base: Integer;
+Begin
+  { Emit: bl _symbolname (for external C functions) }
+  Write('    bl _');
+  base := sym_idx * 32;
+  i := 0;
+  While (i < 32) And (sym_name[base + i] <> 0) Do
+  Begin
+    WriteChar(sym_name[base + i]);
+    i := i + 1
+  End;
+  WriteLn
+End;
+
 Procedure EmitCmpX0X1;
 Begin
   WriteLn('    cmp x1, x0')

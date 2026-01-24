@@ -215,6 +215,80 @@ For procedure/function parameters:
 - `first_param_in_group` tracks where each parameter group starts
 - After parsing the type, loops through `param_indices[first_param_in_group..param_count-1]`
 
+## External C Functions
+
+TuxPascal supports calling external C functions using the `external` keyword:
+
+```pascal
+function gfx_init(width, height: integer): integer; external;
+procedure snd_beep(frequency, duration: integer); external;
+```
+
+The compiler emits `bl _functionname` for external calls. Link with the appropriate `.o` file.
+
+## TuxGraph Library (lib/tuxgraph.m)
+
+A native Objective-C graphics and sound library for TuxPascal programs.
+
+### Building Graphics Programs
+
+```bash
+# Compile Pascal to assembly
+./build/bin/tuxpascal < examples/graphtetris.pas > /tmp/graphtetris.s
+
+# Link with tuxgraph library
+clang -o graphtetris /tmp/graphtetris.s lib/tuxgraph.o \
+  -framework Cocoa -framework CoreGraphics -framework AudioToolbox
+```
+
+### Graphics Functions
+
+| Function | Description |
+|----------|-------------|
+| `gfx_init(w, h)` | Initialize window, returns 1 on success |
+| `gfx_close` | Close window and cleanup |
+| `gfx_clear(color)` | Clear screen to color (0xRRGGBB) |
+| `gfx_set_pixel(x, y, color)` | Set single pixel |
+| `gfx_line(x1, y1, x2, y2, color)` | Draw line |
+| `gfx_rect(x, y, w, h, color)` | Draw rectangle outline |
+| `gfx_fill_rect(x, y, w, h, color)` | Draw filled rectangle |
+| `gfx_circle(cx, cy, r, color)` | Draw circle outline |
+| `gfx_fill_circle(cx, cy, r, color)` | Draw filled circle |
+| `gfx_present` | Update display (must call to see changes) |
+| `gfx_read_key` | Non-blocking key read (-1 if none) |
+| `gfx_sleep(ms)` | Sleep for milliseconds |
+| `gfx_running` | Returns 1 if window still open |
+
+### Sound Functions
+
+| Function | Description |
+|----------|-------------|
+| `snd_beep(freq, duration)` | Play square wave (retro game sound) |
+| `snd_tone(freq, duration)` | Play sine wave (pure tone) |
+| `snd_noise(duration)` | Play white noise |
+| `snd_volume(0-100)` | Set volume level |
+
+### Key Codes
+
+Arrow keys return macOS virtual key codes: Up=63232, Down=63233, Left=63234, Right=63235
+
+### Example Declaration Block
+
+```pascal
+{ Graphics }
+function gfx_init(width, height: integer): integer; external;
+procedure gfx_close; external;
+procedure gfx_clear(color: integer); external;
+procedure gfx_fill_rect(x, y, w, h, color: integer); external;
+procedure gfx_present; external;
+function gfx_read_key: integer; external;
+procedure gfx_sleep(ms: integer); external;
+
+{ Sound }
+procedure snd_beep(frequency, duration: integer); external;
+procedure snd_tone(frequency, duration: integer); external;
+```
+
 ## Known Limitations
 
 - **Maximum 8 parameters**: Procedures/functions support up to 8 parameters (stored in `param_indices[0..7]`)

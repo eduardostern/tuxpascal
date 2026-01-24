@@ -1172,11 +1172,18 @@ Begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check For Forward declaration Or Interface declaration }
-  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  { Check For Forward, External, Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (tok_type = TOK_EXTERNAL) Or (in_interface = 1) Then
   Begin
     If tok_type = TOK_FORWARD Then
     Begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    End
+    Else If tok_type = TOK_EXTERNAL Then
+    Begin
+      { External C function - mark it And store name For linking }
+      sym_is_external[idx] := 1;
       NextToken;
       Expect(TOK_SEMICOLON)
     End;
@@ -1439,11 +1446,18 @@ Begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check For Forward declaration Or Interface declaration }
-  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  { Check For Forward, External, Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (tok_type = TOK_EXTERNAL) Or (in_interface = 1) Then
   Begin
     If tok_type = TOK_FORWARD Then
     Begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    End
+    Else If tok_type = TOK_EXTERNAL Then
+    Begin
+      { External C function - mark it And store name For linking }
+      sym_is_external[idx] := 1;
       NextToken;
       Expect(TOK_SEMICOLON)
     End;

@@ -645,7 +645,13 @@ Begin
         If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
           If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
             If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
-              tok_type := TOK_INTEGER_TYPE
+              tok_type := TOK_INTEGER_TYPE;
+      { External = 101,120,116,101,114,110,97,108 - for C library linking }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 120) Then { ex }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 110) Then { rn }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
+              tok_type := TOK_EXTERNAL
     End;
     { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
     If tok_len = 14 Then
