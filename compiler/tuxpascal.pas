@@ -1701,6 +1701,42 @@ Begin
     WriteLn('    ldur x8, [x8, #-8]')
 End;
 
+{ Emit: xDest = xBase + offset (handles negative offsets and large values) }
+Procedure EmitAddrOffset(dest, base, offset: Integer);
+Begin
+  If offset = 0 Then
+  Begin
+    If dest <> base Then
+    Begin
+      Write('    mov x'); Write(dest); Write(', x'); WriteLn(base)
+    End
+  End
+  Else If offset < 0 Then
+  Begin
+    If (0 - offset) <= 4095 Then
+    Begin
+      Write('    sub x'); Write(dest); Write(', x'); Write(base); Write(', #'); WriteLn(0 - offset)
+    End
+    Else
+    Begin
+      EmitMovX8(0 - offset);
+      Write('    sub x'); Write(dest); Write(', x'); Write(base); WriteLn(', x8')
+    End
+  End
+  Else
+  Begin
+    If offset <= 4095 Then
+    Begin
+      Write('    add x'); Write(dest); Write(', x'); Write(base); Write(', #'); WriteLn(offset)
+    End
+    Else
+    Begin
+      EmitMovX8(offset);
+      Write('    add x'); Write(dest); Write(', x'); Write(base); WriteLn(', x8')
+    End
+  End
+End;
+
 Procedure EmitVarAddr(var_idx, cur_scope: Integer);
 Var
   offset, var_level, i: Integer;
@@ -7084,14 +7120,10 @@ Begin
           If sym_level[with_rec_idx] < scope_level Then
           Begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
-            { add x0, x8, #sym_offset + field_offset }
-            WriteLn('    add x0, x8, #');
+            EmitAddrOffset(0, 8, sym_offset[with_rec_idx] + field_offset[arg_count])
           End
           Else
-          Begin
-            { add x0, x29, #sym_offset + field_offset }
-            WriteLn('    add x0, x29, #');
-          End;
+            EmitAddrOffset(0, 29, sym_offset[with_rec_idx] + field_offset[arg_count]);
           { Load from computed address }
           If field_type[arg_count] = TYPE_REAL Then
           Begin
@@ -7178,9 +7210,7 @@ Begin
             NextToken;  { consume field name }
             { Add field offset: x1 = x1 + offset }
             If field_offset[arg_count] > 0 Then
-            Begin
-              WriteLn('    add x1, x1, #');
-            End;
+              EmitAddrOffset(1, 1, field_offset[arg_count]);
             { Load field value }
             If field_type[arg_count] = TYPE_REAL Then
             Begin
@@ -7214,14 +7244,10 @@ Begin
           If sym_level[idx] < scope_level Then
           Begin
             EmitFollowChain(sym_level[idx], scope_level);
-            { add x0, x8, #sym_offset + field_offset }
-            WriteLn('    add x0, x8, #');
+            EmitAddrOffset(0, 8, sym_offset[idx] + field_offset[arg_count])
           End
           Else
-          Begin
-            { add x0, x29, #sym_offset + field_offset }
-            WriteLn('    add x0, x29, #');
-          End;
+            EmitAddrOffset(0, 29, sym_offset[idx] + field_offset[arg_count]);
           NextToken;
           { Handle nested Record fields: x0 has address, check For more dots }
           While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
@@ -7236,9 +7262,7 @@ Begin
               Error(15);
             { Add sub-field offset To x0 }
             If field_offset[arg_count] > 0 Then
-            Begin
-              WriteLn('    add x0, x0, #');
-            End;
+              EmitAddrOffset(0, 0, field_offset[arg_count]);
             NextToken
           End;
           { Load from final computed address }
@@ -7359,9 +7383,7 @@ Begin
               NextToken;  { consume field name }
               { Add field offset To pointer: add x0, x0, #offset }
               If field_offset[arg_count] > 0 Then
-              Begin
-                WriteLn('    add x0, x0, #');
-              End;
+                EmitAddrOffset(0, 0, field_offset[arg_count]);
               { Handle nested Record fields }
               While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
               Begin
@@ -7373,9 +7395,7 @@ Begin
                 If arg_count < 0 Then
                   Error(15);
                 If field_offset[arg_count] > 0 Then
-                Begin
-                  WriteLn('    add x0, x0, #');
-                End;
+                  EmitAddrOffset(0, 0, field_offset[arg_count]);
                 NextToken
               End;
               { Load field value }
@@ -9731,12 +9751,10 @@ Begin
           If sym_level[with_rec_idx] < scope_level Then
           Begin
             EmitFollowChain(sym_level[with_rec_idx], scope_level);
-            WriteLn('    add x1, x8, #');
+            EmitAddrOffset(1, 8, sym_offset[with_rec_idx] + field_offset[arg_count])
           End
           Else
-          Begin
-            WriteLn('    add x1, x29, #');
-          End;
+            EmitAddrOffset(1, 29, sym_offset[with_rec_idx] + field_offset[arg_count]);
           { Store value To field }
           If field_type[arg_count] = TYPE_REAL Then
           Begin
@@ -9895,9 +9913,7 @@ Begin
             NextToken;
             { Add field offset }
             If field_offset[arg_count] > 0 Then
-            Begin
-              WriteLn('    add x1, x1, #');
-            End;
+              EmitAddrOffset(1, 1, field_offset[arg_count]);
             EmitPushX1;  { save field address }
             Expect(TOK_ASSIGN);
             ParseExpression;
@@ -9964,12 +9980,10 @@ Begin
             If sym_level[idx] < scope_level Then
             Begin
               EmitFollowChain(sym_level[idx], scope_level);
-              WriteLn('    add x0, x8, #');
+              EmitAddrOffset(0, 8, sym_offset[idx] + lbl1)
             End
             Else
-            Begin
-              WriteLn('    add x0, x29, #');
-            End;
+              EmitAddrOffset(0, 29, sym_offset[idx] + lbl1);
             EmitPopD0;
             { str d0, [x0] }
             WriteLn('    str d0, [x0]');
@@ -9982,12 +9996,10 @@ Begin
             If sym_level[idx] < scope_level Then
             Begin
               EmitFollowChain(sym_level[idx], scope_level);
-              WriteLn('    add x1, x8, #');
+              EmitAddrOffset(1, 8, sym_offset[idx] + lbl1)
             End
             Else
-            Begin
-              WriteLn('    add x1, x29, #');
-            End;
+              EmitAddrOffset(1, 29, sym_offset[idx] + lbl1);
             EmitPopX0;
             { str x0, [x1] }
             WriteLn('    str x0, [x1]');
@@ -10027,9 +10039,7 @@ Begin
             NextToken;  { consume field name }
             { Add field offset To pointer: x0 = x0 + offset }
             If field_offset[arg_count] > 0 Then
-            Begin
-              WriteLn('    add x0, x0, #');
-            End;
+              EmitAddrOffset(0, 0, field_offset[arg_count]);
             { Handle nested Record fields }
             While (field_type[arg_count] = TYPE_RECORD) And (tok_type = TOK_DOT) Do
             Begin
@@ -10041,9 +10051,7 @@ Begin
               If arg_count < 0 Then
                 Error(15);
               If field_offset[arg_count] > 0 Then
-              Begin
-                WriteLn('    add x0, x0, #');
-              End;
+                EmitAddrOffset(0, 0, field_offset[arg_count]);
               NextToken
             End;
             EmitPushX0;  { save field address }
@@ -10155,28 +10163,10 @@ Begin
             If sym_level[idx] < scope_level Then
             Begin
               EmitFollowChain(sym_level[idx], scope_level);
-              { add/sub x8, x8, #offset }
-              If sym_offset[idx] < 0 Then
-              Begin
-                WriteLn('    sub x8, x8, #');
-              End
-              Else
-              Begin
-                WriteLn('    add x8, x8, #');
-              End
+              EmitAddrOffset(8, 8, sym_offset[idx])
             End
             Else
-            Begin
-              { add/sub x8, x29, #offset }
-              If sym_offset[idx] < 0 Then
-              Begin
-                WriteLn('    sub x8, x29, #');
-              End
-              Else
-              Begin
-                WriteLn('    add x8, x29, #');
-              End
-            End;
+              EmitAddrOffset(8, 29, sym_offset[idx]);
             { Store Length at [x8] }
             EmitMovX0(tok_len);
             WriteLn('    strb w0, [x8]');

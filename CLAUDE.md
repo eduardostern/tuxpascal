@@ -217,5 +217,4 @@ For procedure/function parameters:
 
 ## Known Limitations
 
-- **Arrays of records**: Field access in arrays of record types may generate incorrect assembly
 - **Maximum 8 parameters**: Procedures/functions support up to 8 parameters (stored in `param_indices[0..7]`)

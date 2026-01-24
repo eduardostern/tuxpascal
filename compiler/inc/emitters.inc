@@ -289,6 +289,42 @@ Begin
     WriteLn('    ldur x8, [x8, #-8]')
 End;
 
+{ Emit: xDest = xBase + offset (handles negative offsets and large values) }
+Procedure EmitAddrOffset(dest, base, offset: Integer);
+Begin
+  If offset = 0 Then
+  Begin
+    If dest <> base Then
+    Begin
+      Write('    mov x'); Write(dest); Write(', x'); WriteLn(base)
+    End
+  End
+  Else If offset < 0 Then
+  Begin
+    If (0 - offset) <= 4095 Then
+    Begin
+      Write('    sub x'); Write(dest); Write(', x'); Write(base); Write(', #'); WriteLn(0 - offset)
+    End
+    Else
+    Begin
+      EmitMovX8(0 - offset);
+      Write('    sub x'); Write(dest); Write(', x'); Write(base); WriteLn(', x8')
+    End
+  End
+  Else
+  Begin
+    If offset <= 4095 Then
+    Begin
+      Write('    add x'); Write(dest); Write(', x'); Write(base); Write(', #'); WriteLn(offset)
+    End
+    Else
+    Begin
+      EmitMovX8(offset);
+      Write('    add x'); Write(dest); Write(', x'); Write(base); WriteLn(', x8')
+    End
+  End
+End;
+
 Procedure EmitVarAddr(var_idx, cur_scope: Integer);
 Var
   offset, var_level, i: Integer;
