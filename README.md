@@ -399,6 +399,17 @@ No optimization passes. No register allocation. Just honest, predictable code ge
 
 ---
 
+## Known Limitations
+
+A few edge cases to be aware of:
+
+- **Arrays of records** - Field access in arrays of record types may generate incorrect assembly in some cases
+- **Maximum 8 parameters** - Procedures and functions support up to 8 parameters
+
+These limitations may be addressed in future releases.
+
+---
+
 ## Requirements
 
 - **macOS on Apple Silicon** (ARM64)

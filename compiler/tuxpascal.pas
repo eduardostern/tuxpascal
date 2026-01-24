@@ -10326,9 +10326,20 @@ Begin
     End;
     Expect(TOK_COLON);
     { Parse Type }
-    If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
-       (tok_type = TOK_BOOLEAN_TYPE) Then
+    If tok_type = TOK_INTEGER_TYPE Then
+      NextToken  { Already TYPE_INTEGER from SymAdd }
+    Else If tok_type = TOK_CHAR_TYPE Then
+    Begin
+      For j := first_idx To idx Do
+        sym_type[j] := TYPE_CHAR;
       NextToken
+    End
+    Else If tok_type = TOK_BOOLEAN_TYPE Then
+    Begin
+      For j := first_idx To idx Do
+        sym_type[j] := TYPE_BOOLEAN;
+      NextToken
+    End
     Else If tok_type = TOK_REAL_TYPE Then
     Begin
       { Set Type To Real For all vars In this group }
@@ -10365,11 +10376,23 @@ Begin
       Begin
         NextToken;
         arr_size := (hi_bound - lo_bound + 1) * 8;
-        local_offset := local_offset - (arr_size - 8);
-        sym_type[first_idx] := TYPE_ARRAY;
-        sym_const_val[first_idx] := lo_bound;
-        sym_label[first_idx] := arr_size;
-        sym_var_param_flags[first_idx] := 0  { 0 = basic Type element }
+        { Handle all variables In the list }
+        For j := first_idx To idx Do
+        Begin
+          sym_type[j] := TYPE_ARRAY;
+          sym_const_val[j] := lo_bound;
+          sym_label[j] := arr_size;
+          sym_var_param_flags[j] := 0;  { 0 = basic Type element }
+          If j = first_idx Then
+            { First var keeps its offset, just expand local_offset }
+            local_offset := local_offset - (arr_size - 8)
+          Else
+          Begin
+            { Subsequent vars need new offset below current local_offset }
+            sym_offset[j] := local_offset - 8;
+            local_offset := sym_offset[j] - (arr_size - 8)
+          End
+        End
       End
       Else If tok_type = TOK_IDENT Then
       Begin
@@ -10378,11 +10401,23 @@ Begin
         If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And (sym_type[base_idx] = TYPE_RECORD) Then
         Begin
           arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
-          local_offset := local_offset - (arr_size - 8);
-          sym_type[first_idx] := TYPE_ARRAY;
-          sym_const_val[first_idx] := lo_bound;
-          sym_label[first_idx] := arr_size;
-          sym_var_param_flags[first_idx] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
+          { Handle all variables In the list }
+          For j := first_idx To idx Do
+          Begin
+            sym_type[j] := TYPE_ARRAY;
+            sym_const_val[j] := lo_bound;
+            sym_label[j] := arr_size;
+            sym_var_param_flags[j] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
+            If j = first_idx Then
+              { First var keeps its offset, just expand local_offset }
+              local_offset := local_offset - (arr_size - 8)
+            Else
+            Begin
+              { Subsequent vars need new offset below current local_offset }
+              sym_offset[j] := local_offset - 8;
+              local_offset := sym_offset[j] - (arr_size - 8)
+            End
+          End;
           NextToken
         End
         Else
@@ -11291,6 +11326,7 @@ Var
   param_indices: Array[0..7] Of Integer;
   is_var_group: Integer;
   saved_exit_label, proc_exit_label: Integer;
+  first_param_in_group: Integer;
 Begin
   NextToken;  { consume 'Procedure' }
 
@@ -11337,6 +11373,7 @@ Begin
         End;
         { Parse identifier list For this parameter group }
         If tok_type <> TOK_IDENT Then Error(11);
+        first_param_in_group := param_count;  { Remember where this group starts }
         Repeat
           If tok_type = TOK_COMMA Then NextToken;
           If tok_type <> TOK_IDENT Then Error(11);
@@ -11357,29 +11394,40 @@ Begin
           If tok_type = TOK_REAL_TYPE Then
           Begin
             { Set all params In this group To TYPE_REAL }
-            { Find starting index Of this group And Set types }
-            { param_indices has the indices, but we need To know where this group started }
-            { For simplicity, Set all recent params To Real - this is approximate }
-            sym_type[param_idx] := TYPE_REAL;
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_REAL;
+            NextToken
+          End
+          Else If tok_type = TOK_CHAR_TYPE Then
+          Begin
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_CHAR;
+            NextToken
+          End
+          Else If tok_type = TOK_BOOLEAN_TYPE Then
+          Begin
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_BOOLEAN;
             NextToken
           End
           Else If tok_type = TOK_STRING_TYPE Then
           Begin
-            { String parameter }
-            sym_type[param_idx] := TYPE_STRING;
-            If is_var_group = 0 Then
+            { String parameters }
+            For j := first_param_in_group To param_count - 1 Do
             Begin
-              { Value parameter - need 256 bytes total, already have 8, need 248 more }
-              local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-In }
+              sym_type[param_indices[j]] := TYPE_STRING;
+              If is_var_group = 0 Then
+              Begin
+                { Value parameter - need 256 bytes total, already have 8, need 248 more }
+                local_offset := local_offset - 248;
+                sym_offset[param_indices[j]] := local_offset;
+                sym_label[param_indices[j]] := 256  { Mark as needing copy-In }
+              End
             End;
-            { Var String params keep the 8-byte slot For address }
             NextToken
           End
-          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
-             (tok_type = TOK_BOOLEAN_TYPE) Then
-            NextToken
+          Else If tok_type = TOK_INTEGER_TYPE Then
+            NextToken  { Already TYPE_INTEGER from SymAdd }
         End
       Until tok_type <> TOK_SEMICOLON
     End;
@@ -11528,6 +11576,7 @@ Var
   param_indices: Array[0..7] Of Integer;
   is_var_group: Integer;
   saved_exit_label, func_exit_label: Integer;
+  first_param_in_group: Integer;
 Begin
   NextToken;  { consume 'Function' }
 
@@ -11574,6 +11623,7 @@ Begin
         End;
         { Parse identifier list For this parameter group }
         If tok_type <> TOK_IDENT Then Error(11);
+        first_param_in_group := param_count;  { Remember where this group starts }
         Repeat
           If tok_type = TOK_COMMA Then NextToken;
           If tok_type <> TOK_IDENT Then Error(11);
@@ -11593,26 +11643,40 @@ Begin
           NextToken;
           If tok_type = TOK_REAL_TYPE Then
           Begin
-            sym_type[param_idx] := TYPE_REAL;
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_REAL;
+            NextToken
+          End
+          Else If tok_type = TOK_CHAR_TYPE Then
+          Begin
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_CHAR;
+            NextToken
+          End
+          Else If tok_type = TOK_BOOLEAN_TYPE Then
+          Begin
+            For j := first_param_in_group To param_count - 1 Do
+              sym_type[param_indices[j]] := TYPE_BOOLEAN;
             NextToken
           End
           Else If tok_type = TOK_STRING_TYPE Then
           Begin
-            { String parameter }
-            sym_type[param_idx] := TYPE_STRING;
-            If is_var_group = 0 Then
+            { String parameters }
+            For j := first_param_in_group To param_count - 1 Do
             Begin
-              { Value parameter - need 256 bytes total, already have 8, need 248 more }
-              local_offset := local_offset - 248;
-              sym_offset[param_idx] := local_offset;  { Update offset To start Of 256-byte area }
-              sym_label[param_idx] := 256  { Mark as needing copy-In }
+              sym_type[param_indices[j]] := TYPE_STRING;
+              If is_var_group = 0 Then
+              Begin
+                { Value parameter - need 256 bytes total, already have 8, need 248 more }
+                local_offset := local_offset - 248;
+                sym_offset[param_indices[j]] := local_offset;
+                sym_label[param_indices[j]] := 256  { Mark as needing copy-In }
+              End
             End;
-            { Var String params keep the 8-byte slot For address }
             NextToken
           End
-          Else If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
-             (tok_type = TOK_BOOLEAN_TYPE) Then
-            NextToken
+          Else If tok_type = TOK_INTEGER_TYPE Then
+            NextToken  { Already TYPE_INTEGER from SymAdd }
         End
       Until tok_type <> TOK_SEMICOLON
     End;

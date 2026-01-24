@@ -189,3 +189,33 @@ The `tpc` wrapper provides:
 - **Automatic linking**: Links all required `.o` files when building executables
 
 Note: `read`/`readln`/`new`/`dispose`/file I/O are implemented in the Pascal compiler only, not in the bootstrap.
+
+## Multi-Variable Declarations
+
+The compiler supports declaring multiple variables of the same type on one line:
+
+```pascal
+var a, b, c: integer;
+var x, y: array[0..9] of char;
+procedure Foo(a, b, c: char);
+```
+
+**Implementation Details** (in `compiler/inc/declarations.inc`):
+
+When parsing multi-variable declarations, the code:
+1. Parses the identifier list, adding each variable to the symbol table with `TYPE_INTEGER` as a placeholder
+2. Tracks `first_idx` (first variable) and `idx` (last variable) in the group
+3. After parsing the type, loops from `first_idx` to `idx` to set the correct type for all variables
+
+For arrays, each variable needs its own stack space with proper offset calculation:
+- First variable keeps its original offset, `local_offset` expands downward by `arr_size - 8`
+- Subsequent variables get new offsets below `local_offset`
+
+For procedure/function parameters:
+- `first_param_in_group` tracks where each parameter group starts
+- After parsing the type, loops through `param_indices[first_param_in_group..param_count-1]`
+
+## Known Limitations
+
+- **Arrays of records**: Field access in arrays of record types may generate incorrect assembly
+- **Maximum 8 parameters**: Procedures/functions support up to 8 parameters (stored in `param_indices[0..7]`)
