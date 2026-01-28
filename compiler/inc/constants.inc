@@ -289,6 +289,15 @@ Var
   set_high: Array[0..99] Of Integer;        { high bound Of base Type }
   set_count: Integer;                       { count Of Set types defined }
 
+  { Multi-dimensional array metadata }
+  { arr_dims[sym_idx] = number of dimensions (1 for 1D, 2 for 2D, etc.) }
+  arr_dims: Array[0..499] Of Integer;
+  { arr_info stores bounds for multi-dim arrays: 8 integers per symbol }
+  { Layout: [lo1, size1, lo2, size2, lo3, size3, lo4, size4] }
+  { For 2D array[0..3, 0..5]: lo1=0, size1=6, lo2=0, size2=6 }
+  { Access arr_info[sym_idx * 8 + dim * 2] for lo, +1 for size }
+  arr_info: Array[0..3999] Of Integer;      { 500 symbols * 8 ints each }
+
   { File variable structure (at runtime, 272 bytes per file Var):
     offset 0: fd (8 bytes) - file descriptor, -1 If Not open
     offset 8: mode (8 bytes) - 0=closed, 1=Read, 2=Write, 3=append

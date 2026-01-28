@@ -25,6 +25,7 @@ Procedure ParseFactor;
 Var
   idx, arg_count, i, lbl1, lbl2: Integer;
   var_flags, var_arg_idx: Integer;
+  dim_idx, dim_count, dim_lo, dim_size: Integer;
 Begin
   If tok_type = TOK_INTEGER Then
   Begin
@@ -186,18 +187,52 @@ Begin
     NextToken;
     If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
     Begin
-      { Address Of Array element: @arr[index] }
+      { Address Of Array element: @arr[index] Or @arr[i,j,...] }
       NextToken;  { consume '[' }
-      ParseExpression;  { index In x0 }
-      Expect(TOK_RBRACKET);
-      { Subtract low bound }
+      ParseExpression;  { first index In x0 }
+      { Subtract low bound for first dimension }
+      dim_lo := arr_info[idx * 8];
       EmitPushX0;
-      EmitMovX0(sym_const_val[idx]);  { low bound }
+      EmitMovX0(dim_lo);
       EmitPopX1;
-      { x0 = x1 - x0 = index - low_bound }
       WriteLn('    sub x0, x1, x0');
-      { Multiply by 8 (element size) using lsl #3 }
-      WriteLn('    lsl x0, x0, #3');
+      { Handle multi-dimensional arrays }
+      dim_count := arr_dims[idx];
+      If dim_count < 1 Then dim_count := 1;
+      dim_idx := 1;
+      While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+      Begin
+        NextToken;  { consume ',' }
+        dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+        EmitPushX0;
+        EmitMovX0(dim_size);
+        EmitPopX1;
+        WriteLn('    mul x0, x1, x0');
+        EmitPushX0;
+        ParseExpression;
+        dim_lo := arr_info[idx * 8 + dim_idx * 2];
+        EmitPushX0;
+        EmitMovX0(dim_lo);
+        EmitPopX1;
+        WriteLn('    sub x0, x1, x0');
+        EmitPopX1;
+        WriteLn('    add x0, x1, x0');
+        dim_idx := dim_idx + 1
+      End;
+      Expect(TOK_RBRACKET);
+      { Multiply by element size }
+      If sym_var_param_flags[idx] > 0 Then
+      Begin
+        lbl1 := sym_label[sym_var_param_flags[idx] - 1];
+        EmitPushX0;
+        EmitMovX0(lbl1);
+        EmitPopX1;
+        WriteLn('    mul x0, x1, x0');
+      End
+      Else If sym_var_param_flags[idx] = -1 Then
+        WriteLn('    lsl x0, x0, #8')
+      Else
+        WriteLn('    lsl x0, x0, #3');
       { Get base address }
       If sym_level[idx] < scope_level Then
       Begin
@@ -266,17 +301,44 @@ Begin
       Begin
         If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
         Begin
-          { Array element access: arr[index] Or arr[index].field }
+          { Array element access: arr[index] Or arr[i,j,...] }
           NextToken;  { consume '[' }
-          ParseExpression;  { index In x0 }
-          Expect(TOK_RBRACKET);
-          { Subtract low bound }
+          ParseExpression;  { first index In x0 }
+          { Subtract low bound for first dimension }
+          dim_lo := arr_info[idx * 8];  { lo bound for dim 0 }
           EmitPushX0;
-          EmitMovX0(sym_const_val[idx]);  { low bound }
+          EmitMovX0(dim_lo);
           EmitPopX1;
-          { x0 = x1 - x0 = index - low_bound }
-          WriteLn('    sub x0, x1, x0');
-          { Check If Array Of records Or strings }
+          WriteLn('    sub x0, x1, x0');  { x0 = index - lo_bound }
+          { Handle multi-dimensional arrays }
+          dim_count := arr_dims[idx];
+          If dim_count < 1 Then dim_count := 1;  { default to 1D }
+          dim_idx := 1;
+          While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+          Begin
+            NextToken;  { consume ',' }
+            { Multiply current linear index by this dimension's size }
+            dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+            EmitPushX0;  { save current linear index }
+            EmitMovX0(dim_size);
+            EmitPopX1;
+            WriteLn('    mul x0, x1, x0');  { x0 = linear_index * dim_size }
+            EmitPushX0;  { save multiplied result }
+            { Parse next index }
+            ParseExpression;  { new index in x0 }
+            { Subtract low bound for this dimension }
+            dim_lo := arr_info[idx * 8 + dim_idx * 2];
+            EmitPushX0;
+            EmitMovX0(dim_lo);
+            EmitPopX1;
+            WriteLn('    sub x0, x1, x0');  { x0 = index - lo_bound }
+            { Add to previous linear index }
+            EmitPopX1;  { restore multiplied linear index }
+            WriteLn('    add x0, x1, x0');  { x0 = linear_index + new_index }
+            dim_idx := dim_idx + 1
+          End;
+          Expect(TOK_RBRACKET);
+          { Multiply linear index by element size }
           If sym_var_param_flags[idx] > 0 Then
           Begin
             { Array Of records - multiply by Record size }
@@ -284,7 +346,6 @@ Begin
             EmitPushX0;
             EmitMovX0(lbl1);
             EmitPopX1;
-            { mul x0, x1, x0 }
             WriteLn('    mul x0, x1, x0');
           End
           Else If sym_var_param_flags[idx] = -1 Then
@@ -526,16 +587,50 @@ Begin
                     If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                     Begin
                       NextToken;  { consume '[' }
-                      ParseExpression;  { index In x0 }
-                      Expect(TOK_RBRACKET);
-                      { Compute element address }
+                      ParseExpression;  { first index In x0 }
+                      { Subtract low bound for first dimension }
+                      dim_lo := arr_info[var_arg_idx * 8];
                       EmitPushX0;
-                      EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                      EmitMovX0(dim_lo);
                       EmitPopX1;
-                      { x0 = x1 - x0 = index - low_bound }
                       WriteLn('    sub x0, x1, x0');
-                      { Multiply by 8 using lsl #3 }
-                      WriteLn('    lsl x0, x0, #3');
+                      { Handle multi-dimensional arrays }
+                      dim_count := arr_dims[var_arg_idx];
+                      If dim_count < 1 Then dim_count := 1;
+                      dim_idx := 1;
+                      While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                      Begin
+                        NextToken;
+                        dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                        EmitPushX0;
+                        EmitMovX0(dim_size);
+                        EmitPopX1;
+                        WriteLn('    mul x0, x1, x0');
+                        EmitPushX0;
+                        ParseExpression;
+                        dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                        EmitPushX0;
+                        EmitMovX0(dim_lo);
+                        EmitPopX1;
+                        WriteLn('    sub x0, x1, x0');
+                        EmitPopX1;
+                        WriteLn('    add x0, x1, x0');
+                        dim_idx := dim_idx + 1
+                      End;
+                      Expect(TOK_RBRACKET);
+                      { Multiply by element size }
+                      If sym_var_param_flags[var_arg_idx] > 0 Then
+                      Begin
+                        lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                        EmitPushX0;
+                        EmitMovX0(lbl1);
+                        EmitPopX1;
+                        WriteLn('    mul x0, x1, x0');
+                      End
+                      Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                        WriteLn('    lsl x0, x0, #8')
+                      Else
+                        WriteLn('    lsl x0, x0, #3');
                       { Get base address And subtract element offset }
                       If sym_level[var_arg_idx] < scope_level Then
                       Begin
@@ -619,16 +714,50 @@ Begin
                 If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                 Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index In x0 }
-                  Expect(TOK_RBRACKET);
-                  { Compute element address }
+                  ParseExpression;  { first index In x0 }
+                  { Subtract low bound for first dimension }
+                  dim_lo := arr_info[var_arg_idx * 8];
                   EmitPushX0;
-                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitMovX0(dim_lo);
                   EmitPopX1;
-                  { x0 = x1 - x0 = index - low_bound }
                   WriteLn('    sub x0, x1, x0');
-                  { Multiply by 8 using lsl #3 }
-                  WriteLn('    lsl x0, x0, #3');
+                  { Handle multi-dimensional arrays }
+                  dim_count := arr_dims[var_arg_idx];
+                  If dim_count < 1 Then dim_count := 1;
+                  dim_idx := 1;
+                  While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                  Begin
+                    NextToken;
+                    dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                    EmitPushX0;
+                    EmitMovX0(dim_size);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                    EmitPushX0;
+                    ParseExpression;
+                    dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                    EmitPushX0;
+                    EmitMovX0(dim_lo);
+                    EmitPopX1;
+                    WriteLn('    sub x0, x1, x0');
+                    EmitPopX1;
+                    WriteLn('    add x0, x1, x0');
+                    dim_idx := dim_idx + 1
+                  End;
+                  Expect(TOK_RBRACKET);
+                  { Multiply by element size }
+                  If sym_var_param_flags[var_arg_idx] > 0 Then
+                  Begin
+                    lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                    EmitPushX0;
+                    EmitMovX0(lbl1);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                  End
+                  Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                    WriteLn('    lsl x0, x0, #8')
+                  Else
+                    WriteLn('    lsl x0, x0, #3');
                   { Get base address And subtract element offset }
                   If sym_level[var_arg_idx] < scope_level Then
                   Begin
@@ -2319,6 +2448,7 @@ Var
   idx, lbl1, lbl2, lbl3, arg_count, i: Integer;
   var_flags, arg_idx, var_arg_idx: Integer;
   old_break, old_continue: Integer;
+  dim_idx, dim_count, dim_lo, dim_size: Integer;
 Begin
   If tok_type = TOK_BEGIN Then
   Begin
@@ -4163,16 +4293,50 @@ Begin
                 If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                 Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index In x0 }
-                  Expect(TOK_RBRACKET);
-                  { Compute element address }
+                  ParseExpression;  { first index In x0 }
+                  { Subtract low bound for first dimension }
+                  dim_lo := arr_info[var_arg_idx * 8];
                   EmitPushX0;
-                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitMovX0(dim_lo);
                   EmitPopX1;
-                  { x0 = x1 - x0 = index - low_bound }
                   WriteLn('    sub x0, x1, x0');
-                  { Multiply by 8 using lsl #3 }
-                  WriteLn('    lsl x0, x0, #3');
+                  { Handle multi-dimensional arrays }
+                  dim_count := arr_dims[var_arg_idx];
+                  If dim_count < 1 Then dim_count := 1;
+                  dim_idx := 1;
+                  While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                  Begin
+                    NextToken;
+                    dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                    EmitPushX0;
+                    EmitMovX0(dim_size);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                    EmitPushX0;
+                    ParseExpression;
+                    dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                    EmitPushX0;
+                    EmitMovX0(dim_lo);
+                    EmitPopX1;
+                    WriteLn('    sub x0, x1, x0');
+                    EmitPopX1;
+                    WriteLn('    add x0, x1, x0');
+                    dim_idx := dim_idx + 1
+                  End;
+                  Expect(TOK_RBRACKET);
+                  { Multiply by element size }
+                  If sym_var_param_flags[var_arg_idx] > 0 Then
+                  Begin
+                    lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                    EmitPushX0;
+                    EmitMovX0(lbl1);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                  End
+                  Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                    WriteLn('    lsl x0, x0, #8')
+                  Else
+                    WriteLn('    lsl x0, x0, #3');
                   { Get base address And subtract element offset }
                   If sym_level[var_arg_idx] < scope_level Then
                   Begin
@@ -4218,16 +4382,39 @@ Begin
       Begin
         If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
         Begin
-          { Array element assignment: arr[index] := expr Or arr[index].field := expr }
+          { Array element assignment: arr[i] := expr Or arr[i,j,...] := expr }
           NextToken;  { consume '[' }
-          ParseExpression;  { index In x0 }
-          Expect(TOK_RBRACKET);
-          { Subtract low bound }
+          ParseExpression;  { first index In x0 }
+          { Subtract low bound for first dimension }
+          dim_lo := arr_info[idx * 8];
           EmitPushX0;
-          EmitMovX0(sym_const_val[idx]);
+          EmitMovX0(dim_lo);
           EmitPopX1;
-          { x0 = x1 - x0 = index - low_bound }
           WriteLn('    sub x0, x1, x0');
+          { Handle multi-dimensional arrays }
+          dim_count := arr_dims[idx];
+          If dim_count < 1 Then dim_count := 1;
+          dim_idx := 1;
+          While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+          Begin
+            NextToken;
+            dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+            EmitPushX0;
+            EmitMovX0(dim_size);
+            EmitPopX1;
+            WriteLn('    mul x0, x1, x0');
+            EmitPushX0;
+            ParseExpression;
+            dim_lo := arr_info[idx * 8 + dim_idx * 2];
+            EmitPushX0;
+            EmitMovX0(dim_lo);
+            EmitPopX1;
+            WriteLn('    sub x0, x1, x0');
+            EmitPopX1;
+            WriteLn('    add x0, x1, x0');
+            dim_idx := dim_idx + 1
+          End;
+          Expect(TOK_RBRACKET);
           { Multiply by element size }
           If sym_var_param_flags[idx] > 0 Then
           Begin

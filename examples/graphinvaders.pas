@@ -125,72 +125,64 @@ end;
 procedure DrawDigit(x, y, d, color: integer);
 { Atari 2600 style blocky digits - 4 pixels wide, 5 tall, scaled 3x }
 begin
-  if d = 0 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x, y, 3, 15, color);
-    gfx_fill_rect(x+9, y, 3, 15, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 1 then
-    gfx_fill_rect(x+9, y, 3, 15, color)
-  else if d = 2 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x+9, y, 3, 9, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x, y+6, 3, 9, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 3 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x+9, y, 3, 15, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 4 then
-  begin
-    gfx_fill_rect(x, y, 3, 9, color);
-    gfx_fill_rect(x+9, y, 3, 15, color);
-    gfx_fill_rect(x, y+6, 12, 3, color)
-  end
-  else if d = 5 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x, y, 3, 9, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x+9, y+6, 3, 9, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 6 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x, y, 3, 15, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x+9, y+6, 3, 9, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 7 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x+9, y, 3, 15, color)
-  end
-  else if d = 8 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x, y, 3, 15, color);
-    gfx_fill_rect(x+9, y, 3, 15, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
-  end
-  else if d = 9 then
-  begin
-    gfx_fill_rect(x, y, 12, 3, color);
-    gfx_fill_rect(x, y, 3, 9, color);
-    gfx_fill_rect(x+9, y, 3, 15, color);
-    gfx_fill_rect(x, y+6, 12, 3, color);
-    gfx_fill_rect(x, y+12, 12, 3, color)
+  case d of
+    0: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x, y, 3, 15, color);
+      gfx_fill_rect(x+9, y, 3, 15, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    1: gfx_fill_rect(x+9, y, 3, 15, color);
+    2: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x+9, y, 3, 9, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x, y+6, 3, 9, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    3: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x+9, y, 3, 15, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    4: begin
+      gfx_fill_rect(x, y, 3, 9, color);
+      gfx_fill_rect(x+9, y, 3, 15, color);
+      gfx_fill_rect(x, y+6, 12, 3, color)
+    end;
+    5: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x, y, 3, 9, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x+9, y+6, 3, 9, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    6: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x, y, 3, 15, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x+9, y+6, 3, 9, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    7: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x+9, y, 3, 15, color)
+    end;
+    8: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x, y, 3, 15, color);
+      gfx_fill_rect(x+9, y, 3, 15, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end;
+    9: begin
+      gfx_fill_rect(x, y, 12, 3, color);
+      gfx_fill_rect(x, y, 3, 9, color);
+      gfx_fill_rect(x+9, y, 3, 15, color);
+      gfx_fill_rect(x, y+6, 12, 3, color);
+      gfx_fill_rect(x, y+12, 12, 3, color)
+    end
   end
 end;
 
@@ -776,10 +768,12 @@ begin
 
   { Classic Atari 2600 march sound - 4 descending tones }
   alienStepSound := (alienStepSound + 1) mod 4;
-  if alienStepSound = 0 then snd_beep(120, 60)
-  else if alienStepSound = 1 then snd_beep(100, 60)
-  else if alienStepSound = 2 then snd_beep(80, 60)
-  else snd_beep(60, 60);
+  case alienStepSound of
+    0: snd_beep(120, 60);
+    1: snd_beep(100, 60);
+    2: snd_beep(80, 60);
+    3: snd_beep(60, 60)
+  end;
 
   { Clear all }
   for r := 0 to AlienRows - 1 do

@@ -23,6 +23,23 @@ static int gKeyBuffer[KEY_BUFFER_SIZE];
 static int gKeyHead = 0;
 static int gKeyTail = 0;
 
+// Key state tracking for held keys (up to 256 key codes)
+#define KEY_STATE_SIZE 65536
+static uint8_t gKeyState[KEY_STATE_SIZE];
+
+static void setKeyState(int key, int state) {
+    if (key >= 0 && key < KEY_STATE_SIZE) {
+        gKeyState[key] = state;
+    }
+}
+
+static int getKeyState(int key) {
+    if (key >= 0 && key < KEY_STATE_SIZE) {
+        return gKeyState[key];
+    }
+    return 0;
+}
+
 static void pushKey(int key) {
     int next = (gKeyHead + 1) % KEY_BUFFER_SIZE;
     if (next != gKeyTail) {  // Buffer not full
@@ -190,11 +207,17 @@ static void cleanupAudio(void) {
     if ([chars length] > 0) {
         unichar ch = [chars characterAtIndex:0];
         pushKey((int)ch);
+        setKeyState((int)ch, 1);  // Mark key as held
     }
 }
 
 - (void)keyUp:(NSEvent *)event {
-    // Absorb key up to prevent beep
+    // Handle key release
+    NSString *chars = [event charactersIgnoringModifiers];
+    if ([chars length] > 0) {
+        unichar ch = [chars characterAtIndex:0];
+        setKeyState((int)ch, 0);  // Mark key as released
+    }
 }
 
 @end
@@ -457,6 +480,12 @@ int gfx_key_pressed(void) {
 int gfx_read_key(void) {
     gfx_poll_events();
     return popKey();
+}
+
+// Check if a key is currently held down
+// Note: call gfx_poll_events() once per frame before checking keys
+int gfx_key_held(int key) {
+    return getKeyState(key);
 }
 
 // Get the last key pressed (blocks until key press)

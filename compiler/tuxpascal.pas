@@ -87,6 +87,7 @@ Const
   TOK_INTERFACE = 145;      { Interface keyword }
   TOK_IMPLEMENTATION = 146; { Implementation keyword }
   TOK_USES = 147;    { Uses keyword }
+  TOK_EXTERNAL = 148; { External keyword for C library linking }
 
   { Symbol kinds }
   SYM_VAR = 0;
@@ -135,6 +136,7 @@ Var
   sym_is_var_param: Array[0..499] Of Integer;  { 1 If Var parameter (pass by ref) }
   sym_var_param_flags: Array[0..499] Of Integer;  { bitmap: bit i = 1 If param i is Var (For proc/func) }
   sym_unit_idx: Array[0..499] Of Integer;  { Unit index For imported symbols, -1 For local }
+  sym_is_external: Array[0..499] Of Integer;  { 1 if external C function }
   sym_count: Integer;
 
   { Record field table }
@@ -292,6 +294,15 @@ Var
   set_low: Array[0..99] Of Integer;         { low bound Of base Type }
   set_high: Array[0..99] Of Integer;        { high bound Of base Type }
   set_count: Integer;                       { count Of Set types defined }
+
+  { Multi-dimensional array metadata }
+  { arr_dims[sym_idx] = number of dimensions (1 for 1D, 2 for 2D, etc.) }
+  arr_dims: Array[0..499] Of Integer;
+  { arr_info stores bounds for multi-dim arrays: 8 integers per symbol }
+  { Layout: [lo1, size1, lo2, size2, lo3, size3, lo4, size4] }
+  { For 2D array[0..3, 0..5]: lo1=0, size1=6, lo2=0, size2=6 }
+  { Access arr_info[sym_idx * 8 + dim * 2] for lo, +1 for size }
+  arr_info: Array[0..3999] Of Integer;      { 500 symbols * 8 ints each }
 
   { File variable structure (at runtime, 272 bytes per file Var):
     offset 0: fd (8 bytes) - file descriptor, -1 If Not open
@@ -904,6 +915,22 @@ Begin
       End
     End
   End
+  Else If ch = 36 Then  { $ - hex literal }
+  Begin
+    NextChar;  { consume '$' }
+    tok_type := TOK_INTEGER;
+    tok_int := 0;
+    While ((ch >= 48) And (ch <= 57)) Or ((ch >= 65) And (ch <= 70)) Or ((ch >= 97) And (ch <= 102)) Do
+    Begin
+      If (ch >= 48) And (ch <= 57) Then
+        tok_int := tok_int * 16 + (ch - 48)
+      Else If (ch >= 65) And (ch <= 70) Then
+        tok_int := tok_int * 16 + (ch - 55)
+      Else
+        tok_int := tok_int * 16 + (ch - 87);
+      NextChar
+    End
+  End
   Else If IsAlpha(ch) = 1 Then
   Begin
     tok_type := TOK_IDENT;
@@ -1161,7 +1188,13 @@ Begin
         If (ToLower(tok_str[2]) = 114) And (ToLower(tok_str[3]) = 100) Then { rd }
           If (ToLower(tok_str[4]) = 105) And (ToLower(tok_str[5]) = 110) Then { in }
             If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
-              tok_type := TOK_INTEGER_TYPE
+              tok_type := TOK_INTEGER_TYPE;
+      { External = 101,120,116,101,114,110,97,108 - for C library linking }
+      If (ToLower(tok_str[0]) = 101) And (ToLower(tok_str[1]) = 120) Then { ex }
+        If (ToLower(tok_str[2]) = 116) And (ToLower(tok_str[3]) = 101) Then { te }
+          If (ToLower(tok_str[4]) = 114) And (ToLower(tok_str[5]) = 110) Then { rn }
+            If (ToLower(tok_str[6]) = 97) And (ToLower(tok_str[7]) = 108) Then { al }
+              tok_type := TOK_EXTERNAL
     End;
     { Implementation = 105,109,112,108,101,109,101,110,116,97,116,105,111,110 }
     If tok_len = 14 Then
@@ -1654,6 +1687,22 @@ End;
 Procedure EmitBL(lbl: Integer);
 Begin
   Write('    bl L'); WriteLn(lbl)
+End;
+
+Procedure EmitBLExternal(sym_idx: Integer);
+Var
+  i, base: Integer;
+Begin
+  { Emit: bl _symbolname (for external C functions) }
+  Write('    bl _');
+  base := sym_idx * 32;
+  i := 0;
+  While (i < 32) And (sym_name[base + i] <> 0) Do
+  Begin
+    WriteChar(sym_name[base + i]);
+    i := i + 1
+  End;
+  WriteLn
 End;
 
 Procedure EmitCmpX0X1;
@@ -5770,6 +5819,7 @@ Procedure ParseFactor;
 Var
   idx, arg_count, i, lbl1, lbl2: Integer;
   var_flags, var_arg_idx: Integer;
+  dim_idx, dim_count, dim_lo, dim_size: Integer;
 Begin
   If tok_type = TOK_INTEGER Then
   Begin
@@ -5931,18 +5981,52 @@ Begin
     NextToken;
     If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
     Begin
-      { Address Of Array element: @arr[index] }
+      { Address Of Array element: @arr[index] Or @arr[i,j,...] }
       NextToken;  { consume '[' }
-      ParseExpression;  { index In x0 }
-      Expect(TOK_RBRACKET);
-      { Subtract low bound }
+      ParseExpression;  { first index In x0 }
+      { Subtract low bound for first dimension }
+      dim_lo := arr_info[idx * 8];
       EmitPushX0;
-      EmitMovX0(sym_const_val[idx]);  { low bound }
+      EmitMovX0(dim_lo);
       EmitPopX1;
-      { x0 = x1 - x0 = index - low_bound }
       WriteLn('    sub x0, x1, x0');
-      { Multiply by 8 (element size) using lsl #3 }
-      WriteLn('    lsl x0, x0, #3');
+      { Handle multi-dimensional arrays }
+      dim_count := arr_dims[idx];
+      If dim_count < 1 Then dim_count := 1;
+      dim_idx := 1;
+      While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+      Begin
+        NextToken;  { consume ',' }
+        dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+        EmitPushX0;
+        EmitMovX0(dim_size);
+        EmitPopX1;
+        WriteLn('    mul x0, x1, x0');
+        EmitPushX0;
+        ParseExpression;
+        dim_lo := arr_info[idx * 8 + dim_idx * 2];
+        EmitPushX0;
+        EmitMovX0(dim_lo);
+        EmitPopX1;
+        WriteLn('    sub x0, x1, x0');
+        EmitPopX1;
+        WriteLn('    add x0, x1, x0');
+        dim_idx := dim_idx + 1
+      End;
+      Expect(TOK_RBRACKET);
+      { Multiply by element size }
+      If sym_var_param_flags[idx] > 0 Then
+      Begin
+        lbl1 := sym_label[sym_var_param_flags[idx] - 1];
+        EmitPushX0;
+        EmitMovX0(lbl1);
+        EmitPopX1;
+        WriteLn('    mul x0, x1, x0');
+      End
+      Else If sym_var_param_flags[idx] = -1 Then
+        WriteLn('    lsl x0, x0, #8')
+      Else
+        WriteLn('    lsl x0, x0, #3');
       { Get base address }
       If sym_level[idx] < scope_level Then
       Begin
@@ -6011,17 +6095,44 @@ Begin
       Begin
         If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
         Begin
-          { Array element access: arr[index] Or arr[index].field }
+          { Array element access: arr[index] Or arr[i,j,...] }
           NextToken;  { consume '[' }
-          ParseExpression;  { index In x0 }
-          Expect(TOK_RBRACKET);
-          { Subtract low bound }
+          ParseExpression;  { first index In x0 }
+          { Subtract low bound for first dimension }
+          dim_lo := arr_info[idx * 8];  { lo bound for dim 0 }
           EmitPushX0;
-          EmitMovX0(sym_const_val[idx]);  { low bound }
+          EmitMovX0(dim_lo);
           EmitPopX1;
-          { x0 = x1 - x0 = index - low_bound }
-          WriteLn('    sub x0, x1, x0');
-          { Check If Array Of records }
+          WriteLn('    sub x0, x1, x0');  { x0 = index - lo_bound }
+          { Handle multi-dimensional arrays }
+          dim_count := arr_dims[idx];
+          If dim_count < 1 Then dim_count := 1;  { default to 1D }
+          dim_idx := 1;
+          While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+          Begin
+            NextToken;  { consume ',' }
+            { Multiply current linear index by this dimension's size }
+            dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+            EmitPushX0;  { save current linear index }
+            EmitMovX0(dim_size);
+            EmitPopX1;
+            WriteLn('    mul x0, x1, x0');  { x0 = linear_index * dim_size }
+            EmitPushX0;  { save multiplied result }
+            { Parse next index }
+            ParseExpression;  { new index in x0 }
+            { Subtract low bound for this dimension }
+            dim_lo := arr_info[idx * 8 + dim_idx * 2];
+            EmitPushX0;
+            EmitMovX0(dim_lo);
+            EmitPopX1;
+            WriteLn('    sub x0, x1, x0');  { x0 = index - lo_bound }
+            { Add to previous linear index }
+            EmitPopX1;  { restore multiplied linear index }
+            WriteLn('    add x0, x1, x0');  { x0 = linear_index + new_index }
+            dim_idx := dim_idx + 1
+          End;
+          Expect(TOK_RBRACKET);
+          { Multiply linear index by element size }
           If sym_var_param_flags[idx] > 0 Then
           Begin
             { Array Of records - multiply by Record size }
@@ -6029,8 +6140,12 @@ Begin
             EmitPushX0;
             EmitMovX0(lbl1);
             EmitPopX1;
-            { mul x0, x1, x0 }
             WriteLn('    mul x0, x1, x0');
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - multiply by 256 using lsl #8 }
+            WriteLn('    lsl x0, x0, #8');
           End
           Else
           Begin
@@ -6069,6 +6184,12 @@ Begin
               WriteLn('    ldr x0, [x1]');
               expr_type := field_type[arg_count]
             End
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - return address Of String element }
+            WriteLn('    mov x0, x1');
+            expr_type := TYPE_STRING
           End
           Else
           Begin
@@ -6260,16 +6381,50 @@ Begin
                     If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                     Begin
                       NextToken;  { consume '[' }
-                      ParseExpression;  { index In x0 }
-                      Expect(TOK_RBRACKET);
-                      { Compute element address }
+                      ParseExpression;  { first index In x0 }
+                      { Subtract low bound for first dimension }
+                      dim_lo := arr_info[var_arg_idx * 8];
                       EmitPushX0;
-                      EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                      EmitMovX0(dim_lo);
                       EmitPopX1;
-                      { x0 = x1 - x0 = index - low_bound }
                       WriteLn('    sub x0, x1, x0');
-                      { Multiply by 8 using lsl #3 }
-                      WriteLn('    lsl x0, x0, #3');
+                      { Handle multi-dimensional arrays }
+                      dim_count := arr_dims[var_arg_idx];
+                      If dim_count < 1 Then dim_count := 1;
+                      dim_idx := 1;
+                      While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                      Begin
+                        NextToken;
+                        dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                        EmitPushX0;
+                        EmitMovX0(dim_size);
+                        EmitPopX1;
+                        WriteLn('    mul x0, x1, x0');
+                        EmitPushX0;
+                        ParseExpression;
+                        dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                        EmitPushX0;
+                        EmitMovX0(dim_lo);
+                        EmitPopX1;
+                        WriteLn('    sub x0, x1, x0');
+                        EmitPopX1;
+                        WriteLn('    add x0, x1, x0');
+                        dim_idx := dim_idx + 1
+                      End;
+                      Expect(TOK_RBRACKET);
+                      { Multiply by element size }
+                      If sym_var_param_flags[var_arg_idx] > 0 Then
+                      Begin
+                        lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                        EmitPushX0;
+                        EmitMovX0(lbl1);
+                        EmitPopX1;
+                        WriteLn('    mul x0, x1, x0');
+                      End
+                      Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                        WriteLn('    lsl x0, x0, #8')
+                      Else
+                        WriteLn('    lsl x0, x0, #3');
                       { Get base address And subtract element offset }
                       If sym_level[var_arg_idx] < scope_level Then
                       Begin
@@ -6303,9 +6458,11 @@ Begin
             End;
             { Set up static link For callee }
             EmitStaticLink(sym_level[idx], scope_level);
-            { Check If calling imported Unit Procedure }
+            { Check If calling imported Unit Procedure or external C function }
             If sym_unit_idx[idx] >= 0 Then
               EmitBLUnitProc(sym_unit_idx[idx], idx)
+            Else If sym_is_external[idx] = 1 Then
+              EmitBLExternal(idx)
             Else
               EmitBL(sym_label[idx]);
             expr_type := sym_type[idx]  { Function return Type }
@@ -6351,16 +6508,50 @@ Begin
                 If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                 Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index In x0 }
-                  Expect(TOK_RBRACKET);
-                  { Compute element address }
+                  ParseExpression;  { first index In x0 }
+                  { Subtract low bound for first dimension }
+                  dim_lo := arr_info[var_arg_idx * 8];
                   EmitPushX0;
-                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitMovX0(dim_lo);
                   EmitPopX1;
-                  { x0 = x1 - x0 = index - low_bound }
                   WriteLn('    sub x0, x1, x0');
-                  { Multiply by 8 using lsl #3 }
-                  WriteLn('    lsl x0, x0, #3');
+                  { Handle multi-dimensional arrays }
+                  dim_count := arr_dims[var_arg_idx];
+                  If dim_count < 1 Then dim_count := 1;
+                  dim_idx := 1;
+                  While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                  Begin
+                    NextToken;
+                    dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                    EmitPushX0;
+                    EmitMovX0(dim_size);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                    EmitPushX0;
+                    ParseExpression;
+                    dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                    EmitPushX0;
+                    EmitMovX0(dim_lo);
+                    EmitPopX1;
+                    WriteLn('    sub x0, x1, x0');
+                    EmitPopX1;
+                    WriteLn('    add x0, x1, x0');
+                    dim_idx := dim_idx + 1
+                  End;
+                  Expect(TOK_RBRACKET);
+                  { Multiply by element size }
+                  If sym_var_param_flags[var_arg_idx] > 0 Then
+                  Begin
+                    lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                    EmitPushX0;
+                    EmitMovX0(lbl1);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                  End
+                  Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                    WriteLn('    lsl x0, x0, #8')
+                  Else
+                    WriteLn('    lsl x0, x0, #3');
                   { Get base address And subtract element offset }
                   If sym_level[var_arg_idx] < scope_level Then
                   Begin
@@ -6394,9 +6585,11 @@ Begin
         End;
         { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check If calling imported Unit Procedure }
+        { Check If calling imported Unit Procedure or external C function }
         If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
+        Else If sym_is_external[idx] = 1 Then
+          EmitBLExternal(idx)
         Else
           EmitBL(sym_label[idx]);
         expr_type := sym_type[idx]  { Function return Type }
@@ -7149,17 +7342,47 @@ Begin
       End
       Else If tok_type = TOK_IDENT Then
       Begin
-        { Must be a String variable }
+        { String variable Or Array Of String element }
         idx := SymLookup;
         If idx < 0 Then
           Error(3);
-        If sym_type[idx] <> TYPE_STRING Then
+        If sym_type[idx] = TYPE_STRING Then
+        Begin
+          NextToken;
+          { Load String address }
+          EmitVarAddr(idx, scope_level);
+          { Load Length byte from [x0] }
+          WriteLn('    ldrb w0, [x0]');
+        End
+        Else If (sym_type[idx] = TYPE_ARRAY) And (sym_var_param_flags[idx] = -1) Then
+        Begin
+          { Array Of String - need To parse index And get element address }
+          NextToken;
+          Expect(TOK_LBRACKET);
+          ParseExpression;  { index In x0 }
+          Expect(TOK_RBRACKET);
+          { Subtract low bound }
+          EmitPushX0;
+          EmitMovX0(sym_const_val[idx]);
+          EmitPopX1;
+          WriteLn('    sub x0, x1, x0');
+          { Multiply by 256 }
+          WriteLn('    lsl x0, x0, #8');
+          { Get base address }
+          If sym_level[idx] < scope_level Then
+          Begin
+            EmitFollowChain(sym_level[idx], scope_level);
+            EmitSubLargeOffset(1, 8, 0 - sym_offset[idx])
+          End
+          Else
+            EmitSubLargeOffset(1, 29, 0 - sym_offset[idx]);
+          { Compute element address }
+          WriteLn('    sub x0, x1, x0');
+          { Load Length byte from [x0] }
+          WriteLn('    ldrb w0, [x0]');
+        End
+        Else
           Error(9);
-        NextToken;
-        { Load String address }
-        EmitVarAddr(idx, scope_level);
-        { Load Length byte from [x0] }
-        WriteLn('    ldrb w0, [x0]');
       End
       Else
         Error(9);
@@ -8019,6 +8242,7 @@ Var
   idx, lbl1, lbl2, lbl3, arg_count, i: Integer;
   var_flags, arg_idx, var_arg_idx: Integer;
   old_break, old_continue: Integer;
+  dim_idx, dim_count, dim_lo, dim_size: Integer;
 Begin
   If tok_type = TOK_BEGIN Then
   Begin
@@ -8108,7 +8332,10 @@ Begin
     NextToken;
     Expect(TOK_ASSIGN);
     ParseExpression;
-    EmitSturX0(sym_offset[idx]);
+    If sym_level[idx] < scope_level Then
+      EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+    Else
+      EmitSturX0(sym_offset[idx]);
 
     lbl1 := NewLabel;  { condition check }
     lbl2 := NewLabel;  { loop End / Break target }
@@ -8127,7 +8354,11 @@ Begin
       EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { load loop Var }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       { ldur x1, [sp] - load End value from stack }
       WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
@@ -8136,9 +8367,15 @@ Begin
       ParseStatement;
       { Continue target - increment }
       EmitLabel(lbl3);
-      EmitLdurX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       WriteLn('    add x0, x0, #1');
-      EmitSturX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { Restore old Break/Continue labels }
@@ -8154,7 +8391,11 @@ Begin
       EmitPushX0;       { save End value on stack }
       Expect(TOK_DO);
       EmitLabel(lbl1);
-      EmitLdurX0(sym_offset[idx]);  { load loop Var }
+      { load loop Var }
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       { ldur x1, [sp] - load End value from stack }
       WriteLn('    ldur x1, [sp]');
       EmitCmpX0X1;
@@ -8163,9 +8404,15 @@ Begin
       ParseStatement;
       { Continue target - decrement }
       EmitLabel(lbl3);
-      EmitLdurX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitLdurX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitLdurX0(sym_offset[idx]);
       WriteLn('    sub x0, x0, #1');
-      EmitSturX0(sym_offset[idx]);
+      If sym_level[idx] < scope_level Then
+        EmitSturX0Outer(sym_offset[idx], sym_level[idx], scope_level)
+      Else
+        EmitSturX0(sym_offset[idx]);
       EmitBranchLabel(lbl1);
       EmitLabel(lbl2);
       { Restore old Break/Continue labels }
@@ -9812,7 +10059,8 @@ Begin
       Begin
       NextToken;
 
-      If sym_kind[idx] = SYM_PROCEDURE Then
+      If (sym_kind[idx] = SYM_PROCEDURE) Or
+         ((sym_kind[idx] = SYM_FUNCTION) And (tok_type = TOK_LPAREN)) Then
       Begin
         { Procedure call - pass args In x0-x7 }
         arg_count := 0;
@@ -9839,16 +10087,50 @@ Begin
                 If (sym_type[var_arg_idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
                 Begin
                   NextToken;  { consume '[' }
-                  ParseExpression;  { index In x0 }
-                  Expect(TOK_RBRACKET);
-                  { Compute element address }
+                  ParseExpression;  { first index In x0 }
+                  { Subtract low bound for first dimension }
+                  dim_lo := arr_info[var_arg_idx * 8];
                   EmitPushX0;
-                  EmitMovX0(sym_const_val[var_arg_idx]);  { low bound }
+                  EmitMovX0(dim_lo);
                   EmitPopX1;
-                  { x0 = x1 - x0 = index - low_bound }
                   WriteLn('    sub x0, x1, x0');
-                  { Multiply by 8 using lsl #3 }
-                  WriteLn('    lsl x0, x0, #3');
+                  { Handle multi-dimensional arrays }
+                  dim_count := arr_dims[var_arg_idx];
+                  If dim_count < 1 Then dim_count := 1;
+                  dim_idx := 1;
+                  While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+                  Begin
+                    NextToken;
+                    dim_size := arr_info[var_arg_idx * 8 + dim_idx * 2 + 1];
+                    EmitPushX0;
+                    EmitMovX0(dim_size);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                    EmitPushX0;
+                    ParseExpression;
+                    dim_lo := arr_info[var_arg_idx * 8 + dim_idx * 2];
+                    EmitPushX0;
+                    EmitMovX0(dim_lo);
+                    EmitPopX1;
+                    WriteLn('    sub x0, x1, x0');
+                    EmitPopX1;
+                    WriteLn('    add x0, x1, x0');
+                    dim_idx := dim_idx + 1
+                  End;
+                  Expect(TOK_RBRACKET);
+                  { Multiply by element size }
+                  If sym_var_param_flags[var_arg_idx] > 0 Then
+                  Begin
+                    lbl1 := sym_label[sym_var_param_flags[var_arg_idx] - 1];
+                    EmitPushX0;
+                    EmitMovX0(lbl1);
+                    EmitPopX1;
+                    WriteLn('    mul x0, x1, x0');
+                  End
+                  Else If sym_var_param_flags[var_arg_idx] = -1 Then
+                    WriteLn('    lsl x0, x0, #8')
+                  Else
+                    WriteLn('    lsl x0, x0, #3');
                   { Get base address And subtract element offset }
                   If sym_level[var_arg_idx] < scope_level Then
                   Begin
@@ -9882,9 +10164,11 @@ Begin
         End;
         { Set up static link For callee }
         EmitStaticLink(sym_level[idx], scope_level);
-        { Check If calling imported Unit Procedure }
+        { Check If calling imported Unit Procedure or external C function }
         If sym_unit_idx[idx] >= 0 Then
           EmitBLUnitProc(sym_unit_idx[idx], idx)
+        Else If sym_is_external[idx] = 1 Then
+          EmitBLExternal(idx)
         Else
           EmitBL(sym_label[idx])
       End
@@ -9892,16 +10176,39 @@ Begin
       Begin
         If (sym_type[idx] = TYPE_ARRAY) And (tok_type = TOK_LBRACKET) Then
         Begin
-          { Array element assignment: arr[index] := expr Or arr[index].field := expr }
+          { Array element assignment: arr[i] := expr Or arr[i,j,...] := expr }
           NextToken;  { consume '[' }
-          ParseExpression;  { index In x0 }
-          Expect(TOK_RBRACKET);
-          { Subtract low bound }
+          ParseExpression;  { first index In x0 }
+          { Subtract low bound for first dimension }
+          dim_lo := arr_info[idx * 8];
           EmitPushX0;
-          EmitMovX0(sym_const_val[idx]);
+          EmitMovX0(dim_lo);
           EmitPopX1;
-          { x0 = x1 - x0 = index - low_bound }
           WriteLn('    sub x0, x1, x0');
+          { Handle multi-dimensional arrays }
+          dim_count := arr_dims[idx];
+          If dim_count < 1 Then dim_count := 1;
+          dim_idx := 1;
+          While (dim_idx < dim_count) And (tok_type = TOK_COMMA) Do
+          Begin
+            NextToken;
+            dim_size := arr_info[idx * 8 + dim_idx * 2 + 1];
+            EmitPushX0;
+            EmitMovX0(dim_size);
+            EmitPopX1;
+            WriteLn('    mul x0, x1, x0');
+            EmitPushX0;
+            ParseExpression;
+            dim_lo := arr_info[idx * 8 + dim_idx * 2];
+            EmitPushX0;
+            EmitMovX0(dim_lo);
+            EmitPopX1;
+            WriteLn('    sub x0, x1, x0');
+            EmitPopX1;
+            WriteLn('    add x0, x1, x0');
+            dim_idx := dim_idx + 1
+          End;
+          Expect(TOK_RBRACKET);
           { Multiply by element size }
           If sym_var_param_flags[idx] > 0 Then
           Begin
@@ -9911,6 +10218,11 @@ Begin
             EmitMovX0(lbl1);
             EmitPopX1;
             WriteLn('    mul x0, x1, x0');
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - multiply by 256 }
+            WriteLn('    lsl x0, x0, #8');
           End
           Else
           Begin
@@ -9952,6 +10264,28 @@ Begin
               EmitPopX1;
               WriteLn('    str x0, [x1]');
             End
+          End
+          Else If sym_var_param_flags[idx] = -1 Then
+          Begin
+            { Array Of strings - use rt_str_copy }
+            EmitPushX1;  { save dest address }
+            Expect(TOK_ASSIGN);
+            ParseExpression;  { source String address In x0 }
+            If expr_type = TYPE_CHAR Then
+            Begin
+              { Single character - convert to 1-char string on heap }
+              WriteLn('    mov x3, x0');  { save char value }
+              WriteLn('    mov x0, x21');  { x0 = heap pointer (string addr) }
+              WriteLn('    mov x4, #1');
+              WriteLn('    strb w4, [x0]');  { store length = 1 }
+              WriteLn('    strb w3, [x0, #1]');  { store char }
+              WriteLn('    add x21, x21, #256');  { advance heap }
+              expr_type := TYPE_STRING
+            End;
+            { x0 = source, need To call rt_str_copy(dest, source) }
+            WriteLn('    mov x1, x0');  { x1 = source }
+            EmitPopX0;  { x0 = dest }
+            EmitBL(rt_str_copy)
           End
           Else
           Begin
@@ -10179,41 +10513,27 @@ Begin
           Begin
           { String assignment }
           Expect(TOK_ASSIGN);
-          If tok_type = TOK_STRING Then
+          { Parse String expression (literal, variable, copy, concat, Or + expressions) }
+          ParseExpression;
+          If expr_type = TYPE_CHAR Then
           Begin
-            { Assign from String literal }
-            { Compute base address Of String variable into x8 }
-            If sym_level[idx] < scope_level Then
-            Begin
-              EmitFollowChain(sym_level[idx], scope_level);
-              EmitAddrOffset(8, 8, sym_offset[idx])
-            End
-            Else
-              EmitAddrOffset(8, 29, sym_offset[idx]);
-            { Store Length at [x8] }
-            EmitMovX0(tok_len);
-            WriteLn('    strb w0, [x8]');
-            { Store each character at [x8+1], [x8+2], etc }
-            For i := 0 To tok_len - 1 Do
-            Begin
-              EmitMovX0(tok_str[i]);
-              Write('    strb w0, [x8, #'); Write(i + 1); WriteLn(']');
-            End;
-            NextToken
-          End
-          Else
-          Begin
-            { Parse String expression (variable, copy, concat, Or + expressions) }
-            ParseExpression;
-            If expr_type <> TYPE_STRING Then
-              Error(12);  { expected String }
-            { x0 = source String address, copy To dest }
-            WriteLn('    mov x1, x0');
-            { Get dest address into x0 }
-            EmitVarAddr(idx, scope_level);
-            { Call rt_str_copy(x0=dest, x1=source) }
-            EmitBL(rt_str_copy)
-          End
+            { Single character - convert to 1-char string on heap }
+            WriteLn('    mov x3, x0');  { save char value }
+            WriteLn('    mov x0, x21');  { x0 = heap pointer (string addr) }
+            WriteLn('    mov x4, #1');
+            WriteLn('    strb w4, [x0]');  { store length = 1 }
+            WriteLn('    strb w3, [x0, #1]');  { store char }
+            WriteLn('    add x21, x21, #256');  { advance heap }
+            expr_type := TYPE_STRING
+          End;
+          If expr_type <> TYPE_STRING Then
+            Error(12);  { expected String }
+          { x0 = source String address, copy To dest }
+          WriteLn('    mov x1, x0');
+          { Get dest address into x0 }
+          EmitVarAddr(idx, scope_level);
+          { Call rt_str_copy(x0=dest, x1=source) }
+          EmitBL(rt_str_copy)
           End  { End Of Else For String whole assignment }
         End
         Else If sym_type[idx] = TYPE_REAL Then
@@ -10319,6 +10639,9 @@ End;
 Procedure ParseVarDeclarations;
 Var
   idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: Integer;
+  dim_count, dim_idx, elem_size: Integer;
+  dim_lo: Array[0..3] Of Integer;   { low bounds for up to 4 dimensions }
+  dim_size: Array[0..3] Of Integer; { sizes for up to 4 dimensions }
 Begin
   NextToken;  { consume 'Var' }
   While tok_type = TOK_IDENT Do
@@ -10364,38 +10687,70 @@ Begin
     Begin
       NextToken;
       Expect(TOK_LBRACKET);
-      { Parse low bound }
-      If tok_type = TOK_INTEGER Then
-      Begin
-        lo_bound := tok_int;
-        NextToken
-      End
-      Else
-        Error(9);
-      Expect(TOK_DOTDOT);
-      { Parse high bound }
-      If tok_type = TOK_INTEGER Then
-      Begin
-        hi_bound := tok_int;
-        NextToken
-      End
-      Else
-        Error(9);
-      Expect(TOK_RBRACKET);
+      { Parse dimensions - supports array[lo1..hi1, lo2..hi2, ...] }
+      dim_count := 0;
+      Repeat
+        { Parse low bound }
+        If tok_type = TOK_INTEGER Then
+        Begin
+          lo_bound := tok_int;
+          NextToken
+        End
+        Else
+          Error(9);
+        Expect(TOK_DOTDOT);
+        { Parse high bound }
+        If tok_type = TOK_INTEGER Then
+        Begin
+          hi_bound := tok_int;
+          NextToken
+        End
+        Else
+          Error(9);
+        { Store dimension info (up to 4 dimensions) }
+        If dim_count < 4 Then
+        Begin
+          dim_lo[dim_count] := lo_bound;
+          dim_size[dim_count] := hi_bound - lo_bound + 1
+        End;
+        dim_count := dim_count + 1;
+        { Check for more dimensions }
+        If tok_type = TOK_COMMA Then
+          NextToken
+        Else If tok_type = TOK_RBRACKET Then
+        Begin
+          NextToken;
+          { Exit the repeat loop - we'll break out naturally }
+          lo_bound := -999999  { Signal to exit loop }
+        End
+        Else
+          Error(9)
+      Until lo_bound = -999999;
       Expect(TOK_OF);
-      { Parse element Type }
+      { Parse element Type and calculate total size }
       If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
          (tok_type = TOK_BOOLEAN_TYPE) Then
       Begin
         NextToken;
-        arr_size := (hi_bound - lo_bound + 1) * 8;
+        elem_size := 8;
+        { Calculate total array size }
+        arr_size := elem_size;
+        For dim_idx := 0 To dim_count - 1 Do
+          arr_size := arr_size * dim_size[dim_idx];
         { Handle all variables In the list }
         For j := first_idx To idx Do
         Begin
           sym_type[j] := TYPE_ARRAY;
-          sym_const_val[j] := lo_bound;
+          sym_const_val[j] := dim_lo[0];  { First dimension low bound }
           sym_label[j] := arr_size;
           sym_var_param_flags[j] := 0;  { 0 = basic Type element }
+          arr_dims[j] := dim_count;
+          { Store all dimension info }
+          For dim_idx := 0 To dim_count - 1 Do
+          Begin
+            arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+            arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+          End;
           If j = first_idx Then
             { First var keeps its offset, just expand local_offset }
             local_offset := local_offset - (arr_size - 8)
@@ -10407,20 +10762,58 @@ Begin
           End
         End
       End
+      Else If tok_type = TOK_STRING_TYPE Then
+      Begin
+        { Array Of String Type - 256 bytes per element }
+        NextToken;
+        elem_size := 256;
+        arr_size := elem_size;
+        For dim_idx := 0 To dim_count - 1 Do
+          arr_size := arr_size * dim_size[dim_idx];
+        For j := first_idx To idx Do
+        Begin
+          sym_type[j] := TYPE_ARRAY;
+          sym_const_val[j] := dim_lo[0];
+          sym_label[j] := arr_size;
+          sym_var_param_flags[j] := -1;  { -1 = String element Type }
+          arr_dims[j] := dim_count;
+          For dim_idx := 0 To dim_count - 1 Do
+          Begin
+            arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+            arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+          End;
+          If j = first_idx Then
+            local_offset := local_offset - (arr_size - 8)
+          Else
+          Begin
+            sym_offset[j] := local_offset - 8;
+            local_offset := sym_offset[j] - (arr_size - 8)
+          End
+        End
+      End
       Else If tok_type = TOK_IDENT Then
       Begin
         { Array Of Record Type }
         base_idx := SymLookup;
         If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And (sym_type[base_idx] = TYPE_RECORD) Then
         Begin
-          arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
+          elem_size := sym_label[base_idx];
+          arr_size := elem_size;
+          For dim_idx := 0 To dim_count - 1 Do
+            arr_size := arr_size * dim_size[dim_idx];
           { Handle all variables In the list }
           For j := first_idx To idx Do
           Begin
             sym_type[j] := TYPE_ARRAY;
-            sym_const_val[j] := lo_bound;
+            sym_const_val[j] := dim_lo[0];
             sym_label[j] := arr_size;
             sym_var_param_flags[j] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
+            arr_dims[j] := dim_count;
+            For dim_idx := 0 To dim_count - 1 Do
+            Begin
+              arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+              arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+            End;
             If j = first_idx Then
               { First var keeps its offset, just expand local_offset }
               local_offset := local_offset - (arr_size - 8)
@@ -11488,11 +11881,18 @@ Begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check For Forward declaration Or Interface declaration }
-  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  { Check For Forward, External, Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (tok_type = TOK_EXTERNAL) Or (in_interface = 1) Then
   Begin
     If tok_type = TOK_FORWARD Then
     Begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    End
+    Else If tok_type = TOK_EXTERNAL Then
+    Begin
+      { External C function - mark it And store name For linking }
+      sym_is_external[idx] := 1;
       NextToken;
       Expect(TOK_SEMICOLON)
     End;
@@ -11755,11 +12155,18 @@ Begin
 
   Expect(TOK_SEMICOLON);
 
-  { Check For Forward declaration Or Interface declaration }
-  If (tok_type = TOK_FORWARD) Or (in_interface = 1) Then
+  { Check For Forward, External, Or Interface declaration }
+  If (tok_type = TOK_FORWARD) Or (tok_type = TOK_EXTERNAL) Or (in_interface = 1) Then
   Begin
     If tok_type = TOK_FORWARD Then
     Begin
+      NextToken;
+      Expect(TOK_SEMICOLON)
+    End
+    Else If tok_type = TOK_EXTERNAL Then
+    Begin
+      { External C function - mark it And store name For linking }
+      sym_is_external[idx] := 1;
       NextToken;
       Expect(TOK_SEMICOLON)
     End;

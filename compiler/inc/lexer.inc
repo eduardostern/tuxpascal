@@ -388,6 +388,22 @@ Begin
       End
     End
   End
+  Else If ch = 36 Then  { $ - hex literal }
+  Begin
+    NextChar;  { consume '$' }
+    tok_type := TOK_INTEGER;
+    tok_int := 0;
+    While ((ch >= 48) And (ch <= 57)) Or ((ch >= 65) And (ch <= 70)) Or ((ch >= 97) And (ch <= 102)) Do
+    Begin
+      If (ch >= 48) And (ch <= 57) Then
+        tok_int := tok_int * 16 + (ch - 48)
+      Else If (ch >= 65) And (ch <= 70) Then
+        tok_int := tok_int * 16 + (ch - 55)
+      Else
+        tok_int := tok_int * 16 + (ch - 87);
+      NextChar
+    End
+  End
   Else If IsAlpha(ch) = 1 Then
   Begin
     tok_type := TOK_IDENT;

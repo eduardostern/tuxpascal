@@ -3,6 +3,9 @@
 Procedure ParseVarDeclarations;
 Var
   idx, first_idx, arr_size, lo_bound, hi_bound, j, base_idx: Integer;
+  dim_count, dim_idx, elem_size: Integer;
+  dim_lo: Array[0..3] Of Integer;   { low bounds for up to 4 dimensions }
+  dim_size: Array[0..3] Of Integer; { sizes for up to 4 dimensions }
 Begin
   NextToken;  { consume 'Var' }
   While tok_type = TOK_IDENT Do
@@ -48,38 +51,70 @@ Begin
     Begin
       NextToken;
       Expect(TOK_LBRACKET);
-      { Parse low bound }
-      If tok_type = TOK_INTEGER Then
-      Begin
-        lo_bound := tok_int;
-        NextToken
-      End
-      Else
-        Error(9);
-      Expect(TOK_DOTDOT);
-      { Parse high bound }
-      If tok_type = TOK_INTEGER Then
-      Begin
-        hi_bound := tok_int;
-        NextToken
-      End
-      Else
-        Error(9);
-      Expect(TOK_RBRACKET);
+      { Parse dimensions - supports array[lo1..hi1, lo2..hi2, ...] }
+      dim_count := 0;
+      Repeat
+        { Parse low bound }
+        If tok_type = TOK_INTEGER Then
+        Begin
+          lo_bound := tok_int;
+          NextToken
+        End
+        Else
+          Error(9);
+        Expect(TOK_DOTDOT);
+        { Parse high bound }
+        If tok_type = TOK_INTEGER Then
+        Begin
+          hi_bound := tok_int;
+          NextToken
+        End
+        Else
+          Error(9);
+        { Store dimension info (up to 4 dimensions) }
+        If dim_count < 4 Then
+        Begin
+          dim_lo[dim_count] := lo_bound;
+          dim_size[dim_count] := hi_bound - lo_bound + 1
+        End;
+        dim_count := dim_count + 1;
+        { Check for more dimensions }
+        If tok_type = TOK_COMMA Then
+          NextToken
+        Else If tok_type = TOK_RBRACKET Then
+        Begin
+          NextToken;
+          { Exit the repeat loop - we'll break out naturally }
+          lo_bound := -999999  { Signal to exit loop }
+        End
+        Else
+          Error(9)
+      Until lo_bound = -999999;
       Expect(TOK_OF);
-      { Parse element Type }
+      { Parse element Type and calculate total size }
       If (tok_type = TOK_INTEGER_TYPE) Or (tok_type = TOK_CHAR_TYPE) Or
          (tok_type = TOK_BOOLEAN_TYPE) Then
       Begin
         NextToken;
-        arr_size := (hi_bound - lo_bound + 1) * 8;
+        elem_size := 8;
+        { Calculate total array size }
+        arr_size := elem_size;
+        For dim_idx := 0 To dim_count - 1 Do
+          arr_size := arr_size * dim_size[dim_idx];
         { Handle all variables In the list }
         For j := first_idx To idx Do
         Begin
           sym_type[j] := TYPE_ARRAY;
-          sym_const_val[j] := lo_bound;
+          sym_const_val[j] := dim_lo[0];  { First dimension low bound }
           sym_label[j] := arr_size;
           sym_var_param_flags[j] := 0;  { 0 = basic Type element }
+          arr_dims[j] := dim_count;
+          { Store all dimension info }
+          For dim_idx := 0 To dim_count - 1 Do
+          Begin
+            arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+            arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+          End;
           If j = first_idx Then
             { First var keeps its offset, just expand local_offset }
             local_offset := local_offset - (arr_size - 8)
@@ -95,13 +130,22 @@ Begin
       Begin
         { Array Of String Type - 256 bytes per element }
         NextToken;
-        arr_size := (hi_bound - lo_bound + 1) * 256;
+        elem_size := 256;
+        arr_size := elem_size;
+        For dim_idx := 0 To dim_count - 1 Do
+          arr_size := arr_size * dim_size[dim_idx];
         For j := first_idx To idx Do
         Begin
           sym_type[j] := TYPE_ARRAY;
-          sym_const_val[j] := lo_bound;
+          sym_const_val[j] := dim_lo[0];
           sym_label[j] := arr_size;
           sym_var_param_flags[j] := -1;  { -1 = String element Type }
+          arr_dims[j] := dim_count;
+          For dim_idx := 0 To dim_count - 1 Do
+          Begin
+            arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+            arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+          End;
           If j = first_idx Then
             local_offset := local_offset - (arr_size - 8)
           Else
@@ -117,14 +161,23 @@ Begin
         base_idx := SymLookup;
         If (base_idx >= 0) And (sym_kind[base_idx] = SYM_TYPEDEF) And (sym_type[base_idx] = TYPE_RECORD) Then
         Begin
-          arr_size := (hi_bound - lo_bound + 1) * sym_label[base_idx];
+          elem_size := sym_label[base_idx];
+          arr_size := elem_size;
+          For dim_idx := 0 To dim_count - 1 Do
+            arr_size := arr_size * dim_size[dim_idx];
           { Handle all variables In the list }
           For j := first_idx To idx Do
           Begin
             sym_type[j] := TYPE_ARRAY;
-            sym_const_val[j] := lo_bound;
+            sym_const_val[j] := dim_lo[0];
             sym_label[j] := arr_size;
             sym_var_param_flags[j] := base_idx + 1;  { Record Type index + 1 (0 means basic) }
+            arr_dims[j] := dim_count;
+            For dim_idx := 0 To dim_count - 1 Do
+            Begin
+              arr_info[j * 8 + dim_idx * 2] := dim_lo[dim_idx];
+              arr_info[j * 8 + dim_idx * 2 + 1] := dim_size[dim_idx]
+            End;
             If j = first_idx Then
               { First var keeps its offset, just expand local_offset }
               local_offset := local_offset - (arr_size - 8)
